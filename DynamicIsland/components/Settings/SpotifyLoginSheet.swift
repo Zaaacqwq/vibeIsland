@@ -29,11 +29,11 @@ private enum SpotifyLoginConstants {
     )!
     static let cookieDomainSuffix = "spotify.com"
     static let cookieName = "sp_dc"
-    // Chrome UA — Spotify's anti-bot heuristics block "Safari" WebViews more
-    // aggressively than they block Chromium-shaped ones in practice.
     static let userAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
         + "(KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    static let blockedOAuthHostSuffixes = ["accounts.google.com", "accounts.youtube.com"]
+    static let googleSignInRedirectURL = URL(string: "https://accounts.spotify.com/en/login")!
 }
 
 private let spotifyLoginLogger = os.Logger(subsystem: "com.Ebullioscopic.Atoll", category: "SpotifyLogin")
@@ -43,7 +43,8 @@ struct SpotifyLoginSheet: View {
 
     let onCapture: (String) -> Void
 
-    @State private var statusText: String = "Sign in to Spotify to finish setup."
+    @State private var statusText: String =
+        "Sign in with email & password, Apple, or Facebook. Google blocks in-app sign-in — use “Open in Browser” for Google accounts."
     @State private var didCapture = false
 
     var body: some View {
@@ -124,10 +125,6 @@ struct SpotifyLoginWebView: NSViewRepresentable {
     }
 
     private final class FirstClickWebView: WKWebView {
-        // SwiftUI sheets present the WKWebView with the host window already key, but
-        // AppKit still treats the webview as inactive until something inside it gets
-        // explicit focus. Without this override the first mouseDown is consumed
-        // making the view first responder rather than dispatching the click.
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
@@ -178,8 +175,6 @@ struct SpotifyLoginWebView: NSViewRepresentable {
             }
         }
 
-        // MARK: - WKHTTPCookieStoreObserver
-
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             cookieStore.getAllCookies { [weak self] cookies in
                 Task { @MainActor in
@@ -189,6 +184,30 @@ struct SpotifyLoginWebView: NSViewRepresentable {
         }
 
         // MARK: - WKNavigationDelegate
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            if let url = navigationAction.request.url, Self.isBlockedOAuthHost(url.host) {
+                decisionHandler(.cancel)
+                spotifyLoginLogger.debug(
+                    "Blocked embedded OAuth navigation to host=\(url.host ?? "", privacy: .public)"
+                )
+                onStatus(
+                    "Google blocks in-app sign-in. Use email & password, Apple, or tap “Open in Browser” to sign in there and paste sp_dc in Settings."
+                )
+                webView.load(URLRequest(url: SpotifyLoginConstants.googleSignInRedirectURL))
+                return
+            }
+            decisionHandler(.allow)
+        }
+
+        private static func isBlockedOAuthHost(_ host: String?) -> Bool {
+            guard let host else { return false }
+            return SpotifyLoginConstants.blockedOAuthHostSuffixes.contains { host.hasSuffix($0) }
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             let host = webView.url?.host ?? ""
@@ -228,6 +247,12 @@ struct SpotifyLoginWebView: NSViewRepresentable {
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+                if Self.isBlockedOAuthHost(url.host) {
+                    onStatus(
+                        "Google blocks in-app sign-in. Use email & password, Apple, or tap “Open in Browser” to sign in there and paste sp_dc in Settings."
+                    )
+                    return nil
+                }
                 webView.load(URLRequest(url: url))
             }
             return nil
