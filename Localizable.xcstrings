@@ -11994,8 +11994,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "Amazon Music"
           }
         }
       }
@@ -36020,6 +36020,12 @@
           "stringUnit": {
             "value": "Включить медиа ",
             "state": "translated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用媒体 "
           }
         }
       }
@@ -60469,8 +60475,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "仅应用图标"
           }
         }
       }
@@ -60599,8 +60605,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "仅下载图标"
           }
         }
       }
@@ -60729,8 +60735,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "透明度："
           }
         }
       }
@@ -60865,8 +60871,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开 Google AI Studio"
           }
         }
       }
@@ -60996,8 +61002,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "在日历中打开"
           }
         }
       }
@@ -61132,8 +61138,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开模型设置"
           }
         }
       }
@@ -61151,6 +61157,12 @@
           "stringUnit": {
             "value": "Открывать вырез при наведении",
             "state": "translated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停时打开刘海"
           }
         }
       }
@@ -61280,8 +61292,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开设置"
           }
         }
       }
@@ -61558,8 +61570,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开 AI 助手面板，进行文件分析与对话。默认为 Cmd+Shift+A。仅在启用屏幕助手功能时有效。"
           }
         }
       }
@@ -61700,8 +61712,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开剪贴板历史记录面板。默认为 Cmd+Shift+V（类似于 PC 上的 Windows+V）。仅在启用剪贴板功能时有效。"
           }
         }
       }
@@ -61842,8 +61854,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "打开取色器面板进行屏幕颜色捕获。默认为 Cmd+Shift+P。仅在启用取色器功能时有效。"
           }
         }
       }
@@ -61973,8 +61985,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "输出设备"
           }
         }
       }
@@ -62104,8 +62116,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "输出音量"
           }
         }
       }
@@ -62246,8 +62258,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "面板模式会在刘海附近的浮动窗口中显示剪贴板。弹出模式会将剪贴板显示为附加在剪贴板按钮上的下拉菜单。"
           }
         }
       }
@@ -62388,8 +62400,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "面板模式会在浮动窗口中显示取色器。弹出模式会将取色器显示为附加在取色器按钮上的下拉菜单。"
           }
         }
       }
@@ -62530,8 +62542,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "面板模式会在刘海附近的浮动窗口中显示助手。弹出模式会将助手显示为附加在 AI 按钮上的下拉菜单。"
           }
         }
       }
@@ -62790,8 +62802,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "已暂停"
           }
         }
       }
@@ -63310,8 +63322,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "已选取 %@"
           }
         }
       }
@@ -63440,8 +63452,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "拾取的颜色"
           }
         }
       }
@@ -63570,8 +63582,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "拾取状态"
           }
         }
       }
@@ -63700,8 +63712,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "从历史记录中固定项目以保存在此处"
           }
         }
       }
@@ -63830,8 +63842,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "固定项目以添加收藏"
           }
         }
       }
@@ -63960,8 +63972,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "固定项目以将它们添加到收藏夹"
           }
         }
       }
@@ -64090,8 +64102,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "已固定项目"
           }
         }
       }
@@ -64226,8 +64238,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "请在模型设置中为所选的 AI 提供商配置您的 API 密钥。"
           }
         }
       }
@@ -64521,8 +64533,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "弹出模式会将剪贴板显示为附加在剪贴板按钮上的下拉菜单。面板模式会在刘海附近的浮动窗口中显示剪贴板。"
           }
         }
       }
@@ -64663,8 +64675,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "弹出模式会将取色器显示为附加在取色器按钮上的下拉菜单。面板模式会在浮动窗口中显示取色器。"
           }
         }
       }
@@ -64805,8 +64817,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "弹出模式会将助手显示为附加在 AI 按钮上的下拉菜单。面板模式会在刘海附近的浮动窗口中显示助手。"
           }
         }
       }
@@ -65340,8 +65352,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "预设将显示在计时器弹出窗口中，包括配置的名称、持续时间和重音颜色。重新排序以更改显示顺序。"
           }
         }
       }
@@ -65471,8 +65483,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "气压"
           }
         }
       }
@@ -65731,8 +65743,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "预览缩放："
           }
         }
       }
@@ -89120,8 +89132,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "new",
-            "value": ""
+            "state": "translated",
+            "value": "当 Amazon Music 应用是活动媒体源时使用 macOS 正在播放。播放控制遵循系统正在播放目标。如果 Amazon Music 应用不支持远程拖拽，在时间轴上拖动可能无效。"
           }
         }
       }
@@ -92633,6 +92645,266 @@
           "stringUnit": {
             "state": "translated",
             "value": "YouTube Music 需要安装此第三方应用："
+          }
+        }
+      }
+    },
+    "15 mins": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 分钟"
+          }
+        }
+      }
+    },
+    "30 mins": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 分钟"
+          }
+        }
+      }
+    },
+    "1 hour": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 小时"
+          }
+        }
+      }
+    },
+    "3 hours": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 小时"
+          }
+        }
+      }
+    },
+    "6 hours": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 小时"
+          }
+        }
+      }
+    },
+    "12 hours": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 小时"
+          }
+        }
+      }
+    },
+    "Rest of the day": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天余下的时间"
+          }
+        }
+      }
+    },
+    "All time": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有时间"
+          }
+        }
+      }
+    },
+    "Symbol": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符号"
+          }
+        }
+      }
+    },
+    "3D": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3D"
+          }
+        }
+      }
+    },
+    "Left": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左对齐"
+          }
+        }
+      }
+    },
+    "Right": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右对齐"
+          }
+        }
+      }
+    },
+    "Enable Minimalistic UI": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用极简 UI"
+          }
+        }
+      }
+    },
+    "Hide Dynamic Island during screenshots & recordings": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截屏和录屏时隐藏灵动岛"
+          }
+        }
+      }
+    },
+    "Close gesture": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭手势"
+          }
+        }
+      }
+    },
+    "Reverse swipe gestures": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反向滑动"
+          }
+        }
+      }
+    },
+    "Reverse scroll gestures": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反向滚动"
+          }
+        }
+      }
+    },
+    "Extend hover area": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扩展悬停区域"
+          }
+        }
+      }
+    },
+    "External display style": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外接显示器样式"
+          }
+        }
+      }
+    },
+    "Hide until hovered": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停时显示"
+          }
+        }
+      }
+    },
+    "Enable Focus Detection": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用专注模式检测"
+          }
+        }
+      }
+    },
+    "Accessibility permission lets Dynamic Island replace the native volume, brightness, and keyboard HUDs.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辅助功能权限允许灵动岛替换原生的音量、亮度和键盘提示框。"
+          }
+        }
+      }
+    },
+    "Full Disk Access for global mode": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全局模式需要完全磁盘访问权限"
+          }
+        }
+      }
+    },
+    "Without Full Disk Access, Shelf can only read files from Documents and Downloads. Grant Full Disk Access to make Shelf work globally.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果没有完全磁盘访问权限，暂存器只能读取文档和下载目录的文件。授予完全磁盘访问权限以使暂存器能在全局范围工作。"
+          }
+        }
+      }
+    },
+    "Request Full Disk Access": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求完全磁盘访问权限"
+          }
+        }
+      }
+    },
+    "Open Privacy & Security": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开隐私与安全性"
           }
         }
       }

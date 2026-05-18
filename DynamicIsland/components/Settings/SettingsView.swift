@@ -632,10 +632,10 @@ struct SettingsView: View {
                                 }
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(suggestion.title)
+                                Text(LocalizedStringKey(suggestion.title))
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.primary)
-                                Text(suggestion.tab.title)
+                                Text(LocalizedStringKey(suggestion.tab.title))
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.secondary)
                             }
@@ -2239,12 +2239,12 @@ private struct SystemControlsView: View {
         case .betterDisplay:
             if betterDisplayManager.isRunning { return "Running" }
             if betterDisplayManager.isDetected { return "Not running" }
-            return "Not detected"
+            return String(localized: "Not detected")
         case .lunar:
             if lunarManager.isConnected { return "Connected" }
             if lunarManager.isRunning { return "Running" }
             if lunarManager.isDetected { return "Not running" }
-            return "Not detected"
+            return String(localized: "Not detected")
         }
     }
 
@@ -2266,23 +2266,23 @@ private struct SystemControlsView: View {
         switch thirdPartyDDCProvider {
         case .betterDisplay:
             if !betterDisplayManager.isDetected {
-                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through Atoll's HUD."
+                return String(localized: "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through Atoll's HUD.")
             }
             if !betterDisplayManager.isRunning {
-                return "BetterDisplay is installed but not currently running. Launch BetterDisplay to enable integration."
+                return String(localized: "BetterDisplay is installed but not currently running. Launch BetterDisplay to enable integration.")
             }
-            return "BetterDisplay OSD events will be routed through Atoll's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
+            return String(localized: "BetterDisplay OSD events will be routed through Atoll's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration.")
         case .lunar:
             if !lunarManager.isDetected {
-                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through Atoll's HUD via DDC."
+                return String(localized: "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through Atoll's HUD via DDC.")
             }
             if !lunarManager.isRunning {
-                return "Lunar is installed but not currently running. Launch Lunar to enable integration."
+                return String(localized: "Lunar is installed but not currently running. Launch Lunar to enable integration.")
             }
             if lunarManager.isConnected {
-                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through Atoll's HUD; volume follows when external volume control listener is enabled below."
+                return String(localized: "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through Atoll's HUD; volume follows when external volume control listener is enabled below.")
             }
-            return "Lunar is running but the socket connection is not yet established. It will connect automatically."
+            return String(localized: "Lunar is running but the socket connection is not yet established. It will connect automatically.")
         }
     }
 
@@ -3125,14 +3125,14 @@ struct CalendarSettings: View {
 
         var title: String {
             switch self {
-            case .mins15: return "15 mins"
-            case .mins30: return "30 mins"
-            case .hour1: return "1 hour"
-            case .hours3: return "3 hours"
-            case .hours6: return "6 hours"
-            case .hours12: return "12 hours"
-            case .restOfDay: return "Rest of the day"
-            case .allTime: return "All time"
+            case .mins15: return String(localized: "15 mins")
+            case .mins30: return String(localized: "30 mins")
+            case .hour1: return String(localized: "1 hour")
+            case .hours3: return String(localized: "3 hours")
+            case .hours6: return String(localized: "6 hours")
+            case .hours12: return String(localized: "12 hours")
+            case .restOfDay: return String(localized: "Rest of the day")
+            case .allTime: return String(localized: "All time")
             }
         }
     }
@@ -3623,9 +3623,9 @@ private extension DevicesSettingsView {
         var title: String {
             switch self {
             case .symbol:
-                return "Symbol"
+                return String(localized: "Symbol")
             case .threeD:
-                return "3D"
+                return String(localized: "3D")
             }
         }
     }
@@ -4961,14 +4961,14 @@ struct LockScreenSettings: View {
 
         var title: String {
             switch self {
-            case .mins15: return "15 mins"
-            case .mins30: return "30 mins"
-            case .hour1: return "1 hour"
-            case .hours3: return "3 hours"
-            case .hours6: return "6 hours"
-            case .hours12: return "12 hours"
-            case .restOfDay: return "Rest of the day"
-            case .allTime: return "All time"
+            case .mins15: return String(localized: "15 mins")
+            case .mins30: return String(localized: "30 mins")
+            case .hour1: return String(localized: "1 hour")
+            case .hours3: return String(localized: "3 hours")
+            case .hours6: return String(localized: "6 hours")
+            case .hours12: return String(localized: "12 hours")
+            case .restOfDay: return String(localized: "Rest of the day")
+            case .allTime: return String(localized: "All time")
             }
         }
     }
@@ -4982,9 +4982,9 @@ struct LockScreenSettings: View {
 
         var title: String {
             switch self {
-            case .leading: return "Left"
-            case .center: return "Center"
-            case .trailing: return "Right"
+            case .leading: return String(localized: "Left")
+            case .center: return String(localized: "Center")
+            case .trailing: return String(localized: "Right")
             }
         }
     }
@@ -7057,11 +7057,11 @@ struct StatsSettings: View {
     private var formattedUpdateInterval: String {
         let seconds = Int(statsUpdateInterval.rounded())
         if seconds >= 60 {
-            return "60 s (1 min)"
+            return String(localized: "60 s (1 min)")
         } else if seconds == 1 {
-            return "1 s"
+            return String(localized: "1 s")
         } else {
-            return "\(seconds) s"
+            return String(localized: "\(seconds) s")
         }
     }
 
@@ -7453,16 +7453,16 @@ struct ClipboardSettings: View {
         let interval = Date().timeIntervalSince(date)
 
         if interval < 60 {
-            return "Just now"
+            return String(localized: "Just now")
         } else if interval < 3600 {
             let minutes = Int(interval / 60)
-            return "\(minutes)m ago"
+            return String(localized: "\(minutes)m ago")
         } else if interval < 86400 {
             let hours = Int(interval / 3600)
-            return "\(hours)h ago"
+            return String(localized: "\(hours)h ago")
         } else {
             let days = Int(interval / 86400)
-            return "\(days)d ago"
+            return String(localized: "\(days)d ago")
         }
     }
 }
@@ -7631,16 +7631,16 @@ struct ScreenAssistantSettings: View {
         let interval = Date().timeIntervalSince(date)
 
         if interval < 60 {
-            return "Just now"
+            return String(localized: "Just now")
         } else if interval < 3600 {
             let minutes = Int(interval / 60)
-            return "\(minutes)m ago"
+            return String(localized: "\(minutes)m ago")
         } else if interval < 86400 {
             let hours = Int(interval / 3600)
-            return "\(hours)h ago"
+            return String(localized: "\(hours)h ago")
         } else {
             let days = Int(interval / 86400)
-            return "\(days)d ago"
+            return String(localized: "\(days)d ago")
         }
     }
 }
@@ -8004,21 +8004,21 @@ struct SettingsPermissionCallout: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: icon)
+            Label(LocalizedStringKey(title), systemImage: icon)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(iconColor)
 
-            Text(message)
+            Text(LocalizedStringKey(message))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 8) {
-                Button(requestButtonTitle) {
+                Button(LocalizedStringKey(requestButtonTitle)) {
                     requestAction()
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button(openSettingsButtonTitle) {
+                Button(LocalizedStringKey(openSettingsButtonTitle)) {
                     openSettingsAction()
                 }
                 .buttonStyle(.bordered)

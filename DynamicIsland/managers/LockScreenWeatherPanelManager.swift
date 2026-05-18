@@ -49,8 +49,10 @@ final class LockScreenWeatherPanelManager {
 
     func hide() {
         guard let window else { return }
+        window.alphaValue = 0
         window.orderOut(nil)
         window.contentView = nil
+        window.alphaValue = 1
         latestFrame = nil
         lastSnapshot = nil
         lastContentSize = nil
