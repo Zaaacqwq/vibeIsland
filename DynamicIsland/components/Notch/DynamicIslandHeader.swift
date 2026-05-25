@@ -233,12 +233,13 @@ struct DynamicIslandHeader: View {
 
                 if vm.notchState == .open && showBatteryIndicator {
                     if enableMinimalisticUI {
-                        BatteryView(
+                        MinimalisticBatteryView(
                             levelBattery: batteryModel.levelBattery,
                             isPluggedIn: batteryModel.isPluggedIn,
                             isCharging: batteryModel.isCharging,
                             isInLowPowerMode: batteryModel.isInLowPowerMode,
-                            batteryWidth: 30,
+                            bodyWidth: 28,
+                            bodyHeight: 14,
                             isForNotification: false,
                             showPercentInside: showBatteryPercentInside
                         )
