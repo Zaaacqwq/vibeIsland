@@ -22,7 +22,7 @@ import AtollExtensionKit
 
 /// Shared constants for the Atoll extension XPC service.
 enum ExtensionXPCServiceConstants {
-    static let machServiceName = "com.ebullioscopic.Atoll.xpc"
+    static let machServiceName = "com.ebullioscopic.VibeIsland.xpc"
 }
 
 @MainActor
@@ -50,14 +50,14 @@ final class ExtensionXPCServiceHost: NSObject, NSXPCListenerDelegate {
         self.listener = listener
         listener.resume()
 
-        Logger.log("Started Atoll XPC listener", category: .extensions)
+        Logger.log("Started VibeIsland XPC listener", category: .extensions)
     }
 
     func stop() {
         listener?.invalidate()
         listener = nil
         clientContexts.removeAll()
-        Logger.log("Stopped Atoll XPC listener", category: .extensions)
+        Logger.log("Stopped VibeIsland XPC listener", category: .extensions)
     }
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {

@@ -951,7 +951,7 @@ final class FullScreenArtworkWindowManager: ObservableObject {
             let prepared = await Self.prepareCustomLiveWallpaperAsset(
                 from: videoURL,
                 assetID: assetID,
-                displayName: displayName.isEmpty ? "Atoll Canvas" : displayName,
+                displayName: displayName.isEmpty ? "VibeIsland Canvas" : displayName,
                 manifestURL: manifestURL,
                 videosDirectoryURL: videosDirectoryURL,
                 thumbnailsDirectoryURL: thumbnailsDirectoryURL,

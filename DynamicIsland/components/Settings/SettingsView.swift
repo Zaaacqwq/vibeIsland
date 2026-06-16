@@ -2276,21 +2276,21 @@ private struct ExternalDisplayIntegrationsSection: View {
         switch thirdPartyDDCProvider {
         case .betterDisplay:
             if !betterDisplayManager.isDetected {
-                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through Atoll's HUD."
+                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through VibeIsland's HUD."
             }
             if !betterDisplayManager.isRunning {
                 return "BetterDisplay is installed but not currently running. Launch BetterDisplay to enable integration."
             }
-            return "BetterDisplay OSD events will be routed through Atoll's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
+            return "BetterDisplay OSD events will be routed through VibeIsland's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
         case .lunar:
             if !lunarManager.isDetected {
-                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through Atoll's HUD via DDC."
+                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through VibeIsland's HUD via DDC."
             }
             if !lunarManager.isRunning {
                 return "Lunar is installed but not currently running. Launch Lunar to enable integration."
             }
             if lunarManager.isConnected {
-                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through Atoll's HUD; volume follows when external volume control listener is enabled below."
+                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through VibeIsland's HUD; volume follows when external volume control listener is enabled below."
             }
             return "Lunar is running but the socket connection is not yet established. It will connect automatically."
         }
@@ -2400,8 +2400,8 @@ private struct ExternalDisplayIntegrationsSection: View {
 
                     Text(
                         enableExternalVolumeControlListener
-                        ? "Atoll's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
-                        : "Atoll keeps native volume key interception. External provider volume payloads are ignored while this is off."
+                        ? "VibeIsland's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
+                        : "VibeIsland keeps native volume key interception. External provider volume payloads are ignored while this is off."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -2426,13 +2426,13 @@ private struct ExternalDisplayIntegrationsSection: View {
                     }
                     .buttonStyle(.link)
                 } else {
-                    Text("Enable to route BetterDisplay or Lunar display adjustments through Atoll's active HUD style.")
+                    Text("Enable to route BetterDisplay or Lunar display adjustments through VibeIsland's active HUD style.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } footer: {
                 if enableThirdPartyDDCIntegration {
-                    Text("Atoll always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled.")
+                    Text("VibeIsland always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled.")
                         .foregroundStyle(.secondary)
                         .font(.caption)
                 }
@@ -3031,7 +3031,7 @@ struct Media: View {
                     }
                     .disabled(!enableLockScreenMediaWidget || !lockScreenMusicFullscreenArtworkEnabled)
                     .settingsHighlight(id: highlightID("Keep album art visible during fullscreen artwork"))
-                    Text("Right-click the album art on the lock screen to set it as the wallpaper. Right-click again or click the background to restore the original wallpaper. If a canvas is available, Atoll can also keep the same album art + player layout on top of the live canvas.")
+                    Text("Right-click the album art on the lock screen to set it as the wallpaper. Right-click again or click the background to restore the original wallpaper. If a canvas is available, VibeIsland can also keep the same album art + player layout on top of the live canvas.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -5166,7 +5166,7 @@ struct LockScreenSettings: View {
                     }
                     .disabled(!enableLockScreenMediaWidget || !lockScreenMusicFullscreenArtworkEnabled)
                     .settingsHighlight(id: highlightID("Keep album art visible during fullscreen artwork"))
-                    Text("Right-click the album art on the lock screen to set it as the wallpaper. Right-click again or click the background to restore the original wallpaper. If a canvas is available, Atoll can also keep the same album art + player layout on top of the live canvas.")
+                    Text("Right-click the album art on the lock screen to set it as the wallpaper. Right-click again or click the background to restore the original wallpaper. If a canvas is available, VibeIsland can also keep the same album art + player layout on top of the live canvas.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -8144,7 +8144,7 @@ struct NotesSettingsView: View {
                 } header: {
                     Text("Apple Notes")
                 } footer: {
-                    Text("Two-way sync with the macOS Notes app. Notes created in Atoll appear in the Atoll folder in Notes, and your existing Apple Notes are imported into the notch. Grant Automation permission for Notes when prompted.")
+                    Text("Two-way sync with the macOS Notes app. Notes created in VibeIsland appear in the VibeIsland folder in Notes, and your existing Apple Notes are imported into the notch. Grant Automation permission for Notes when prompted.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

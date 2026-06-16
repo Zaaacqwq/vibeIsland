@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import AtollAgentKit
+@testable import VibeIslandAgentKit
 import OpenIslandCore
 
 private func makeSession(
@@ -18,14 +18,14 @@ private func makeSession(
     )
 }
 
-@Suite("AtollAgentConfiguration")
-struct AtollAgentConfigurationTests {
+@Suite("VibeIslandAgentConfiguration")
+struct VibeIslandAgentConfigurationTests {
     @Test("Default socket and binary live under an Atoll namespace, not OpenIsland")
     func namespacedDefaults() {
-        let config = AtollAgentConfiguration()
-        #expect(config.socketURL.path.contains("/Atoll/"))
+        let config = VibeIslandAgentConfiguration()
+        #expect(config.socketURL.path.contains("/VibeIsland/"))
         #expect(config.socketURL.lastPathComponent == "agent-bridge.sock")
-        #expect(config.managedBinaryURL.path.contains("/Atoll/"))
+        #expect(config.managedBinaryURL.path.contains("/VibeIsland/"))
         #expect(!config.socketURL.path.contains("/OpenIsland/"))
     }
 
@@ -34,15 +34,15 @@ struct AtollAgentConfigurationTests {
         // The hooks CLI maps --source to HookSource to choose the Claude vs
         // Codex decoder; an unknown value silently falls back to .codex and
         // breaks Claude tracking. Lock the functional value in.
-        #expect(AtollAgentConfiguration.hookSource == "claude")
+        #expect(VibeIslandAgentConfiguration.hookSource == "claude")
     }
 
     @Test("Hook command overrides the bridge socket and routes to the Claude decoder")
     func hookCommandCarriesSocketOverride() {
-        let socket = URL(fileURLWithPath: "/tmp/atoll-test/agent-bridge.sock")
-        let config = AtollAgentConfiguration(
+        let socket = URL(fileURLWithPath: "/tmp/vibeisland-test/agent-bridge.sock")
+        let config = VibeIslandAgentConfiguration(
             socketURL: socket,
-            managedBinaryURL: URL(fileURLWithPath: "/tmp/atoll-test/AtollAgentHooks")
+            managedBinaryURL: URL(fileURLWithPath: "/tmp/vibeisland-test/VibeIslandAgentHooks")
         )
         let command = config.hookCommand(binaryPath: "/Applications/Atoll.app/Contents/Helpers/OpenIslandHooks")
 
@@ -55,7 +55,7 @@ struct AtollAgentConfigurationTests {
     @Test("Socket paths containing spaces stay shell-safe")
     func hookCommandQuotesSocketPath() {
         let socket = URL(fileURLWithPath: "/Users/dev/Library/Application Support/Atoll/agent-bridge.sock")
-        let config = AtollAgentConfiguration(socketURL: socket)
+        let config = VibeIslandAgentConfiguration(socketURL: socket)
         let command = config.hookCommand(binaryPath: "/bin/hooks")
         // The space-bearing path must be single-quoted so /bin/sh keeps it as one token.
         #expect(command.contains("'/Users/dev/Library/Application Support/Atoll/agent-bridge.sock'"))

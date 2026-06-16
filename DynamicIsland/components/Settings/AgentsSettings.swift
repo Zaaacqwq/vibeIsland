@@ -82,7 +82,7 @@ struct AgentsSettings: View {
                 } header: {
                     Text("Claude Code")
                 } footer: {
-                    Text("Installing writes Atoll-namespaced hooks into ~/.claude/settings.json. Hooks fail open — if Atoll isn't running, Claude is unaffected.")
+                    Text("Installing writes VibeIsland-namespaced hooks into ~/.claude/settings.json. Hooks fail open — if VibeIsland isn't running, Claude is unaffected.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

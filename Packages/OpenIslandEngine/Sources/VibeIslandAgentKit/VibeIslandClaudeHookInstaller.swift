@@ -9,13 +9,13 @@ import OpenIslandCore
 /// `status` and `uninstall` delegate to the engine's
 /// `ClaudeHookInstallationManager`, which keys off the manifest's stored
 /// command — so removal matches whatever this installer wrote.
-public struct AtollClaudeHookInstaller {
-    private let configuration: AtollAgentConfiguration
+public struct VibeIslandClaudeHookInstaller {
+    private let configuration: VibeIslandAgentConfiguration
     private let claudeDirectory: URL
     private let fileManager: FileManager
 
     public init(
-        configuration: AtollAgentConfiguration = AtollAgentConfiguration(),
+        configuration: VibeIslandAgentConfiguration = VibeIslandAgentConfiguration(),
         claudeDirectory: URL = ClaudeConfigDirectory.resolved(),
         fileManager: FileManager = .default
     ) {
@@ -28,7 +28,7 @@ public struct AtollClaudeHookInstaller {
         ClaudeHookInstallationManager(
             claudeDirectory: claudeDirectory,
             managedHooksBinaryURL: configuration.managedBinaryURL,
-            hookSource: AtollAgentConfiguration.hookSource,
+            hookSource: VibeIslandAgentConfiguration.hookSource,
             fileManager: fileManager
         )
     }

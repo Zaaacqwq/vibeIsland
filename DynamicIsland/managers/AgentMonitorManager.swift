@@ -21,7 +21,7 @@ import AppKit
 import Combine
 import Foundation
 import OpenIslandCore
-import AtollAgentKit
+import VibeIslandAgentKit
 
 /// Bridges Open Island's agent-monitoring engine into Atoll's Combine /
 /// `ObservableObject` world.
@@ -74,7 +74,7 @@ final class AgentMonitorManager: ObservableObject {
         return .idle
     }
 
-    private let configuration = AtollAgentConfiguration()
+    private let configuration = VibeIslandAgentConfiguration()
     private let bridgeServer: BridgeServer
     private var bridgeClient: LocalBridgeClient?
     private var bridgeTask: Task<Void, Never>?
@@ -191,7 +191,7 @@ final class AgentMonitorManager: ObservableObject {
 
         let resolution: PermissionResolution = approved
             ? .allowOnce()
-            : .deny(message: "Permission denied in Atoll.", interrupt: false)
+            : .deny(message: "Permission denied in VibeIsland.", interrupt: false)
 
         state.resolvePermission(sessionID: sessionID, resolution: resolution)
         bridgeServer.updateStateSnapshot(state)
@@ -243,7 +243,7 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     func refreshHookStatus() {
-        let installer = AtollClaudeHookInstaller(configuration: configuration)
+        let installer = VibeIslandClaudeHookInstaller(configuration: configuration)
         Task.detached {
             let status: HookStatus
             do {
@@ -257,7 +257,7 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     func installHooks() {
-        let installer = AtollClaudeHookInstaller(configuration: configuration)
+        let installer = VibeIslandClaudeHookInstaller(configuration: configuration)
         let binaryURL = bundledHooksBinaryURL
         Task.detached {
             var message: String?
@@ -276,7 +276,7 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     func uninstallHooks() {
-        let installer = AtollClaudeHookInstaller(configuration: configuration)
+        let installer = VibeIslandClaudeHookInstaller(configuration: configuration)
         Task.detached {
             var message: String?
             do {
