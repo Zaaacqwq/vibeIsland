@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		473E0E64537F02B3D0280808 /* OpenIslandCore in Frameworks */ = {isa = PBXBuildFile; productRef = 751D122FB2749407D65EA317 /* OpenIslandCore */; };
 		7E1ADF1D2EA209B1001DA867 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = 7E61181E2E24071E0050006C /* SkyLightWindow */; };
 		7E288D122F1659EF0020C117 /* AtollExtensionKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7E288D112F1659EF0020C117 /* AtollExtensionKit */; };
 		7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 14D032192C68F32E0096E6A1 /* LaunchAtLogin */; };
@@ -28,17 +29,18 @@
 		7EE1D73F2E6B1E1200997219 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EE1D73E2E6B1E1200997219 /* IOKit.framework */; };
 		7EF10C122F817ECF004229A0 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EF10C112F817ECF004229A0 /* Accelerate.framework */; };
 		7EF19C172F577040005B9929 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7EF19C162F577040005B9929 /* SwiftTerm */; };
+		C8EAB2459CA668EE125B0BAB /* AtollAgentKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5A3ACE8DF5DFC55301948002 /* AtollAgentKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		7EA69B1B2F5AE13500EB2D16 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 8;
+			buildActionMask = 2147483647;
 			dstPath = Contents/Helpers;
 			dstSubfolderSpec = 1;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -64,6 +66,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Helpers/NowPlayingTestClient,
+				Helpers/OpenIslandHooks,
 			);
 			target = F54406E62CD4987A00C7AFD9 /* DynamicIsland */;
 		};
@@ -77,14 +80,16 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "Copy Files" phase from "DynamicIsland" target */ = {
+		7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "" build phase */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
 				Helpers/NowPlayingTestClient = (CodeSignOnCopy, );
+				Helpers/OpenIslandHooks = (CodeSignOnCopy, );
 			};
 			buildPhase = 7EA69B1B2F5AE13500EB2D16 /* CopyFiles */;
 			membershipExceptions = (
 				Helpers/NowPlayingTestClient,
+				Helpers/OpenIslandHooks,
 			);
 		};
 /* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
@@ -94,7 +99,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				7EA69B1E2F5AE61200EB2D16 /* Exceptions for "Contents" folder in "DynamicIsland" target */,
-				7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "Copy Files" phase from "DynamicIsland" target */,
+				7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "" build phase */,
 			);
 			path = Contents;
 			sourceTree = "<group>";
@@ -128,6 +133,8 @@
 				7E6118152E24071E0050006C /* Sparkle in Frameworks */,
 				7E288D122F1659EF0020C117 /* AtollExtensionKit in Frameworks */,
 				7E6118142E24071E0050006C /* LaunchAtLogin in Frameworks */,
+				473E0E64537F02B3D0280808 /* OpenIslandCore in Frameworks */,
+				C8EAB2459CA668EE125B0BAB /* AtollAgentKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,6 +229,8 @@
 				7E61181E2E24071E0050006C /* SkyLightWindow */,
 				7E288D112F1659EF0020C117 /* AtollExtensionKit */,
 				7EF19C162F577040005B9929 /* SwiftTerm */,
+				751D122FB2749407D65EA317 /* OpenIslandCore */,
+				5A3ACE8DF5DFC55301948002 /* AtollAgentKit */,
 			);
 			productName = DynamicIsland;
 			productReference = F54406E72CD4987A00C7AFD9 /* Atoll.app */;
@@ -270,6 +279,7 @@
 				7E09D5962EB7B497005AF41D /* XCRemoteSwiftPackageReference "open-meteo" */,
 				7E288D102F1659EF0020C117 /* XCRemoteSwiftPackageReference "AtollExtensionKit" */,
 				7EF19C152F577040005B9929 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F54406E82CD4987A00C7AFD9 /* Products */;
@@ -616,6 +626,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/OpenIslandEngine;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		146BC4352D366E9B0047C66A /* XCRemoteSwiftPackageReference "MacroVisionKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -738,6 +755,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14D0321B2C68F3350096E6A1 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		5A3ACE8DF5DFC55301948002 /* AtollAgentKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */;
+			productName = AtollAgentKit;
+		};
+		751D122FB2749407D65EA317 /* OpenIslandCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */;
+			productName = OpenIslandCore;
 		};
 		7E288D112F1659EF0020C117 /* AtollExtensionKit */ = {
 			isa = XCSwiftPackageProductDependency;
