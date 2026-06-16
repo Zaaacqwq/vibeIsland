@@ -1,7 +1,28 @@
-Atoll (DynamicIsland) - NOTICE
+VibeIsland — NOTICE
 
-This product includes software derived from the boring.notch project,
-modified and adapted for Atoll (DynamicIsland). The boring.notch project
-is licensed under the GNU General Public License v3.0.
+Copyright (C) 2026 Zaaacqwq and VibeIsland contributors.
+Licensed under the GNU General Public License v3.0. See the LICENSE file for
+the full GPL v3 text.
 
-See the LICENSE file for the full GPL v3 text.
+VibeIsland is a derivative work. It is built upon and includes software from
+the following GPL v3 projects, whose copyrights are retained by their
+respective authors and contributors:
+
+- Atoll (DynamicIsland) — https://github.com/Ebullioscopic/Atoll
+  Copyright (C) 2024-2026 Atoll Contributors. Licensed under GPL v3.
+  The VibeIsland application is derived from Atoll. Atoll is itself derived
+  from the boring.notch project.
+
+- boring.notch
+  The original macOS notch project from which Atoll is derived. GPL v3.
+
+- Open Island / Open Vibe Island — https://github.com/Octane0411/open-vibe-island
+  Copyright (C) Octane0411 and Open Island contributors. Licensed under GPL v3.
+  The AI coding-agent monitoring engine (OpenIslandCore and the OpenIslandHooks
+  CLI, vendored under Packages/OpenIslandEngine) is taken from this project.
+
+In accordance with the GNU GPL v3, this software remains licensed under GPL v3,
+and the above copyright notices and attributions are retained.
+
+All trademarks, service marks, and logos are the property of their respective
+owners and are used for identification purposes only.

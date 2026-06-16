@@ -17,8 +17,8 @@ let package = Package(
             targets: ["OpenIslandCore"]
         ),
         .library(
-            name: "AtollAgentKit",
-            targets: ["AtollAgentKit"]
+            name: "VibeIslandAgentKit",
+            targets: ["VibeIslandAgentKit"]
         ),
         .executable(
             name: "OpenIslandHooks",
@@ -33,7 +33,7 @@ let package = Package(
         // session filtering, and hook installation. Keeps the upstream
         // OpenIslandCore sources untouched for easy updates.
         .target(
-            name: "AtollAgentKit",
+            name: "VibeIslandAgentKit",
             dependencies: ["OpenIslandCore"]
         ),
         .executableTarget(
@@ -41,8 +41,8 @@ let package = Package(
             dependencies: ["OpenIslandCore"]
         ),
         .testTarget(
-            name: "AtollAgentKitTests",
-            dependencies: ["AtollAgentKit", "OpenIslandCore"]
+            name: "VibeIslandAgentKitTests",
+            dependencies: ["VibeIslandAgentKit", "OpenIslandCore"]
         ),
     ]
 )

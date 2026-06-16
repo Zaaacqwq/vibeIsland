@@ -9,7 +9,7 @@ import OpenIslandCore
 /// co-installed Open Island, every externally-visible identity — the bridge
 /// socket, the managed hooks binary, and the installed hook command — is
 /// rebased under an `Atoll` namespace.
-public struct AtollAgentConfiguration: Sendable {
+public struct VibeIslandAgentConfiguration: Sendable {
     /// `--source` value passed to the hooks CLI. This is a **routing key** the
     /// CLI maps to `HookSource` (it picks the Claude vs Codex decoder from it),
     /// so it must be the functional value `claude` — not a custom label.
@@ -26,30 +26,30 @@ public struct AtollAgentConfiguration: Sendable {
     public let managedBinaryURL: URL
 
     public init(
-        socketURL: URL = AtollAgentConfiguration.defaultSocketURL,
-        managedBinaryURL: URL = AtollAgentConfiguration.defaultManagedBinaryURL
+        socketURL: URL = VibeIslandAgentConfiguration.defaultSocketURL,
+        managedBinaryURL: URL = VibeIslandAgentConfiguration.defaultManagedBinaryURL
     ) {
         self.socketURL = socketURL
         self.managedBinaryURL = managedBinaryURL
     }
 
-    /// `~/Library/Application Support/Atoll/agent-bridge.sock`
+    /// `~/Library/Application Support/VibeIsland/agent-bridge.sock`
     public static var defaultSocketURL: URL {
-        atollSupportDirectory().appendingPathComponent("agent-bridge.sock")
+        vibeIslandSupportDirectory().appendingPathComponent("agent-bridge.sock")
     }
 
-    /// `~/Library/Application Support/Atoll/AtollAgentHooks`
+    /// `~/Library/Application Support/VibeIsland/VibeIslandAgentHooks`
     public static var defaultManagedBinaryURL: URL {
-        atollSupportDirectory().appendingPathComponent("AtollAgentHooks")
+        vibeIslandSupportDirectory().appendingPathComponent("VibeIslandAgentHooks")
     }
 
-    private static func atollSupportDirectory() -> URL {
+    private static func vibeIslandSupportDirectory() -> URL {
         let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first
             ?? URL(fileURLWithPath: NSHomeDirectory())
                 .appendingPathComponent("Library/Application Support")
-        return base.appendingPathComponent("Atoll")
+        return base.appendingPathComponent("VibeIsland")
     }
 
     /// Hook command written into `~/.claude/settings.json`. Prefixes the bridge

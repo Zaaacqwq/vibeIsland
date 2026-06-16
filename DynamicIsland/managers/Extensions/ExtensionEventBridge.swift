@@ -27,7 +27,7 @@ final class ExtensionEventBridge {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let processIdentifier = ProcessInfo.processInfo.processIdentifier
-    private let ioQueue = DispatchQueue(label: "com.ebullioscopic.Atoll.extensions.bridge", qos: .utility)
+    private let ioQueue = DispatchQueue(label: "com.ebullioscopic.VibeIsland.extensions.bridge", qos: .utility)
 
     private init() {}
 
@@ -157,11 +157,11 @@ final class ExtensionEventBridge {
         var notificationName: Notification.Name {
             switch self {
             case .liveActivities:
-                return Notification.Name("com.ebullioscopic.Atoll.extensions.liveActivitySnapshot")
+                return Notification.Name("com.ebullioscopic.VibeIsland.extensions.liveActivitySnapshot")
             case .lockScreenWidgets:
-                return Notification.Name("com.ebullioscopic.Atoll.extensions.lockScreenWidgetSnapshot")
+                return Notification.Name("com.ebullioscopic.VibeIsland.extensions.lockScreenWidgetSnapshot")
             case .notchExperiences:
-                return Notification.Name("com.ebullioscopic.Atoll.extensions.notchExperienceSnapshot")
+                return Notification.Name("com.ebullioscopic.VibeIsland.extensions.notchExperienceSnapshot")
             }
         }
 

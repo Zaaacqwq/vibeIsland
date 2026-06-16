@@ -31,7 +31,7 @@ final class ExtensionRPCServer {
     private var connections: [UUID: RPCClientConnection] = [:]
     private var shelfSubscribers: Set<String> = [] // bundleIdentifiers subscribed to shelf events
     private let port: UInt16 = 9020
-    private let queue = DispatchQueue(label: "com.ebullioscopic.Atoll.rpc.server", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.ebullioscopic.VibeIsland.rpc.server", qos: .userInitiated)
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
@@ -157,7 +157,7 @@ final class ExtensionRPCServer {
     private func handleListenerState(_ state: NWListener.State) {
         switch state {
         case .ready:
-            Logger.log("Started Atoll RPC WebSocket server on port \(port)", category: .extensions)
+            Logger.log("Started VibeIsland RPC WebSocket server on port \(port)", category: .extensions)
         case .failed(let error):
             Logger.log("RPC server failed: \(error.localizedDescription)", category: .extensions)
             // Attempt restart after delay

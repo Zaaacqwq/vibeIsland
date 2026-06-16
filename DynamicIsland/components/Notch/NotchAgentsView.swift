@@ -94,7 +94,7 @@ struct NotchAgentsView: View {
                 Text("Set up Claude Code")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
-                Text("Install hooks so Atoll can track your Claude sessions.")
+                Text("Install hooks so VibeIsland can track your Claude sessions.")
                     .font(.caption2)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.gray)
