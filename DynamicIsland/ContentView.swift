@@ -55,7 +55,8 @@ struct ContentView: View {
     @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
-    
+    @ObservedObject var agentMonitor = AgentMonitorManager.shared
+
     @Default(.enableStatsFeature) var enableStatsFeature
     @Default(.showCpuGraph) var showCpuGraph
     @Default(.showMemoryGraph) var showMemoryGraph
@@ -943,6 +944,10 @@ struct ContentView: View {
                             .transition(closedLiveActivitySwapTransition)
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
                         PrivacyLiveActivity()
+                      } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && Defaults[.enableAgentMonitoring] && Defaults[.showAgentLiveActivity] && agentMonitor.hasClosedActivity && !vm.hideOnClosed {
+                          AgentLiveActivity()
+                              .id("agent-live-activity")
+                              .transition(closedLiveActivitySwapTransition)
                       } else if let extensionPayload = extensionStandalonePayload {
                           let layout = extensionStandaloneLayout(
                               for: extensionPayload,
@@ -1079,6 +1084,8 @@ struct ContentView: View {
                                 NotchNotesView()
                             case .terminal:
                                 NotchTerminalView()
+                            case .agents:
+                                NotchAgentsView()
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)

@@ -592,6 +592,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Setup Privacy Indicator Manager (camera and microphone monitoring)
         PrivacyIndicatorManager.shared.startMonitoring()
+
+        // Setup Agent Monitor (Open Island integration) — starts the local
+        // bridge that listens for Claude Code hook events.
+        if Defaults[.enableAgentMonitoring] {
+            AgentMonitorManager.shared.startIfNeeded()
+        }
+        Defaults.publisher(.enableAgentMonitoring, options: [])
+            .sink { change in
+                if change.newValue {
+                    AgentMonitorManager.shared.startIfNeeded()
+                } else {
+                    AgentMonitorManager.shared.stop()
+                }
+            }
+            .store(in: &cancellables)
         
         // Setup Real-time Audio Waveform capture if enabled
         if Defaults[.enableRealTimeWaveform] {

@@ -66,6 +66,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case shortcuts
     case notes
     case terminal
+    case agents
     case about
 
     var id: String { rawValue }
@@ -79,7 +80,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .timer, .calendar, .notes:                                      return .productivity
         case .clipboard, .screenAssistant, .colorPicker, .shelf,
              .downloads, .shortcuts:                                         return .utilities
-        case .stats, .terminal:                                              return .developer
+        case .stats, .terminal, .agents:                                     return .developer
         case .extensions:                                                    return .integrations
         case .about:                                                         return .info
         }
@@ -107,6 +108,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return String(localized: "Shortcuts")
         case .notes: return String(localized: "Notes")
         case .terminal: return String(localized: "Terminal")
+        case .agents: return String(localized: "Agents")
         case .about: return String(localized: "About")
         }
     }
@@ -133,6 +135,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return "keyboard"
         case .notes: return "note.text"
         case .terminal: return "apple.terminal"
+        case .agents: return "sparkles"
         case .about: return "info.circle"
         }
     }
@@ -159,6 +162,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return .orange
         case .notes: return Color(red: 0.979, green: 0.716, blue: 0.153, opacity: 1.000)
         case .terminal: return Color(red: 0.2, green: 0.8, blue: 0.4)
+        case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .about: return .secondary
         }
     }
@@ -507,6 +511,7 @@ struct SettingsView: View {
             // Developer
             .stats,
             .terminal,
+            .agents,
             // Integrations
             .extensions,
             // Info
@@ -1019,6 +1024,10 @@ struct SettingsView: View {
         case .terminal:
             SettingsForm(tab: .terminal) {
                 TerminalSettings()
+            }
+        case .agents:
+            SettingsForm(tab: .agents) {
+                AgentsSettings()
             }
         case .about:
             if let controller = updaterController {
