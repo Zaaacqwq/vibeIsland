@@ -213,24 +213,23 @@ final class AgentMonitorManager: ObservableObject {
         }
     }
 
-    // MARK: - Jump-back (minimal: activate the originating terminal app)
+    // MARK: - Jump-back
 
+    private let jumpService = TerminalJumpService()
+
+    /// Focus the terminal window/tab/pane that owns the agent session, using
+    /// the vendored Open Island jump service (AppleScript + TTY/tmux targeting
+    /// for Terminal.app, iTerm, Ghostty, Warp, WezTerm, VS Code, JetBrains, …).
     func jumpBack(to session: AgentSession) {
-        guard let target = session.jumpTarget else { return }
-        let appName = target.terminalApp
-        let workspace = NSWorkspace.shared
-        // Match a running app by localized name (e.g. "Ghostty", "Terminal").
-        let trimmed = appName.replacingOccurrences(of: ".app", with: "")
-        if let running = workspace.runningApplications.first(where: {
-            ($0.localizedName ?? "").caseInsensitiveCompare(trimmed) == .orderedSame
-        }) {
-            running.activate(options: [.activateAllWindows])
+        guard let target = session.jumpTarget else {
+            lastErrorMessage = "No terminal location is known for this session yet."
             return
         }
-        // Fall back to launching the app by name if it isn't running.
-        if let url = workspace.urlForApplication(withBundleIdentifier: appName)
-            ?? NSWorkspace.shared.fullPath(forApplication: trimmed).map(URL.init(fileURLWithPath:)) {
-            workspace.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        do {
+            _ = try jumpService.jump(to: target)
+            lastErrorMessage = nil
+        } catch {
+            lastErrorMessage = "Couldn't jump to the terminal: \(error.localizedDescription)"
         }
     }
 
