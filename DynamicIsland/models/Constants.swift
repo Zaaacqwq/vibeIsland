@@ -1215,6 +1215,13 @@ extension Defaults.Keys {
     )
     static let osdIconColorStyle = Key<OSDIconColorStyle>("osdIconColorStyle", default: .white)
     
+    // MARK: Agent Monitoring (Open Island integration)
+    /// Master switch for the AI coding-agent monitor (Claude Code sessions in
+    /// the notch). Off by default — turning it on starts the local bridge.
+    static let enableAgentMonitoring = Key<Bool>("enableAgentMonitoring", default: false)
+    /// Whether agent status / permission prompts appear as a closed-pill live activity.
+    static let showAgentLiveActivity = Key<Bool>("showAgentLiveActivity", default: true)
+
     // MARK: Screen Recording Detection Feature
     static let enableScreenRecordingDetection = Key<Bool>("enableScreenRecordingDetection", default: true)
     static let showRecordingIndicator = Key<Bool>("showRecordingIndicator", default: true)
