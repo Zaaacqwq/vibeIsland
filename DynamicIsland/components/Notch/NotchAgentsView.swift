@@ -163,6 +163,15 @@ private struct AgentSessionRow: View {
                         .foregroundStyle(halo.color)
                 }
                 Spacer()
+                Button {
+                    agentMonitor.openInTerminal(session)
+                } label: {
+                    Image(systemName: "terminal.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.gray)
+                }
+                .buttonStyle(.plain)
+                .help("Open & resume this session in the notch terminal")
                 if session.jumpTarget != nil {
                     Button {
                         agentMonitor.jumpBack(to: session)
@@ -172,7 +181,7 @@ private struct AgentSessionRow: View {
                             .foregroundStyle(.gray)
                     }
                     .buttonStyle(.plain)
-                    .help("Jump back to terminal")
+                    .help("Jump back to the external terminal")
                 }
             }
 
