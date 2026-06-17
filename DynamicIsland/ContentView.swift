@@ -888,6 +888,8 @@ struct ContentView: View {
                               return false
                           case .shelf:
                               return false
+                          case .agent:
+                              return false
                           }
                       }()
                       let canShowMusicDuringExpansion = !isCurrentScreenExpansionVisible
@@ -1293,6 +1295,13 @@ struct ContentView: View {
     }
 
     private func resolveMusicSecondaryLiveActivity(isMusicPairingEligible: Bool = true) -> MusicSecondaryLiveActivity? {
+        // When Claude is active, the agent halo pairs with music on the right
+        // so both surface at once (music left, Claude right).
+        if Defaults[.enableAgentMonitoring], Defaults[.showAgentLiveActivity],
+           agentMonitor.hasClosedActivity, let halo = agentMonitor.aggregateHaloState {
+            return .agent(halo)
+        }
+
         if coordinator.timerLiveActivityEnabled && timerManager.isTimerActive {
             return .timer
         }
@@ -1344,6 +1353,8 @@ struct ContentView: View {
             let maxWidth = baseWidth + centerBaseWidth * 0.6
             return ExtensionLayoutMetrics.trailingWidth(for: payload, baseWidth: baseWidth, maxWidth: maxWidth)
         case .shelf:
+            return baseWidth
+        case .agent:
             return baseWidth
         }
     }
@@ -1451,6 +1462,8 @@ struct ContentView: View {
                     Image(systemName: "tray.and.arrow.down.fill")
                         .font(.system(size: badgeSize * 0.50, weight: .semibold))
                         .foregroundStyle(.white)
+                case .agent(let state):
+                    HaloRingView(state: state, size: badgeSize * 0.92)
                 }
             }
             .frame(width: badgeSize, height: badgeSize)
@@ -1517,6 +1530,9 @@ struct ContentView: View {
                 .contentTransition(.numericText(countsDown: false))
                 .animation(.smooth(duration: 0.3), value: count)
                 .frame(alignment: .center)
+        case .agent(let state):
+            HaloRingView(state: state, size: max(10, notchHeight - 12))
+                .frame(maxWidth: .infinity, alignment: .center)
         case .none:
             spectrumView(
                 forceSpectrum: false,
@@ -2644,9 +2660,12 @@ private enum MusicSecondaryLiveActivity: Equatable {
     case capsLock(showLabel: Bool)
     case extensionPayload(ExtensionLiveActivityPayload)
     case shelf(count: Int)
+    case agent(HaloState)
 
     var id: String {
         switch self {
+        case .agent:
+            return "agent"
         case .timer:
             return "timer"
         case .reminder(let entry):
