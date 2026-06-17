@@ -1221,6 +1221,8 @@ extension Defaults.Keys {
     static let enableAgentMonitoring = Key<Bool>("enableAgentMonitoring", default: false)
     /// Whether agent status / permission prompts appear as a closed-pill live activity.
     static let showAgentLiveActivity = Key<Bool>("showAgentLiveActivity", default: true)
+    /// Play a sound when a Claude session finishes a turn (Stop).
+    static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
 
     // MARK: Screen Recording Detection Feature
     static let enableScreenRecordingDetection = Key<Bool>("enableScreenRecordingDetection", default: true)

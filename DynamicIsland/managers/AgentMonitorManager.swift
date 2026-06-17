@@ -18,7 +18,9 @@
  */
 
 import AppKit
+import AVFoundation
 import Combine
+import Defaults
 import Foundation
 import OpenIslandCore
 import VibeIslandAgentKit
@@ -218,10 +220,29 @@ final class AgentMonitorManager: ObservableObject {
         case let .questionAsked(question):
             haloActivity[question.sessionID] = .inputNeeded
         case let .sessionCompleted(completed):
+            let wasCompleted = haloActivity[completed.sessionID] == .completed
             haloActivity[completed.sessionID] = .completed
+            if !wasCompleted { playCompletionSoundIfEnabled() }
         default:
             break
         }
+    }
+
+    // MARK: - Completion sound
+
+    private var completionSoundPlayer: AVAudioPlayer?
+
+    /// Plays a ding when Claude finishes a turn. Lazily loads the bundled
+    /// sound and reuses the player across plays.
+    private func playCompletionSoundIfEnabled() {
+        guard Defaults[.agentCompletionSoundEnabled] else { return }
+        if completionSoundPlayer == nil {
+            guard let url = Bundle.main.url(forResource: "agent-complete", withExtension: "mp3") else { return }
+            completionSoundPlayer = try? AVAudioPlayer(contentsOf: url)
+            completionSoundPlayer?.prepareToPlay()
+        }
+        completionSoundPlayer?.currentTime = 0
+        completionSoundPlayer?.play()
     }
 
     /// The halo state for a session: phase is authoritative for attention and
