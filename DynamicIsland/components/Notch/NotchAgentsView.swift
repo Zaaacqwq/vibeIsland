@@ -49,12 +49,38 @@ struct NotchAgentsView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             Spacer()
-            if !agentMonitor.isBridgeReady {
+            if let usage = agentMonitor.usage, !usage.isEmpty {
+                usageBadges(usage)
+            } else if !agentMonitor.isBridgeReady {
                 Text("Connecting…")
                     .font(.caption2)
                     .foregroundStyle(.gray)
             }
         }
+    }
+
+    @ViewBuilder
+    private func usageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
+        HStack(spacing: 6) {
+            if let five = usage.fiveHour {
+                usageBadge(title: "5h", window: five)
+            }
+            if let week = usage.sevenDay {
+                usageBadge(title: "7d", window: week)
+            }
+        }
+    }
+
+    private func usageBadge(title: String, window: ClaudeUsageWindow) -> some View {
+        let warn = window.usedPercentage >= 80
+        return Text("\(title) \(window.roundedUsedPercentage)%")
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(warn ? .orange : .gray)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.white.opacity(0.07)))
+            .help("Claude \(title == "5h" ? "5-hour" : "7-day") limit used")
     }
 
     @ViewBuilder
