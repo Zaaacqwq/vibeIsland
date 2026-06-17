@@ -723,7 +723,13 @@ struct NotchHomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 
-                if Defaults[.showCalendar] {
+                if Defaults[.enableAgentMonitoring] {
+                    // Agent monitor takes the home view's secondary panel;
+                    // the calendar moves to its own tab.
+                    NotchAgentsView()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .environmentObject(vm)
+                } else if Defaults[.showCalendar] {
                     Group {
                         if shouldShowMusicPlayer {
                             CalendarView()
