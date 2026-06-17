@@ -25,6 +25,12 @@ import Foundation
 import OpenIslandCore
 import VibeIslandAgentKit
 
+extension Notification.Name {
+    /// Posted when a Claude session finishes a turn. `AppDelegate` listens and,
+    /// if enabled, expands the notch to the Agents tab. `object` is the session ID.
+    static let vibeIslandAgentDidComplete = Notification.Name("vibeIslandAgentDidComplete")
+}
+
 /// Bridges Open Island's agent-monitoring engine into Atoll's Combine /
 /// `ObservableObject` world.
 ///
@@ -222,10 +228,25 @@ final class AgentMonitorManager: ObservableObject {
         case let .sessionCompleted(completed):
             let wasCompleted = haloActivity[completed.sessionID] == .completed
             haloActivity[completed.sessionID] = .completed
-            if !wasCompleted { playCompletionSoundIfEnabled() }
+            if !wasCompleted {
+                playCompletionSoundIfEnabled()
+                announceCompletionIfEnabled(sessionID: completed.sessionID)
+            }
         default:
             break
         }
+    }
+
+    /// Throttle so a multi-turn burst doesn't repeatedly fling the notch open.
+    private var lastAutoExpandAt: Date = .distantPast
+    private static let autoExpandThrottle: TimeInterval = 8
+
+    private func announceCompletionIfEnabled(sessionID: String) {
+        guard Defaults[.agentExpandOnComplete] else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastAutoExpandAt) > Self.autoExpandThrottle else { return }
+        lastAutoExpandAt = now
+        NotificationCenter.default.post(name: .vibeIslandAgentDidComplete, object: sessionID)
     }
 
     // MARK: - Completion sound
