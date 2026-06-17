@@ -426,9 +426,25 @@ final class AgentMonitorManager: ObservableObject {
     /// *launch* directory — not the live process cwd, which may have moved. We
     /// recover the launch cwd from the session's transcript (the authoritative
     /// source) and fall back to the jump target only if that's unavailable.
+    /// The Claude session currently resumed in the embedded terminal, so a
+    /// re-click reveals it instead of typing the command into the live REPL.
+    private var terminalSessionID: String?
+
     func openInTerminal(_ session: AgentSession) {
         DynamicIslandViewCoordinator.shared.currentView = .terminal
         let id = session.id
+
+        // Already showing this session's live REPL — just reveal the tab.
+        if terminalSessionID == id, TerminalManager.shared.isProcessRunning {
+            return
+        }
+        // Switching sessions while a REPL is running: restart the shell so the
+        // new command runs in a clean shell, not into the old claude prompt.
+        if terminalSessionID != nil, TerminalManager.shared.isProcessRunning {
+            TerminalManager.shared.restartShell()
+        }
+        terminalSessionID = id
+
         let fallbackDir = session.jumpTarget?.workingDirectory
 
         Task.detached(priority: .userInitiated) {
