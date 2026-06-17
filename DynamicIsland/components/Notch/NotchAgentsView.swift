@@ -30,6 +30,11 @@ struct NotchAgentsView: View {
 
     private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
 
+    // Suppress the notch's scroll-to-close gesture while hovering the list, so
+    // scrolling pages through sessions instead of closing the notch.
+    @State private var scrollSuppressionToken = UUID()
+    @State private var isSuppressingScroll = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
@@ -38,7 +43,16 @@ struct NotchAgentsView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .contentShape(Rectangle())
+        .onHover { updateScrollSuppression(for: $0) }
         .onAppear { agentMonitor.refreshHookStatus() }
+        .onDisappear { updateScrollSuppression(for: false) }
+    }
+
+    private func updateScrollSuppression(for hovering: Bool) {
+        guard hovering != isSuppressingScroll else { return }
+        isSuppressingScroll = hovering
+        vm.setScrollGestureSuppression(hovering, token: scrollSuppressionToken)
     }
 
     private var header: some View {
