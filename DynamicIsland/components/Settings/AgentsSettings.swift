@@ -19,6 +19,7 @@
 
 import SwiftUI
 import Defaults
+import OpenIslandCore
 
 /// Settings pane for the AI coding-agent monitor (Open Island integration).
 /// Master switch, live-activity toggle, and Claude Code hook installation.
@@ -87,6 +88,46 @@ struct AgentsSettings: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section {
+                    HStack {
+                        Text("Usage status line")
+                        Spacer()
+                        if agentMonitor.statusLineInstalled {
+                            Label("Installed", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .labelStyle(.titleAndIcon)
+                        } else {
+                            Label("Not installed", systemImage: "xmark.circle")
+                                .foregroundStyle(.secondary)
+                                .labelStyle(.titleAndIcon)
+                        }
+                    }
+
+                    if let usage = agentMonitor.usage, !usage.isEmpty {
+                        if let five = usage.fiveHour {
+                            usageRow(label: "5-hour limit", window: five)
+                        }
+                        if let week = usage.sevenDay {
+                            usageRow(label: "7-day limit", window: week)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        if agentMonitor.statusLineInstalled {
+                            Button("Reinstall") { agentMonitor.installStatusLine() }
+                            Button("Remove", role: .destructive) { agentMonitor.uninstallStatusLine() }
+                        } else {
+                            Button("Install status line") { agentMonitor.installStatusLine() }
+                        }
+                    }
+                } header: {
+                    Text("Usage")
+                } footer: {
+                    Text("Installs a managed Claude Code status line that reports your 5-hour and 7-day rate-limit usage. Modifies the statusLine entry in ~/.claude/settings.json.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let error = agentMonitor.lastErrorMessage {
                     Section {
                         Text(error)
@@ -97,7 +138,25 @@ struct AgentsSettings: View {
             }
         }
         .navigationTitle("Agents")
-        .onAppear { agentMonitor.refreshHookStatus() }
+        .onAppear {
+            agentMonitor.refreshHookStatus()
+            agentMonitor.refreshStatusLineStatus()
+        }
+    }
+
+    @ViewBuilder
+    private func usageRow(label: String, window: ClaudeUsageWindow) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(label)
+                Spacer()
+                Text("\(window.roundedUsedPercentage)%")
+                    .foregroundStyle(window.usedPercentage >= 80 ? .orange : .secondary)
+                    .monospacedDigit()
+            }
+            ProgressView(value: min(max(window.usedPercentage / 100, 0), 1))
+                .tint(window.usedPercentage >= 80 ? .orange : .accentColor)
+        }
     }
 
     @ViewBuilder

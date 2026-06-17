@@ -53,6 +53,11 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var hookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
+    /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
+    /// status line is installed. `nil` until the status line writes its cache.
+    @Published private(set) var usage: ClaudeUsageSnapshot?
+    @Published private(set) var statusLineInstalled = false
+
     /// The single session currently demanding attention (permission/answer),
     /// if any — drives the closed-pill live activity.
     var attentionSession: AgentSession? {
@@ -205,7 +210,11 @@ final class AgentMonitorManager: ObservableObject {
     private func reconcileProcessLiveness() {
         Task.detached(priority: .utility) {
             let aliveTTYs = Self.ttysHostingClaude()
-            await MainActor.run { self.applyLiveness(aliveTTYs: aliveTTYs) }
+            let usage = try? ClaudeUsageLoader.load()
+            await MainActor.run {
+                self.applyLiveness(aliveTTYs: aliveTTYs)
+                if let usage { self.usage = usage }
+            }
         }
     }
 
@@ -362,6 +371,53 @@ final class AgentMonitorManager: ObservableObject {
             }
             await MainActor.run {
                 self.hookStatus = .notInstalled
+                if let message { self.lastErrorMessage = message }
+            }
+        }
+    }
+
+    // MARK: - Usage status line
+    //
+    // Claude rate-limit usage is produced by a managed status line script that
+    // Claude Code runs on each render; it writes the 5h/7d windows to a cache
+    // that `ClaudeUsageLoader` reads. Installing it modifies the `statusLine`
+    // entry in ~/.claude/settings.json (separate from the hooks).
+
+    func refreshStatusLineStatus() {
+        Task.detached {
+            let installed = (try? ClaudeStatusLineInstallationManager().status())?
+                .managedStatusLineInstalled ?? false
+            await MainActor.run { self.statusLineInstalled = installed }
+        }
+    }
+
+    func installStatusLine() {
+        Task.detached {
+            var message: String?
+            var installed = false
+            do {
+                installed = try ClaudeStatusLineInstallationManager().install().managedStatusLineInstalled
+            } catch {
+                message = "Couldn't install the usage status line: \(error.localizedDescription)"
+            }
+            await MainActor.run {
+                self.statusLineInstalled = installed
+                if let message { self.lastErrorMessage = message }
+            }
+        }
+    }
+
+    func uninstallStatusLine() {
+        Task.detached {
+            var message: String?
+            do {
+                _ = try ClaudeStatusLineInstallationManager().uninstall()
+            } catch {
+                message = "Couldn't remove the usage status line: \(error.localizedDescription)"
+            }
+            await MainActor.run {
+                self.statusLineInstalled = false
+                self.usage = nil
                 if let message { self.lastErrorMessage = message }
             }
         }
