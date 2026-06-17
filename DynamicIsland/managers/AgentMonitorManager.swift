@@ -421,18 +421,65 @@ final class AgentMonitorManager: ObservableObject {
 
     /// Open VibeIsland's embedded terminal and resume this Claude session there,
     /// so the full conversation is visible and interactive in the notch.
+    ///
+    /// `claude --resume` is project-scoped, so it must run from the session's
+    /// *launch* directory — not the live process cwd, which may have moved. We
+    /// recover the launch cwd from the session's transcript (the authoritative
+    /// source) and fall back to the jump target only if that's unavailable.
     func openInTerminal(_ session: AgentSession) {
-        var command = ""
-        if let dir = session.jumpTarget?.workingDirectory, !dir.isEmpty {
-            command += "cd \(shellQuote(dir)) && "
-        }
-        command += "claude --resume \(shellQuote(session.id))"
-
         DynamicIslandViewCoordinator.shared.currentView = .terminal
-        TerminalManager.shared.run(command: command)
+        let id = session.id
+        let fallbackDir = session.jumpTarget?.workingDirectory
+
+        Task.detached(priority: .userInitiated) {
+            let cwd = Self.resolveSessionLaunchDirectory(sessionID: id) ?? fallbackDir
+            var command = ""
+            if let cwd, !cwd.isEmpty {
+                command += "cd \(Self.shellQuote(cwd)) && "
+            }
+            command += "claude --resume \(Self.shellQuote(id))"
+            await MainActor.run { TerminalManager.shared.run(command: command) }
+        }
     }
 
-    private func shellQuote(_ value: String) -> String {
+    /// Finds the session's transcript (`~/.claude/projects/<proj>/<id>.jsonl`)
+    /// and reads the `cwd` it recorded — the directory the session was launched
+    /// in, which `claude --resume` needs.
+    private nonisolated static func resolveSessionLaunchDirectory(sessionID: String) -> String? {
+        let projects = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/projects", isDirectory: true)
+        guard let dirs = try? FileManager.default.contentsOfDirectory(
+            at: projects, includingPropertiesForKeys: nil
+        ) else { return nil }
+
+        for dir in dirs {
+            let transcript = dir.appendingPathComponent("\(sessionID).jsonl")
+            guard FileManager.default.fileExists(atPath: transcript.path) else { continue }
+            if let cwd = cwdFromTranscript(transcript) { return cwd }
+        }
+        return nil
+    }
+
+    /// Scans the start of a transcript for the first record carrying a `cwd`
+    /// (the leading `mode` / `permission-mode` / snapshot records don't have
+    /// one — it first appears on `user` entries).
+    private nonisolated static func cwdFromTranscript(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let data = (try? handle.read(upToCount: 64 * 1024)) ?? Data()
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+
+        for line in text.split(separator: "\n") {
+            guard let lineData = line.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  let cwd = object["cwd"] as? String, !cwd.isEmpty
+            else { continue }
+            return cwd
+        }
+        return nil
+    }
+
+    private nonisolated static func shellQuote(_ value: String) -> String {
         "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
