@@ -110,6 +110,11 @@ struct AgentsSettings: View {
                         if let week = usage.sevenDay {
                             usageRow(label: "7-day limit", window: week)
                         }
+                        if let cachedAt = usage.cachedAt {
+                            Text("Updated \(relativeTime(cachedAt)) · refreshes on each Claude turn")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     HStack(spacing: 8) {
@@ -142,6 +147,12 @@ struct AgentsSettings: View {
             agentMonitor.refreshHookStatus()
             agentMonitor.refreshStatusLineStatus()
         }
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     @ViewBuilder
