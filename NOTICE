@@ -21,6 +21,13 @@ respective authors and contributors:
   The AI coding-agent monitoring engine (OpenIslandCore and the OpenIslandHooks
   CLI, vendored under Packages/OpenIslandEngine) is taken from this project.
 
+- Claude Halo — https://github.com/Houyusu/claude-halo
+  Copyright (C) Houyu. Licensed under the MIT License.
+  VibeIsland's agent status "halo" (the six states, their colors, and
+  animation design) is inspired by and adapted from Claude Halo; the visual
+  is reimplemented natively in SwiftUI. MIT-licensed code may be combined
+  with this GPL v3 work; the MIT copyright notice is retained here.
+
 In accordance with the GNU GPL v3, this software remains licensed under GPL v3,
 and the above copyright notices and attributions are retained.
 

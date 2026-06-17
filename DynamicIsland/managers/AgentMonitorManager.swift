@@ -87,6 +87,9 @@ final class AgentMonitorManager: ObservableObject {
     private var state = SessionState()
     private var hasStarted = false
     private var livenessTimer: Timer?
+    /// Per-session fine-grained activity, refining the engine's coarse phase
+    /// into Claude Halo's thinking / executing / compacting / idle states.
+    private var haloActivity: [String: HaloState] = [:]
 
     private static let reconnectDelay: Duration = .seconds(2)
     private static let maxReconnectDelay: Duration = .seconds(30)
@@ -186,9 +189,59 @@ final class AgentMonitorManager: ObservableObject {
     // MARK: - Event reduction
 
     private func apply(_ event: AgentEvent) {
+        trackHaloActivity(event)
         state.apply(event)
         bridgeServer.updateStateSnapshot(state)
         sessions = ClaudeSessionFilter.claudeSessions(in: state)
+    }
+
+    // MARK: - Halo state
+
+    /// Refines a session's activity from raw events. Phase-driven states
+    /// (inputNeeded / completed) are resolved in `haloState(for:)`; this only
+    /// tracks the "running" sub-states the coarse phase can't express.
+    private func trackHaloActivity(_ event: AgentEvent) {
+        switch event {
+        case let .sessionStarted(started):
+            haloActivity[started.sessionID] = .idle
+        case let .activityUpdated(activity):
+            let summary = activity.summary
+            if summary.hasPrefix("Prompt:") {
+                haloActivity[activity.sessionID] = .thinking
+            } else if summary.range(of: "compacting", options: .caseInsensitive) != nil {
+                haloActivity[activity.sessionID] = .compacting
+            } else {
+                haloActivity[activity.sessionID] = .executing
+            }
+        case let .permissionRequested(request):
+            haloActivity[request.sessionID] = .inputNeeded
+        case let .questionAsked(question):
+            haloActivity[question.sessionID] = .inputNeeded
+        case let .sessionCompleted(completed):
+            haloActivity[completed.sessionID] = .completed
+        default:
+            break
+        }
+    }
+
+    /// The halo state for a session: phase is authoritative for attention and
+    /// completion; otherwise the tracked fine-grained activity is used.
+    func haloState(for session: AgentSession) -> HaloState {
+        if session.phase.requiresAttention { return .inputNeeded }
+        if let activity = haloActivity[session.id] {
+            // Don't let a stale "completed" activity mask a session the phase
+            // still considers running.
+            if session.phase == .completed { return .completed }
+            return activity
+        }
+        return session.phase == .completed ? .completed : .thinking
+    }
+
+    /// Collapsed halo for the closed pill — highest-priority state across all
+    /// visible sessions.
+    var aggregateHaloState: HaloState? {
+        sessions.map { haloState(for: $0) }
+            .max { $0.aggregatePriority < $1.aggregatePriority }
     }
 
     // MARK: - Process liveness
@@ -231,6 +284,11 @@ final class AgentMonitorManager: ObservableObject {
         let changed = state.markProcessLiveness(aliveSessionIDs: aliveIDs)
         let removed = state.removeInvisibleSessions()
         guard !changed.isEmpty || removed else { return }
+
+        if removed {
+            let liveIDs = Set(state.sessions.map(\.id))
+            haloActivity = haloActivity.filter { liveIDs.contains($0.key) }
+        }
 
         bridgeServer.updateStateSnapshot(state)
         sessions = ClaudeSessionFilter.claudeSessions(in: state)
