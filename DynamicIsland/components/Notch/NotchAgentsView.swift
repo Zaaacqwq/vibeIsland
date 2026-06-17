@@ -148,28 +148,19 @@ private struct AgentSessionRow: View {
     let accent: Color
     @ObservedObject private var agentMonitor = AgentMonitorManager.shared
 
-    private var statusColor: Color {
-        switch session.phase {
-        case .running: return .green
-        case .waitingForApproval, .waitingForAnswer: return Color(red: 1.0, green: 0.7, blue: 0.28)
-        case .completed: return .gray
-        }
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let halo = agentMonitor.haloState(for: session)
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 7, height: 7)
+                HaloRingView(state: halo, size: 18)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(session.title.isEmpty ? "Claude session" : session.title)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    Text(session.phase.displayName)
+                    Text(halo.label)
                         .font(.system(size: 9))
-                        .foregroundStyle(statusColor)
+                        .foregroundStyle(halo.color)
                 }
                 Spacer()
                 if session.jumpTarget != nil {

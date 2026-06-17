@@ -82,13 +82,8 @@ struct AgentLiveActivity: View {
 
     @ViewBuilder
     private var leadingGlyph: some View {
-        let needsAttention: Bool = {
-            if case .attention = agentMonitor.closedActivity { return true }
-            return false
-        }()
-        Image(systemName: "sparkles")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(needsAttention ? attentionColor : claudeColor)
+        let halo = agentMonitor.aggregateHaloState ?? .idle
+        HaloRingView(state: halo, size: min(accessoryHeight, 18))
             .frame(width: accessoryHeight, height: accessoryHeight)
     }
 
