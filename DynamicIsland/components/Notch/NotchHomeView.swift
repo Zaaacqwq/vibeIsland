@@ -154,12 +154,10 @@ struct MusicPlayerView: View {
     let albumArtNamespace: Namespace.ID
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-            MusicControlsView()
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Album art now lives in the controls' top row (left of title/artist),
+        // above the progress line — see MusicControlsView.songInfoAndSlider.
+        MusicControlsView(albumArtNamespace: albumArtNamespace)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -275,6 +273,7 @@ struct AlbumArtView: View {
 }
 
 struct MusicControlsView: View {
+    let albumArtNamespace: Namespace.ID
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var musicManager = MusicManager.shared
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
@@ -308,7 +307,11 @@ struct MusicControlsView: View {
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 4) {
-                songInfo(width: geo.size.width)
+                HStack(alignment: .center, spacing: 8) {
+                    AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
+                        .frame(width: 38, height: 38)
+                    songInfo(width: max(0, geo.size.width - 46))
+                }
                 musicSlider
             }
         }
