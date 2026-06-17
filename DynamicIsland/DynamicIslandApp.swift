@@ -524,6 +524,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
     
+    /// Peek the notch open on the Agents tab when Claude finishes, then close
+    /// after a few seconds unless the user is interacting with it.
+    private func expandToAgentsTab() {
+        guard Defaults[.enableAgentMonitoring] else { return }
+        coordinator.currentView = .agents
+        vm.open()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+            guard let self else { return }
+            guard self.vm.notchState == .open,
+                  self.coordinator.currentView == .agents,
+                  !self.vm.isAutoCloseSuppressed else { return }
+            self.vm.close()
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         let userInfo: [String: Any] = [
             AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
@@ -605,6 +621,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 } else {
                     AgentMonitorManager.shared.stop()
                 }
+            }
+            .store(in: &cancellables)
+
+        // When a Claude session finishes, peek the notch open on the Agents tab.
+        NotificationCenter.default.publisher(for: .vibeIslandAgentDidComplete)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.expandToAgentsTab()
             }
             .store(in: &cancellables)
         

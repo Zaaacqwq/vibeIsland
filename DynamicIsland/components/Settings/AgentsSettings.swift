@@ -46,6 +46,9 @@ struct AgentsSettings: View {
                     Defaults.Toggle(key: .agentCompletionSoundEnabled) {
                         Text("Play a sound when Claude finishes")
                     }
+                    Defaults.Toggle(key: .agentExpandOnComplete) {
+                        Text("Expand the notch to Agents when Claude finishes")
+                    }
                 }
             } header: {
                 Text("General")

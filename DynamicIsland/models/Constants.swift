@@ -1223,6 +1223,8 @@ extension Defaults.Keys {
     static let showAgentLiveActivity = Key<Bool>("showAgentLiveActivity", default: true)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
+    /// Auto-expand the notch to the Agents tab when a Claude session finishes.
+    static let agentExpandOnComplete = Key<Bool>("agentExpandOnComplete", default: true)
 
     // MARK: Screen Recording Detection Feature
     static let enableScreenRecordingDetection = Key<Bool>("enableScreenRecordingDetection", default: true)
