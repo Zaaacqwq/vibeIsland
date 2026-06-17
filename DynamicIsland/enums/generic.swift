@@ -80,6 +80,7 @@ public enum NotchViews {
     case clipboard
     case terminal
     case agents
+    case calendar
     case extensionExperience
 }
 

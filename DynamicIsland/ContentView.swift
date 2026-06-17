@@ -1086,6 +1086,8 @@ struct ContentView: View {
                                 NotchTerminalView()
                             case .agents:
                                 NotchAgentsView()
+                            case .calendar:
+                                StandaloneCalendarView()
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)

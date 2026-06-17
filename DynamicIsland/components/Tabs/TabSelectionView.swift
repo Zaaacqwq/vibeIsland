@@ -93,6 +93,9 @@ struct TabSelectionView: View {
         if Defaults[.enableAgentMonitoring] {
             tabsArray.append(TabModel(label: "Agents", icon: "sparkles", view: .agents))
         }
+        if Defaults[.showCalendar] {
+            tabsArray.append(TabModel(label: "Calendar", icon: "calendar", view: .calendar))
+        }
         if extensionTabsEnabled {
             for payload in extensionTabPayloads {
                 guard let tab = payload.descriptor.tab else { continue }
