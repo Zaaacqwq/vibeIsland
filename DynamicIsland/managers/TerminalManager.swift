@@ -298,6 +298,34 @@ class TerminalManager: ObservableObject {
             execName: execName
         )
         isProcessRunning = true
+        flushPendingCommandSoon()
+    }
+
+    // MARK: - Programmatic command injection
+
+    /// A command queued to run once the shell is ready (e.g. the terminal was
+    /// just opened and the shell hasn't started yet).
+    private var pendingCommand: String?
+
+    /// Type and run a command in the embedded terminal. If the shell isn't
+    /// running yet it's queued and sent once the shell starts.
+    func run(command: String) {
+        let line = command + "\r"
+        if let view = terminalView, isProcessRunning {
+            view.send(txt: line)
+        } else {
+            pendingCommand = line
+        }
+    }
+
+    private func flushPendingCommandSoon() {
+        guard pendingCommand != nil else { return }
+        // Give the login shell a moment to print its prompt before typing.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let self, let command = self.pendingCommand, let view = self.terminalView else { return }
+            view.send(txt: command)
+            self.pendingCommand = nil
+        }
     }
 
     /// Called when the shell process terminates.

@@ -419,6 +419,23 @@ final class AgentMonitorManager: ObservableObject {
         }
     }
 
+    /// Open VibeIsland's embedded terminal and resume this Claude session there,
+    /// so the full conversation is visible and interactive in the notch.
+    func openInTerminal(_ session: AgentSession) {
+        var command = ""
+        if let dir = session.jumpTarget?.workingDirectory, !dir.isEmpty {
+            command += "cd \(shellQuote(dir)) && "
+        }
+        command += "claude --resume \(shellQuote(session.id))"
+
+        DynamicIslandViewCoordinator.shared.currentView = .terminal
+        TerminalManager.shared.run(command: command)
+    }
+
+    private func shellQuote(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
     // MARK: - Hook installation
 
     /// Location of the hooks CLI bundled inside `Atoll.app/Contents/Helpers`.
