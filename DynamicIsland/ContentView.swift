@@ -1200,23 +1200,34 @@ struct ContentView: View {
         let badgeDisplaySize = badgeDisplaySize(for: secondary, baseSize: badgeBaseSize)
         let badgeOffset = badgeOverlayOffset(for: secondary, badgeSize: badgeDisplaySize)
 
+        let agentSecondaryActive: Bool = {
+            if case .agent = secondary { return true }
+            return false
+        }()
+
         HStack(spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
-                Color.clear
-                    .aspectRatio(1, contentMode: .fit)
-                    .background(
-                        Image(nsImage: musicManager.albumArt)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: musicManager.albumArt.size.width/musicManager.albumArt.size.height > 1.0 ? MusicPlayerImageSizes.cornerRadiusInset.closed/3.0 : MusicPlayerImageSizes.cornerRadiusInset.closed))
-                    )
-                    .clipped()
-                    .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
-                    .albumArtFlip(angle: musicManager.flipAngle)
-                albumArtBadge(for: secondary, badgeSize: badgeDisplaySize)
-                    .offset(x: badgeOffset.width, y: badgeOffset.height)
-                    .id(secondary?.id ?? "music-badge")
-                    .contentTransition(.symbolEffect(.replace))
+                if agentSecondaryActive {
+                    // Music + Claude: show the visualizer on the left, halo on
+                    // the right (the right wing renders the agent halo).
+                    spectrumView(forceSpectrum: true)
+                } else {
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .background(
+                            Image(nsImage: musicManager.albumArt)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .clipShape(RoundedRectangle(cornerRadius: musicManager.albumArt.size.width/musicManager.albumArt.size.height > 1.0 ? MusicPlayerImageSizes.cornerRadiusInset.closed/3.0 : MusicPlayerImageSizes.cornerRadiusInset.closed))
+                        )
+                        .clipped()
+                        .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
+                        .albumArtFlip(angle: musicManager.flipAngle)
+                    albumArtBadge(for: secondary, badgeSize: badgeDisplaySize)
+                        .offset(x: badgeOffset.width, y: badgeOffset.height)
+                        .id(secondary?.id ?? "music-badge")
+                        .contentTransition(.symbolEffect(.replace))
+                }
             }
             .frame(width: wingBaseWidth, height: notchContentHeight)
 
