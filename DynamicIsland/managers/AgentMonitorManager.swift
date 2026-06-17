@@ -81,9 +81,11 @@ final class AgentMonitorManager: ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var state = SessionState()
     private var hasStarted = false
+    private var livenessTimer: Timer?
 
     private static let reconnectDelay: Duration = .seconds(2)
     private static let maxReconnectDelay: Duration = .seconds(30)
+    private static let livenessPollInterval: TimeInterval = 4
 
     private init() {
         bridgeServer = BridgeServer(socketURL: configuration.socketURL)
@@ -107,6 +109,7 @@ final class AgentMonitorManager: ObservableObject {
 
         connectObserver()
         refreshHookStatus()
+        startLivenessMonitor()
     }
 
     func stop() {
@@ -114,6 +117,8 @@ final class AgentMonitorManager: ObservableObject {
         reconnectTask?.cancel()
         bridgeClient?.disconnect()
         bridgeServer.stop()
+        livenessTimer?.invalidate()
+        livenessTimer = nil
         isBridgeReady = false
         hasStarted = false
     }
@@ -179,6 +184,78 @@ final class AgentMonitorManager: ObservableObject {
         state.apply(event)
         bridgeServer.updateStateSnapshot(state)
         sessions = ClaudeSessionFilter.claudeSessions(in: state)
+    }
+
+    // MARK: - Process liveness
+
+    /// Closing a terminal kills Claude before it can fire its `SessionEnd`
+    /// hook, so the session would otherwise linger forever. This poller checks
+    /// whether each session's terminal (by TTY) still hosts a live `claude`
+    /// process; sessions whose TTY no longer runs Claude are marked ended (after
+    /// two consecutive misses, per `markProcessLiveness`) and pruned.
+    private func startLivenessMonitor() {
+        livenessTimer?.invalidate()
+        let timer = Timer.scheduledTimer(withTimeInterval: Self.livenessPollInterval, repeats: true) { [weak self] _ in
+            self?.reconcileProcessLiveness()
+        }
+        livenessTimer = timer
+        reconcileProcessLiveness()
+    }
+
+    private func reconcileProcessLiveness() {
+        Task.detached(priority: .utility) {
+            let aliveTTYs = Self.ttysHostingClaude()
+            await MainActor.run { self.applyLiveness(aliveTTYs: aliveTTYs) }
+        }
+    }
+
+    private func applyLiveness(aliveTTYs: Set<String>) {
+        // A session is "alive" if its TTY still runs Claude. Sessions with no
+        // known TTY are kept alive to avoid false removal.
+        let aliveIDs = Set(state.sessions.compactMap { session -> String? in
+            guard let tty = session.jumpTarget?.terminalTTY, !tty.isEmpty else {
+                return session.id
+            }
+            return aliveTTYs.contains(Self.normalizeTTY(tty)) ? session.id : nil
+        })
+
+        let changed = state.markProcessLiveness(aliveSessionIDs: aliveIDs)
+        let removed = state.removeInvisibleSessions()
+        guard !changed.isEmpty || removed else { return }
+
+        bridgeServer.updateStateSnapshot(state)
+        sessions = ClaudeSessionFilter.claudeSessions(in: state)
+    }
+
+    /// TTYs (normalized, e.g. `ttys003`) that currently host a `claude` process.
+    private nonisolated static func ttysHostingClaude() -> Set<String> {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-Ao", "tty=,command="]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch { return [] }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard let output = String(data: data, encoding: .utf8) else { return [] }
+
+        var ttys: Set<String> = []
+        for rawLine in output.split(separator: "\n") {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard let space = line.firstIndex(of: " ") else { continue }
+            let tty = String(line[..<space])
+            let command = String(line[line.index(after: space)...])
+            guard tty != "??", !tty.isEmpty else { continue }
+            if command.range(of: "claude", options: .caseInsensitive) != nil {
+                ttys.insert(normalizeTTY(tty))
+            }
+        }
+        return ttys
+    }
+
+    private nonisolated static func normalizeTTY(_ tty: String) -> String {
+        tty.hasPrefix("/dev/") ? String(tty.dropFirst("/dev/".count)) : tty
     }
 
     // MARK: - Permission resolution
