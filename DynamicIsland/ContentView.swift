@@ -44,7 +44,6 @@ struct ContentView: View {
     @ObservedObject var timerManager = TimerManager.shared
     @ObservedObject var reminderManager = ReminderLiveActivityManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
-    @ObservedObject var statsManager = StatsManager.shared
     @ObservedObject var recordingManager = ScreenRecordingManager.shared
     @ObservedObject var privacyManager = PrivacyIndicatorManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
@@ -57,12 +56,6 @@ struct ContentView: View {
     @ObservedObject var shelfState = ShelfStateViewModel.shared
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
-    @Default(.enableStatsFeature) var enableStatsFeature
-    @Default(.showCpuGraph) var showCpuGraph
-    @Default(.showMemoryGraph) var showMemoryGraph
-    @Default(.showGpuGraph) var showGpuGraph
-    @Default(.showNetworkGraph) var showNetworkGraph
-    @Default(.showDiskGraph) var showDiskGraph
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
@@ -170,18 +163,7 @@ struct ContentView: View {
             return CGSize(width: baseSize.width, height: preferredHeight)
         }
         
-        guard coordinator.currentView == .stats else {
-            return baseSize
-        }
-        
-        let rows = statsRowCount()
-        if rows <= 1 {
-            return baseSize
-        }
-        
-        let additionalRows = max(rows - 1, 0)
-        let extraHeight = CGFloat(additionalRows) * statsAdditionalRowHeight
-        return CGSize(width: baseSize.width, height: baseSize.height + extraHeight)
+        return baseSize
     }
     
 
@@ -246,7 +228,7 @@ struct ContentView: View {
     }
     
     private let zeroHeightHoverPadding: CGFloat = 10
-    private let statsAdditionalRowHeight: CGFloat = statsSecondRowContentHeight + statsGridSpacingHeight
+    private let statsAdditionalRowHeight: CGFloat = 80
     private let musicControlPauseGrace: TimeInterval = 5
     private let musicControlResumeDelay: TimeInterval = 0.24
 
@@ -597,15 +579,6 @@ struct ContentView: View {
                 }
             })
             .onChange(of: vm.notchState) { _, newState in
-                // Update smart monitoring based on notch state
-                if enableStatsFeature {
-                    let currentViewString = coordinator.currentView == .stats ? "stats" : "other"
-                    statsManager.updateMonitoringState(
-                        notchIsOpen: newState == .open,
-                        currentView: currentViewString
-                    )
-                }
-
                 // Reset hover state when notch state changes
                 if newState == .closed && isHovering {
                     withAnimation {
@@ -630,13 +603,6 @@ struct ContentView: View {
                 #endif
             }
             .onChange(of: vm.isBatteryPopoverActive) { _, newPopoverState in
-                runAfter(0.1) {
-                    if !newPopoverState && !isHovering && vm.notchState == .open && !shouldPreventAutoClose() {
-                        vm.close()
-                    }
-                }
-            }
-            .onChange(of: vm.isStatsPopoverActive) { _, newPopoverState in
                 runAfter(0.1) {
                     if !newPopoverState && !isHovering && vm.notchState == .open && !shouldPreventAutoClose() {
                         vm.close()
@@ -669,13 +635,6 @@ struct ContentView: View {
                 }
             }
             .onChange(of: coordinator.currentView) { _, newValue in
-                if enableStatsFeature {
-                    let currentViewString = newValue == .stats ? "stats" : "other"
-                    statsManager.updateMonitoringState(
-                        notchIsOpen: vm.notchState == .open,
-                        currentView: currentViewString
-                    )
-                }
                 syncStickyTerminalOutsideClickMonitor()
             }
             .sensoryFeedback(.alignment, trigger: haptics)
@@ -1071,8 +1030,6 @@ struct ContentView: View {
                                   NotchShelfView()
                               case .timer:
                                   NotchTimerView()
-                              case .stats:
-                                  NotchStatsView()
                             case .terminal:
                                 NotchTerminalView()
                             case .agents:
@@ -2143,7 +2100,6 @@ struct ContentView: View {
     // Helper function to check if any popovers are active
     private func hasAnyActivePopovers() -> Bool {
      return vm.isBatteryPopoverActive || 
-         vm.isStatsPopoverActive ||
          vm.isTimerPopoverActive ||
          vm.isMediaOutputPopoverActive ||
          vm.isReminderPopoverActive
@@ -2162,23 +2118,6 @@ struct ContentView: View {
         }
     }
     
-    // Helper to check if stats tab has 4+ graphs (needs expanded height)
-    private func enabledStatsGraphCount() -> Int {
-        var enabledCount = 0
-        if showCpuGraph { enabledCount += 1 }
-        if showMemoryGraph { enabledCount += 1 }
-        if showGpuGraph { enabledCount += 1 }
-        if showNetworkGraph { enabledCount += 1 }
-        if showDiskGraph { enabledCount += 1 }
-        return enabledCount
-    }
-
-    private func statsRowCount() -> Int {
-        let count = enabledStatsGraphCount()
-        if count == 0 { return 0 }
-        return count <= 3 ? 1 : 2
-    }
-
     private func currentExtensionTabPayload() -> ExtensionNotchExperiencePayload? {
         guard Defaults[.enableThirdPartyExtensions],
               Defaults[.enableExtensionNotchExperiences],

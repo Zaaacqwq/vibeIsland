@@ -1014,15 +1014,7 @@ extension Defaults.Keys {
     static let useBluetoothHUD3DIcon = Key<Bool>("useBluetoothHUD3DIcon", default: true)
     
     // MARK: Stats Feature
-    static let enableStatsFeature = Key<Bool>("enableStatsFeature", default: false)
     static let autoStartStatsMonitoring = Key<Bool>("autoStartStatsMonitoring", default: true)
-    static let statsStopWhenNotchCloses = Key<Bool>("statsStopWhenNotchCloses", default: true)
-    static let statsUpdateInterval = Key<Double>("statsUpdateInterval", default: 1.0)
-    static let showCpuGraph = Key<Bool>("showCpuGraph", default: true)
-    static let showMemoryGraph = Key<Bool>("showMemoryGraph", default: true)
-    static let showGpuGraph = Key<Bool>("showGpuGraph", default: true)
-    static let showNetworkGraph = Key<Bool>("showNetworkGraph", default: false)
-    static let showDiskGraph = Key<Bool>("showDiskGraph", default: false)
     static let cpuTemperatureUnit = Key<LockScreenWeatherTemperatureUnit>("cpuTemperatureUnit", default: .celsius)
     
     // MARK: Terminal Feature
