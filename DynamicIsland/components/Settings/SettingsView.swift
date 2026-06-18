@@ -58,13 +58,10 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case hudAndOSD
     case battery
     case stats
-    case clipboard
     case screenAssistant
-    case colorPicker
     case downloads
     case shelf
     case shortcuts
-    case notes
     case terminal
     case agents
     case about
@@ -77,8 +74,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general, .appearance:                                          return .core
         case .media, .liveActivities, .lockScreen, .devices:                 return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
-        case .timer, .calendar, .notes:                                      return .productivity
-        case .clipboard, .screenAssistant, .colorPicker, .shelf,
+        case .timer, .calendar:                                      return .productivity
+        case .screenAssistant, .shelf,
              .downloads, .shortcuts:                                         return .utilities
         case .stats, .terminal, .agents:                                     return .developer
         case .extensions:                                                    return .integrations
@@ -100,13 +97,10 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
         case .stats: return String(localized: "Stats")
-        case .clipboard: return String(localized: "Clipboard")
         case .screenAssistant: return String(localized: "Screen Assistant")
-        case .colorPicker: return String(localized: "Color Picker")
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
-        case .notes: return String(localized: "Notes")
         case .terminal: return String(localized: "Terminal")
         case .agents: return String(localized: "Agents")
         case .about: return String(localized: "About")
@@ -127,13 +121,10 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
         case .stats: return "chart.xyaxis.line"
-        case .clipboard: return "clipboard"
         case .screenAssistant: return "brain.head.profile"
-        case .colorPicker: return "eyedropper"
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "books.vertical"
         case .shortcuts: return "keyboard"
-        case .notes: return "note.text"
         case .terminal: return "apple.terminal"
         case .agents: return "sparkles"
         case .about: return "info.circle"
@@ -154,13 +145,10 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
         case .stats: return .teal
-        case .clipboard: return .mint
         case .screenAssistant: return .pink
-        case .colorPicker: return .accentColor
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
-        case .notes: return Color(red: 0.979, green: 0.716, blue: 0.153, opacity: 1.000)
         case .terminal: return Color(red: 0.2, green: 0.8, blue: 0.4)
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .about: return .secondary
@@ -500,11 +488,8 @@ struct SettingsView: View {
             // Productivity
             .timer,
             .calendar,
-            .notes,
             // Utilities
-            .clipboard,
             .screenAssistant,
-            .colorPicker,
             .shelf,
             .downloads,
             .shortcuts,
@@ -900,21 +885,12 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .stats, title: "Disk I/O", keywords: ["disk", "io"], highlightID: SettingsTab.stats.highlightID(for: "Disk I/O")),
 
             // Clipboard
-            SettingsSearchEntry(tab: .clipboard, title: "Enable Clipboard Manager", keywords: ["clipboard", "manager"], highlightID: SettingsTab.clipboard.highlightID(for: "Enable Clipboard Manager")),
-            SettingsSearchEntry(tab: .clipboard, title: "Show Clipboard Icon", keywords: ["icon", "clipboard"], highlightID: SettingsTab.clipboard.highlightID(for: "Show Clipboard Icon")),
-            SettingsSearchEntry(tab: .clipboard, title: "Display Mode", keywords: ["list", "grid", "clipboard"], highlightID: SettingsTab.clipboard.highlightID(for: "Display Mode")),
-            SettingsSearchEntry(tab: .clipboard, title: "History Size", keywords: ["history", "clipboard"], highlightID: SettingsTab.clipboard.highlightID(for: "History Size")),
 
             // Screen Assistant
             SettingsSearchEntry(tab: .screenAssistant, title: "Enable Screen Assistant", keywords: ["screen assistant", "ai"], highlightID: SettingsTab.screenAssistant.highlightID(for: "Enable Screen Assistant")),
             SettingsSearchEntry(tab: .screenAssistant, title: "Display Mode", keywords: ["screen assistant", "mode"], highlightID: SettingsTab.screenAssistant.highlightID(for: "Display Mode")),
 
             // Color Picker
-            SettingsSearchEntry(tab: .colorPicker, title: "Enable Color Picker", keywords: ["color picker", "eyedropper"], highlightID: SettingsTab.colorPicker.highlightID(for: "Enable Color Picker")),
-            SettingsSearchEntry(tab: .colorPicker, title: "Show Color Picker Icon", keywords: ["color icon", "toolbar"], highlightID: SettingsTab.colorPicker.highlightID(for: "Show Color Picker Icon")),
-            SettingsSearchEntry(tab: .colorPicker, title: "Display Mode", keywords: ["color", "list"], highlightID: SettingsTab.colorPicker.highlightID(for: "Display Mode")),
-            SettingsSearchEntry(tab: .colorPicker, title: "History Size", keywords: ["color history"], highlightID: SettingsTab.colorPicker.highlightID(for: "History Size")),
-            SettingsSearchEntry(tab: .colorPicker, title: "Show All Color Formats", keywords: ["hex", "hsl", "color formats"], highlightID: SettingsTab.colorPicker.highlightID(for: "Show All Color Formats")),
 
             // Terminal
             SettingsSearchEntry(tab: .terminal, title: "Enable terminal", keywords: ["terminal", "guake", "shell"], highlightID: SettingsTab.terminal.highlightID(for: "Enable terminal")),
@@ -935,7 +911,7 @@ struct SettingsView: View {
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
         switch tab {
-        case .timer, .stats, .clipboard, .screenAssistant, .colorPicker, .shelf, .notes, .terminal:
+        case .timer, .stats, .screenAssistant, .shelf, .terminal:
             return !enableMinimalisticUI
         default:
             return true
@@ -993,17 +969,9 @@ struct SettingsView: View {
             SettingsForm(tab: .stats) {
                 StatsSettings()
             }
-        case .clipboard:
-            SettingsForm(tab: .clipboard) {
-                ClipboardSettings()
-            }
         case .screenAssistant:
             SettingsForm(tab: .screenAssistant) {
                 ScreenAssistantSettings()
-            }
-        case .colorPicker:
-            SettingsForm(tab: .colorPicker) {
-                ColorPickerSettings()
             }
         case .downloads:
             SettingsForm(tab: .downloads) {
@@ -1016,10 +984,6 @@ struct SettingsView: View {
         case .shortcuts:
             SettingsForm(tab: .shortcuts) {
                 Shortcuts()
-            }
-        case .notes:
-            SettingsForm(tab: .notes) {
-                NotesSettingsView()
             }
         case .terminal:
             SettingsForm(tab: .terminal) {
@@ -6200,10 +6164,8 @@ private func copyLatestCrashReport() {
 
 struct Shortcuts: View {
     @Default(.enableTimerFeature) var enableTimerFeature
-    @Default(.enableClipboardManager) var enableClipboardManager
     @Default(.enableShortcuts) var enableShortcuts
     @Default(.enableStatsFeature) var enableStatsFeature
-    @Default(.enableColorPickerFeature) var enableColorPickerFeature
 
     private func highlightID(_ title: String) -> String {
         SettingsTab.shortcuts.highlightID(for: title)
@@ -6276,29 +6238,6 @@ struct Shortcuts: View {
                 Section {
                     HStack {
                         VStack(alignment: .leading) {
-                            KeyboardShortcuts.Recorder("Clipboard History:", name: .clipboardHistoryPanel)
-                                .disabled(!enableShortcuts || !enableClipboardManager)
-                            if !enableClipboardManager {
-                                Text("Clipboard feature is disabled")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        Spacer()
-                    }
-                } header: {
-                    Text("Clipboard")
-                } footer: {
-                    Text("Opens the clipboard history panel. Default is Cmd+Shift+V (similar to Windows+V on PC). Only works when clipboard feature is enabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
                             KeyboardShortcuts.Recorder("Screen Assistant:", name: .screenAssistantPanel)
                                 .disabled(!enableShortcuts || !Defaults[.enableScreenAssistant])
                             if !Defaults[.enableScreenAssistant] {
@@ -6342,28 +6281,6 @@ struct Shortcuts: View {
                         .font(.caption)
                 }
 
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            KeyboardShortcuts.Recorder("Color Picker Panel:", name: .colorPickerPanel)
-                                .disabled(!enableShortcuts || !enableColorPickerFeature)
-                            if !enableColorPickerFeature {
-                                Text("Color Picker feature is disabled")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        Spacer()
-                    }
-                } header: {
-                    Text("Color Picker")
-                } footer: {
-                    Text("Opens the color picker panel for screen color capture. Default is Cmd+Shift+P. Only works when color picker feature is enabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
             } else {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -7315,177 +7232,6 @@ struct StatsSettings: View {
     }
 }
 
-struct ClipboardSettings: View {
-    @ObservedObject var clipboardManager = ClipboardManager.shared
-    @Default(.enableClipboardManager) var enableClipboardManager
-    @Default(.clipboardHistorySize) var clipboardHistorySize
-    @Default(.showClipboardIcon) var showClipboardIcon
-    @Default(.clipboardDisplayMode) var clipboardDisplayMode
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.clipboard.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableClipboardManager) {
-                    Text("Enable Clipboard Manager")
-                }
-                .settingsHighlight(id: highlightID("Enable Clipboard Manager"))
-                .onChange(of: enableClipboardManager) { _, enabled in
-                    if enabled {
-                        clipboardManager.startMonitoring()
-                    } else {
-                        clipboardManager.stopMonitoring()
-                    }
-                }
-            } header: {
-                Text("Clipboard Manager")
-            } footer: {
-                Text("Monitor clipboard changes and keep a history of recent copies. Use Cmd+Shift+V to quickly access clipboard history.")
-            }
-
-            if enableClipboardManager {
-                Section {
-                    Defaults.Toggle(key: .showClipboardIcon) {
-                        Text("Show Clipboard Icon")
-                    }
-                    .settingsHighlight(id: highlightID("Show Clipboard Icon"))
-
-                    HStack {
-                        Text("Display Mode")
-                        Spacer()
-                        Picker("", selection: $clipboardDisplayMode) {
-                            ForEach(ClipboardDisplayMode.allCases, id: \.self) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 100)
-                    }
-                    .settingsHighlight(id: highlightID("Display Mode"))
-
-                    HStack {
-                        Text("History Size")
-                        Spacer()
-                        Picker("", selection: $clipboardHistorySize) {
-                            Text("3 items").tag(3)
-                            Text("5 items").tag(5)
-                            Text("7 items").tag(7)
-                            Text("10 items").tag(10)
-                        }
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 100)
-                    }
-                    .settingsHighlight(id: highlightID("History Size"))
-
-                    HStack {
-                        Text("Current Items")
-                        Spacer()
-                        Text("\(clipboardManager.clipboardHistory.count)")
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack {
-                        Text("Pinned Items")
-                        Spacer()
-                        Text("\(clipboardManager.pinnedItems.count)")
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack {
-                        Text("Monitoring Status")
-                        Spacer()
-                        Text(clipboardManager.isMonitoring ? "Active" : "Stopped")
-                            .foregroundColor(clipboardManager.isMonitoring ? .green : .secondary)
-                    }
-                } header: {
-                    Text("Settings")
-                } footer: {
-                    switch clipboardDisplayMode {
-                    case .popover:
-                        Text("Popover mode shows clipboard as a dropdown attached to the clipboard button.")
-                    case .panel:
-                        Text("Panel mode shows clipboard in a floating window near the notch.")
-                    case .separateTab:
-                        Text("Separate Tab mode integrates Copied Items and Notes into a single view. If both are enabled, Notes appear on the right and Clipboard on the left.")
-                    }
-                }
-
-                Section {
-                    Button("Clear Clipboard History") {
-                        clipboardManager.clearHistory()
-                    }
-                    .foregroundColor(.red)
-                    .disabled(clipboardManager.clipboardHistory.isEmpty)
-
-                    Button("Clear Pinned Items") {
-                        clipboardManager.pinnedItems.removeAll()
-                        clipboardManager.savePinnedItemsToDefaults()
-                    }
-                    .foregroundColor(.red)
-                    .disabled(clipboardManager.pinnedItems.isEmpty)
-                } header: {
-                    Text("Actions")
-                } footer: {
-                    Text("Clear clipboard history removes recent copies. Clear pinned items removes your favorites. Both actions are permanent.")
-                }
-
-                if !clipboardManager.clipboardHistory.isEmpty {
-                    Section {
-                        ForEach(clipboardManager.clipboardHistory) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Image(systemName: item.type.icon)
-                                        .foregroundColor(.blue)
-                                        .frame(width: 16)
-                                    Text(item.type.displayName)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text(timeAgoString(from: item.timestamp))
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                Text(item.preview)
-                                    .font(.system(.body, design: .monospaced))
-                                    .lineLimit(2)
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    } header: {
-                        Text("Current History")
-                    }
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .navigationTitle("Clipboard")
-        .onAppear {
-            if enableClipboardManager && !clipboardManager.isMonitoring {
-                clipboardManager.startMonitoring()
-            }
-        }
-    }
-
-    private func timeAgoString(from date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
-
-        if interval < 60 {
-            return "Just now"
-        } else if interval < 3600 {
-            let minutes = Int(interval / 60)
-            return "\(minutes)m ago"
-        } else if interval < 86400 {
-            let hours = Int(interval / 3600)
-            return "\(hours)h ago"
-        } else {
-            let days = Int(interval / 86400)
-            return "\(days)d ago"
-        }
-    }
-}
 
 struct ScreenAssistantSettings: View {
     @ObservedObject var screenAssistantManager = ScreenAssistantManager.shared
@@ -7665,127 +7411,6 @@ struct ScreenAssistantSettings: View {
     }
 }
 
-struct ColorPickerSettings: View {
-    @ObservedObject var colorPickerManager = ColorPickerManager.shared
-    @Default(.enableColorPickerFeature) var enableColorPickerFeature
-    @Default(.showColorFormats) var showColorFormats
-    @Default(.colorPickerDisplayMode) var colorPickerDisplayMode
-    @Default(.colorHistorySize) var colorHistorySize
-    @Default(.showColorPickerIcon) var showColorPickerIcon
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.colorPicker.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableColorPickerFeature) {
-                    Text("Enable Color Picker")
-                }
-                .settingsHighlight(id: highlightID("Enable Color Picker"))
-            } header: {
-                Text("Color Picker")
-            } footer: {
-                Text("Enable screen color picking functionality. Use Cmd+Shift+P to quickly access the color picker.")
-            }
-
-            if enableColorPickerFeature {
-                Section {
-                    Defaults.Toggle(key: .showColorPickerIcon) {
-                        Text("Show Color Picker Icon")
-                    }
-                    .settingsHighlight(id: highlightID("Show Color Picker Icon"))
-
-                    HStack {
-                        Text("Display Mode")
-                        Spacer()
-                        Picker("", selection: $colorPickerDisplayMode) {
-                            ForEach(ColorPickerDisplayMode.allCases, id: \.self) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 100)
-                    }
-                    .settingsHighlight(id: highlightID("Display Mode"))
-
-                    HStack {
-                        Text("History Size")
-                        Spacer()
-                        Picker("", selection: $colorHistorySize) {
-                            Text("5 colors").tag(5)
-                            Text("10 colors").tag(10)
-                            Text("15 colors").tag(15)
-                            Text("20 colors").tag(20)
-                        }
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 100)
-                    }
-                    .settingsHighlight(id: highlightID("History Size"))
-
-                    Defaults.Toggle(key: .showColorFormats) {
-                        Text("Show All Color Formats")
-                    }
-                    .settingsHighlight(id: highlightID("Show All Color Formats"))
-
-                } header: {
-                    Text("Settings")
-                } footer: {
-                    switch colorPickerDisplayMode {
-                    case .popover:
-                        Text("Popover mode shows color picker as a dropdown attached to the color picker button. Panel mode shows color picker in a floating window.")
-                    case .panel:
-                        Text("Panel mode shows color picker in a floating window. Popover mode shows color picker as a dropdown attached to the color picker button.")
-                    }
-                }
-
-                Section {
-                    HStack {
-                        Text("Color History")
-                        Spacer()
-                        Text("\(colorPickerManager.colorHistory.count)")
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack {
-                        Text("Picking Status")
-                        Spacer()
-                        Text(colorPickerManager.isPickingColor ? "Active" : "Ready")
-                            .foregroundColor(colorPickerManager.isPickingColor ? .green : .secondary)
-                    }
-
-                    Button("Show Color Picker Panel") {
-                        ColorPickerPanelManager.shared.showColorPickerPanel()
-                    }
-                    .disabled(!enableColorPickerFeature)
-
-                } header: {
-                    Text("Status & Actions")
-                }
-
-                Section {
-                    Button("Clear Color History") {
-                        colorPickerManager.clearHistory()
-                    }
-                    .foregroundColor(.red)
-                    .disabled(colorPickerManager.colorHistory.isEmpty)
-
-                    Button("Start Color Picking") {
-                        colorPickerManager.startColorPicking()
-                    }
-                    .disabled(!enableColorPickerFeature || colorPickerManager.isPickingColor)
-
-                } header: {
-                    Text("Quick Actions")
-                } footer: {
-                    Text("Clear color history removes all picked colors. Start color picking begins screen color capture mode.")
-                }
-            }
-        }
-        .navigationTitle("Color Picker")
-    }
-}
 
 struct CustomOSDSettings: View {
     @Default(.enableCustomOSD) var enableCustomOSD
@@ -8057,102 +7682,6 @@ struct SettingsPermissionCallout: View {
     HUD()
 }
 
-struct NotesSettingsView: View {
-    @EnvironmentObject var vm: DynamicIslandViewModel
-    @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @ObservedObject private var appleNotesSync = AppleNotesSyncManager.shared
-    @Default(.enableNotes) private var enableNotes
-    @Default(.enableAppleNotesSync) private var enableAppleNotesSync
-    @Default(.appleNotesLastSyncDate) private var appleNotesLastSyncDate
-
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.notes.highlightID(for: title)
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableNotes) {
-                    Text("Enable Notes")
-                }
-                if enableNotes {
-                    Defaults.Toggle(key: .enableNotePinning) {
-                        Text("Enable Note Pinning")
-                    }
-                    Defaults.Toggle(key: .enableNoteSearch) {
-                        Text("Enable Note Search")
-                    }
-                    Defaults.Toggle(key: .enableNoteColorFiltering) {
-                        Text("Enable Color Filtering")
-                    }
-                    Defaults.Toggle(key: .enableCreateFromClipboard) {
-                        Text("Enable Create from Clipboard")
-                    }
-                    Defaults.Toggle(key: .enableNoteCharCount) {
-                        Text("Show Character Count")
-                    }
-                }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("Customize how you organize and create notes. Enabling color filtering and search helps manage large lists.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if enableNotes {
-                Section {
-                    Defaults.Toggle(key: .enableAppleNotesSync) {
-                        Text("Sync with Apple Notes")
-                    }
-                    .settingsHighlight(id: highlightID("Sync with Apple Notes"))
-
-                    if enableAppleNotesSync {
-                        Button {
-                            Task {
-                                let notes = Defaults[.savedNotes]
-                                if let merged = await appleNotesSync.sync(localNotes: notes) {
-                                    Defaults[.savedNotes] = merged
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text("Sync Now")
-                                Spacer()
-                                if appleNotesSync.isSyncing {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                            }
-                        }
-                        .disabled(appleNotesSync.isSyncing)
-                        .settingsHighlight(id: highlightID("Sync Now"))
-
-                        if let lastSync = appleNotesLastSyncDate {
-                            LabeledContent("Last synced") {
-                                Text(lastSync, style: .relative)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if let error = appleNotesSync.lastError {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
-                    }
-                } header: {
-                    Text("Apple Notes")
-                } footer: {
-                    Text("Two-way sync with the macOS Notes app. Notes created in VibeIsland appear in the VibeIsland folder in Notes, and your existing Apple Notes are imported into the notch. Grant Automation permission for Notes when prompted.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .navigationTitle("Notes")
-    }
-}
 
 // MARK: - Terminal Settings
 

@@ -51,7 +51,6 @@ struct TabSelectionView: View {
     @State private var showQuickSharePopover = false
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.enableStatsFeature) var enableStatsFeature
-    @Default(.enableColorPickerFeature) var enableColorPickerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.enableThirdPartyExtensions) private var enableThirdPartyExtensions
     @Default(.enableExtensionNotchExperiences) private var enableExtensionNotchExperiences
@@ -80,12 +79,6 @@ struct TabSelectionView: View {
         // Stats tab only shown when stats feature is enabled
         if Defaults[.enableStatsFeature] {
             tabsArray.append(TabModel(label: "Stats", icon: "chart.xyaxis.line", view: .stats))
-        }
-
-        if Defaults[.enableNotes] || (Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .separateTab) {
-            let label = Defaults[.enableNotes] ? "Notes" : "Clipboard"
-            let icon = Defaults[.enableNotes] ? "note.text" : "doc.on.clipboard"
-            tabsArray.append(TabModel(label: label, icon: icon, view: .notes))
         }
         if Defaults[.enableTerminalFeature] {
             tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))

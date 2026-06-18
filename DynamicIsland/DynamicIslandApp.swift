@@ -445,9 +445,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Use a consistent height for different view types
         if coordinator.currentView == .timer {
             baseSize.height = 250 // Extra space for timer presets
-        } else if coordinator.currentView == .notes || coordinator.currentView == .clipboard {
-            let preferredHeight = coordinator.notesLayoutState.preferredHeight
-            baseSize.height = max(baseSize.height, preferredHeight)
         } else if coordinator.currentView == .terminal {
             let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
             let maxFraction = Defaults[.terminalMaxHeightFraction]
@@ -663,13 +660,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }.store(in: &cancellables)
 
-        coordinator.$notesLayoutState
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.updateWindowSizeIfNeeded()
-            }
-            .store(in: &cancellables)
-        
         // Observe stats settings changes - use debounced updates
         Defaults.publisher(.enableStatsFeature, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
@@ -734,18 +724,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }.store(in: &cancellables)
 
         Defaults.publisher(.enableTimerFeature, options: []).sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateFeatureShortcutAvailability()
-            }
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.enableClipboardManager, options: []).sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateFeatureShortcutAvailability()
-            }
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.enableColorPickerFeature, options: []).sink { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.updateFeatureShortcutAvailability()
             }
@@ -1080,45 +1058,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TimerManager.shared.startDemoTimer(duration: 300)
         }
 
-        KeyboardShortcuts.onKeyDown(for: .clipboardHistoryPanel) { [weak self] in
-            guard let self else { return }
-            guard Defaults[.enableShortcuts], Defaults[.enableClipboardManager] else { return }
-
-            if !ClipboardManager.shared.isMonitoring {
-                ClipboardManager.shared.startMonitoring()
-            }
-
-            switch Defaults[.clipboardDisplayMode] {
-            case .panel:
-                ClipboardPanelManager.shared.toggleClipboardPanel()
-            case .popover:
-                if vm.notchState == .closed {
-                    vm.open()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        NotificationCenter.default.post(name: NSNotification.Name("ToggleClipboardPopover"), object: nil)
-                    }
-                } else {
-                    NotificationCenter.default.post(name: NSNotification.Name("ToggleClipboardPopover"), object: nil)
-                }
-            case .separateTab:
-                if vm.notchState == .closed {
-                    vm.open()
-                    coordinator.currentView = .notes
-                } else {
-                    if coordinator.currentView == .notes {
-                        vm.close()
-                    } else {
-                        coordinator.currentView = .notes
-                    }
-                }
-            }
-        }
-
-        KeyboardShortcuts.onKeyDown(for: .colorPickerPanel) {
-            guard Defaults[.enableShortcuts], Defaults[.enableColorPickerFeature] else { return }
-            ColorPickerPanelManager.shared.toggleColorPickerPanel()
-        }
-
         KeyboardShortcuts.onKeyDown(for: .toggleTerminalTab) { [weak self] in
             guard let self else { return }
             guard Defaults[.enableShortcuts], Defaults[.enableTerminalFeature] else { return }
@@ -1170,8 +1109,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func updateFeatureShortcutAvailability() {
         updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
-        updateShortcut(.clipboardHistoryPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableClipboardManager])
-        updateShortcut(.colorPickerPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableColorPickerFeature])
         updateShortcut(.screenAssistantPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableScreenAssistant])
         updateShortcut(.toggleTerminalTab, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTerminalFeature])
     }
