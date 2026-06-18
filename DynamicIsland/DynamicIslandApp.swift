@@ -451,17 +451,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
         }
         
-        let adjustedContentSize = statsAdjustedNotchSize(
-            from: baseSize,
-            isStatsTabActive: coordinator.currentView == .stats,
-            secondRowProgress: coordinator.statsSecondRowExpansion
-        )
-        var result = addShadowPadding(
-            to: adjustedContentSize,
+        return addShadowPadding(
+            to: baseSize,
             isMinimalistic: Defaults[.enableMinimalisticUI]
         )
-
-        return result
     }
 
     /// Adjusts a base notch size for a specific screen by adding Dynamic Island
@@ -659,32 +652,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.updateWindowSizeForTabSwitch()
             }
         }.store(in: &cancellables)
-
-        // Observe stats settings changes - use debounced updates
-        Defaults.publisher(.enableStatsFeature, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showCpuGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showMemoryGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showGpuGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showNetworkGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-        
-        Defaults.publisher(.showDiskGraph, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-
         Defaults.publisher(.openNotchWidth, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
         }.store(in: &cancellables)
