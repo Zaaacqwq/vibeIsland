@@ -1542,7 +1542,7 @@ struct ContentView: View {
                 .animation(.smooth(duration: 0.3), value: count)
                 .frame(alignment: .center)
         case .agent(let state):
-            HaloRingView(state: state, size: max(10, notchHeight - 12))
+            HaloRingView(state: state, size: max(18, notchHeight - 4))
                 .frame(maxWidth: .infinity, alignment: .center)
         case .none:
             spectrumView(
