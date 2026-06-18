@@ -304,27 +304,6 @@ enum ThirdPartyCalendarApp: String, CaseIterable, Codable, Defaults.Serializable
     }
 }
 
-enum ClipboardDisplayMode: String, CaseIterable, Codable, Defaults.Serializable {
-    case popover = "popover"     // Traditional popover attached to button
-    case panel = "panel"         // Floating panel near notch
-    case separateTab = "separateTab" // Separate tab in Dynamic Island
-    
-    var displayName: String {
-        switch self {
-        case .popover: return String(localized: "Popover")
-        case .panel: return String(localized: "Panel")
-        case .separateTab: return String(localized: "Separate Tab")
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .popover: return "Shows clipboard as a dropdown attached to the clipboard button"
-        case .panel: return "Shows clipboard in a floating panel near the notch"
-        case .separateTab: return "Shows copied items in a separate tab within the Dynamic Island (merges with Notes if enabled)"
-        }
-    }
-}
 
 enum ScreenAssistantDisplayMode: String, CaseIterable, Codable, Defaults.Serializable {
     case popover = "popover"     // Traditional popover attached to button
@@ -345,24 +324,6 @@ enum ScreenAssistantDisplayMode: String, CaseIterable, Codable, Defaults.Seriali
     }
 }
 
-enum ColorPickerDisplayMode: String, CaseIterable, Codable, Defaults.Serializable {
-    case popover = "popover"     // Traditional popover attached to button
-    case panel = "panel"         // Floating panel near notch
-    
-    var displayName: String {
-        switch self {
-        case .popover: return "Popover"
-        case .panel: return "Panel"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .popover: return "Shows color picker as a dropdown attached to the color picker button"
-        case .panel: return "Shows color picker in a floating panel near the notch"
-        }
-    }
-}
 
 enum ThirdPartyDDCProvider: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
     case betterDisplay
@@ -1103,18 +1064,11 @@ extension Defaults.Keys {
     static let reminderSneakPeekDuration = Key<Double>("reminderSneakPeekDuration", default: 5)
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
-    // MARK: ColorPicker Feature
-    static let enableColorPickerFeature = Key<Bool>("enableColorPickerFeature", default: true)
     static let showColorFormats = Key<Bool>("showColorFormats", default: true)
-    static let colorPickerDisplayMode = Key<ColorPickerDisplayMode>("colorPickerDisplayMode", default: .panel)
     static let colorHistorySize = Key<Int>("colorHistorySize", default: 10)
-    static let showColorPickerIcon = Key<Bool>("showColorPickerIcon", default: true)
     
     // MARK: Clipboard Feature
-    static let enableClipboardManager = Key<Bool>("enableClipboardManager", default: true)
     static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 3)
-    static let showClipboardIcon = Key<Bool>("showClipboardIcon", default: true)
-    static let clipboardDisplayMode = Key<ClipboardDisplayMode>("clipboardDisplayMode", default: .panel)
     
     // MARK: Screen Assistant Feature
     static let enableScreenAssistant = Key<Bool>("enableScreenAssistant", default: true)
@@ -1265,7 +1219,6 @@ extension Defaults.Keys {
     static let showLiveCanvasInDynamicIsland = Key<Bool>("showLiveCanvasInDynamicIsland", default: false)
     
     // MARK: Notes Feature
-    static let enableNotes = Key<Bool>("enableNotes", default: false)
     static let enableNotePinning = Key<Bool>("enableNotePinning", default: true)
     static let enableNoteSearch = Key<Bool>("enableNoteSearch", default: false)
     static let enableNoteColorFiltering = Key<Bool>("enableNoteColorFiltering", default: false)
