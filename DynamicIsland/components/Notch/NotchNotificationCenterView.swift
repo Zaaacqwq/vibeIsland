@@ -161,20 +161,20 @@ private struct NotificationRow: View {
                     Spacer(minLength: 4)
                     Text(Self.relativeFormatter.localizedString(for: notification.date, relativeTo: Date()))
                         .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.white.opacity(0.45))
                         .fixedSize()
                 }
                 if !notification.title.isEmpty {
                     Text(notification.title)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
                         .lineLimit(1)
                 }
                 let preview = notification.preview
                 if !preview.isEmpty {
                     Text(preview)
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.72))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }

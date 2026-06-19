@@ -527,6 +527,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func expandToNotificationsTab() {
+        guard Defaults[.enableNotificationMonitoring], Defaults[.showNotificationLiveActivity] else { return }
+        coordinator.currentView = .notifications
+        vm.open()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self else { return }
+            guard self.vm.notchState == .open,
+                  self.coordinator.currentView == .notifications,
+                  !self.vm.isAutoCloseSuppressed else { return }
+            self.vm.close()
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         let userInfo: [String: Any] = [
             AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
@@ -632,6 +646,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.expandToAgentsTab()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NotificationMonitorManager.didArrive)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.expandToNotificationsTab()
             }
             .store(in: &cancellables)
         

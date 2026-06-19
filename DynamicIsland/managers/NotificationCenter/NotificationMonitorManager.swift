@@ -130,22 +130,21 @@ final class NotificationMonitorManager: ObservableObject {
 
     // MARK: - Popup
 
-    private let popupDuration: TimeInterval = 4
+    /// Posted (throttled) when a new notification arrives, so the app can expand
+    /// the notch to the notifications tab — same UX as agent-completion.
+    static let didArrive = Notification.Name("vibeIslandNotificationDidArrive")
 
-    /// Pop the closed-pill notification toast via the shared sneak-peek machinery,
-    /// which handles notch widening + auto-hide. No-op while the notch is open.
+    private static let popupThrottle: TimeInterval = 5
+    private var lastPopupAt: Date = .distantPast
+
+    /// Request the big expand-to-tab popup. Throttled so notification bursts
+    /// don't repeatedly re-open the notch.
     private func presentPopup(for notification: IslandNotification) {
         guard Defaults[.showNotificationLiveActivity] else { return }
-        let coordinator = DynamicIslandViewCoordinator.shared
-
-        let appName = NotificationAppCatalog.displayName(for: notification.bundleID)
-        coordinator.toggleSneakPeek(
-            status: true,
-            type: .notification,
-            duration: popupDuration,
-            title: notification.title.isEmpty ? appName : notification.title,
-            subtitle: notification.preview
-        )
+        let now = Date()
+        guard now.timeIntervalSince(lastPopupAt) > Self.popupThrottle else { return }
+        lastPopupAt = now
+        NotificationCenter.default.post(name: Self.didArrive, object: notification.recordID)
     }
 
     // MARK: - Errors
