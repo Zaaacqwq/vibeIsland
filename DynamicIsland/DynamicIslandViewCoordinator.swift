@@ -106,11 +106,11 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .terminal, .extensionExperience]
-    
+    private static let tabOrder: [NotchViews] = [.home, .shelf, .terminal, .agents, .calendar, .extensionExperience]
+
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
-    
+
     @Published var currentView: NotchViews = .home {
         didSet {
             if Defaults[.enableMinimalisticUI] && currentView != .home {
@@ -123,7 +123,36 @@ class DynamicIslandViewCoordinator: ObservableObject {
             tabSwitchForward = newIdx >= oldIdx
         }
     }
-    
+
+    /// The notch tabs currently visible, in display order — mirrors the tab list
+    /// built in `TabSelectionView`. Used by the horizontal swipe-to-switch gesture.
+    private func orderedVisibleTabs() -> [NotchViews] {
+        if Defaults[.enableMinimalisticUI] { return [.home] }
+        var tabs: [NotchViews] = []
+        if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] || Defaults[.showMirror] {
+            tabs.append(.home)
+        }
+        if Defaults[.dynamicShelf] { tabs.append(.shelf) }
+        if Defaults[.enableTerminalFeature] { tabs.append(.terminal) }
+        if Defaults[.enableAgentMonitoring] { tabs.append(.agents) }
+        if Defaults[.showCalendar] { tabs.append(.calendar) }
+        return tabs
+    }
+
+    /// Move to the next (`forward`) or previous visible tab. Clamps at the ends
+    /// (no wrap-around). Extension experience tabs are not included.
+    func navigateToAdjacentTab(forward: Bool) {
+        let tabs = orderedVisibleTabs()
+        guard tabs.count > 1 else { return }
+        guard let idx = tabs.firstIndex(of: currentView) else {
+            withAnimation(.smooth) { currentView = tabs.first ?? .home }
+            return
+        }
+        let nextIdx = forward ? idx + 1 : idx - 1
+        guard nextIdx >= 0, nextIdx < tabs.count else { return }
+        withAnimation(.smooth) { currentView = tabs[nextIdx] }
+    }
+
     @Published var selectedExtensionExperienceID: String?
     
     

@@ -693,6 +693,7 @@ struct NotchHomeView: View {
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     let albumArtNamespace: Namespace.ID
+    @State private var calendarScrollSuppressionToken = UUID()
 
     /// Whether the music player should actively display (enabled AND has real content).
     private var shouldShowMusicPlayer: Bool {
@@ -745,7 +746,10 @@ struct NotchHomeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onHover { isHovering in
-                        vm.isHoveringCalendar = isHovering
+                        vm.setScrollGestureSuppression(isHovering, token: calendarScrollSuppressionToken)
+                    }
+                    .onDisappear {
+                        vm.setScrollGestureSuppression(false, token: calendarScrollSuppressionToken)
                     }
                     .environmentObject(vm)
                 }

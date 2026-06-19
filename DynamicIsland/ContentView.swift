@@ -165,7 +165,8 @@ struct ContentView: View {
     @State private var isHoveringClosedMusicWaveformControl: Bool = false
 
     @State private var gestureProgress: CGFloat = .zero
-    @State private var skipGestureActiveDirection: MusicManager.SkipDirection?
+    @State private var tabSwitchGestureArmed = true
+    @State private var calendarTabScrollSuppressionToken = UUID()
     @State private var isMusicControlWindowVisible = false
     @State private var pendingMusicControlTask: Task<Void, Never>?
     @State private var musicControlHideTask: Task<Void, Never>?
@@ -535,10 +536,10 @@ struct ContentView: View {
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                             .panGesture(direction: .left) { translation, phase in
-                                handleSkipGesture(direction: .forward, translation: translation, phase: phase)
+                                handleTabSwitchGesture(forward: true, translation: translation, phase: phase)
                             }
                             .panGesture(direction: .right) { translation, phase in
-                                handleSkipGesture(direction: .backward, translation: translation, phase: phase)
+                                handleTabSwitchGesture(forward: false, translation: translation, phase: phase)
                             }
                     }
             }
@@ -1000,6 +1001,12 @@ struct ContentView: View {
                                 NotchAgentsView()
                             case .calendar:
                                 StandaloneCalendarView()
+                                    .onHover { hovering in
+                                        vm.setScrollGestureSuppression(hovering, token: calendarTabScrollSuppressionToken)
+                                    }
+                                    .onDisappear {
+                                        vm.setScrollGestureSuppression(false, token: calendarTabScrollSuppressionToken)
+                                    }
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)
@@ -2115,7 +2122,7 @@ struct ContentView: View {
     }
 
     private func handleCloseScrollGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .open, !vm.isHoveringCalendar, !vm.isScrollGestureActive else { return }
+        guard vm.notchState == .open, !vm.isScrollGestureActive else { return }
 
         withAnimation(.smooth) {
             gestureProgress = (translation / Defaults[.gestureSensitivity]) * -20
@@ -2140,45 +2147,37 @@ struct ContentView: View {
         }
     }
 
-    private func handleSkipGesture(direction: MusicManager.SkipDirection, translation: CGFloat, phase: NSEvent.Phase) {
+    /// Horizontal swipe switches between the open notch's tabs.
+    /// Swipe left → next tab, swipe right → previous tab (respects reverseSwipeGestures).
+    private func handleTabSwitchGesture(forward: Bool, translation: CGFloat, phase: NSEvent.Phase) {
         if phase == .ended {
-            skipGestureActiveDirection = nil
+            tabSwitchGestureArmed = true
             return
         }
 
-        guard canPerformSkipGesture() else {
-            skipGestureActiveDirection = nil
+        guard canPerformTabSwitchGesture() else {
+            tabSwitchGestureArmed = true
             return
         }
 
-        if skipGestureActiveDirection == nil && translation > Defaults[.gestureSensitivity] {
-            let effectiveDirection: MusicManager.SkipDirection
-            if Defaults[.reverseSwipeGestures] {
-                effectiveDirection = direction == .forward ? .backward : .forward
-            } else {
-                effectiveDirection = direction
-            }
-            skipGestureActiveDirection = effectiveDirection
+        if tabSwitchGestureArmed && translation > Defaults[.gestureSensitivity] {
+            tabSwitchGestureArmed = false
+
+            let effectiveForward = Defaults[.reverseSwipeGestures] ? !forward : forward
 
             if Defaults[.enableHaptics] {
                 triggerHapticIfAllowed()
             }
 
-            musicManager.handleSkipGesture(direction: effectiveDirection)
+            coordinator.navigateToAdjacentTab(forward: effectiveForward)
         }
     }
 
-    private func canPerformSkipGesture() -> Bool {
-        let canSkipInOpenHome = vm.notchState == .open && coordinator.currentView == .home
-        let canSkipInClosedMusic = !Defaults[.openNotchOnHover] && isClosedMusicGestureContext
-
-        return enableHorizontalMusicGestures
-            && (canSkipInOpenHome || canSkipInClosedMusic)
-            && (!musicManager.isPlayerIdle || musicManager.bundleIdentifier != nil)
+    private func canPerformTabSwitchGesture() -> Bool {
+        return vm.notchState == .open
+            && !Defaults[.enableMinimalisticUI]
             && !lockScreenManager.isLocked
             && !hasAnyActivePopovers()
-            && !vm.isHoveringCalendar
-            && !vm.isScrollGestureActive
     }
 
     private func handleMusicControlPlaybackChange(isPlaying: Bool) {
