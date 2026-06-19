@@ -54,6 +54,7 @@ struct ContentView: View {
     @State private var downloadManager = DownloadManager.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
+    @ObservedObject var notificationMonitor = NotificationMonitorManager.shared
 
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableHorizontalMusicGestures) var enableHorizontalMusicGestures
@@ -848,7 +849,7 @@ struct ContentView: View {
                             styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) }
                         )
                         .id(batteryModel.activeTemporaryHUDToken)
-                      } else if isSneakPeekVisibleOnCurrentScreen && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && !coordinator.sneakPeek.type.isExtensionPayload && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                      } else if isSneakPeekVisibleOnCurrentScreen && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && !coordinator.sneakPeek.type.isExtensionPayload && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(
                                   coordinator.sneakPeek.type == .capsLock
@@ -909,7 +910,7 @@ struct ContentView: View {
                        }
                       
                       if isSneakPeekVisibleOnCurrentScreen {
-                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && !coordinator.sneakPeek.type.isExtensionPayload && !Defaults[.inlineHUD] && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && (coordinator.sneakPeek.type != .notification) && !coordinator.sneakPeek.type.isExtensionPayload && !Defaults[.inlineHUD] && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                               SystemEventIndicatorModifier(eventType: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, sendEventBack: { _ in
                                   //
                               })
@@ -943,6 +944,27 @@ struct ContentView: View {
                                               textColor: reminderColor(for: reminder, now: reminderManager.currentDate),
                                               minDuration: 1,
                                               frameWidth: max(0, geo.size.width - 14)
+                                          )
+                                      }
+                                  }
+                                  .padding(.bottom, 10)
+                              }
+                          }
+                          // Notification Center popup
+                          else if coordinator.sneakPeek.type == .notification {
+                              if vm.notchState == .closed && !vm.hideOnClosed && activeSneakPeekStyle == .standard,
+                                 let notification = notificationMonitor.latestDelivery {
+                                  GeometryReader { geo in
+                                      HStack(spacing: 8) {
+                                          Image(nsImage: NotificationAppCatalog.icon(for: notification.bundleID))
+                                              .resizable()
+                                              .aspectRatio(contentMode: .fit)
+                                              .frame(width: 18, height: 18)
+                                          MarqueeText(
+                                              .constant(notificationSneakPeekText(for: notification)),
+                                              textColor: .gray,
+                                              minDuration: 1,
+                                              frameWidth: max(0, geo.size.width - 24)
                                           )
                                       }
                                   }
@@ -1032,6 +1054,13 @@ struct ContentView: View {
             return .red
         }
         return Color(nsColor: reminder.event.calendar.color).ensureMinimumBrightness(factor: 0.7)
+    }
+
+    private func notificationSneakPeekText(for notification: IslandNotification) -> String {
+        let appName = NotificationAppCatalog.displayName(for: notification.bundleID)
+        let title = notification.title.isEmpty ? appName : notification.title
+        let body = notification.preview
+        return body.isEmpty ? title : "\(title) • \(body)"
     }
 
     private func reminderSneakPeekText(for entry: ReminderLiveActivityManager.ReminderEntry, now: Date) -> String {
