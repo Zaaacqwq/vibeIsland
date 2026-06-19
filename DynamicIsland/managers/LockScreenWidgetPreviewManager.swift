@@ -28,7 +28,6 @@ final class LockScreenWidgetPreviewManager: ObservableObject {
     @Published private(set) var isPreviewVisible = false
 
     private var cancellables = Set<AnyCancellable>()
-    private var startedDemoTimer = false
     private var previewWindow: NSWindow?
     private var previewWindowDelegate: PreviewWindowDelegate?
     private var previewHostingView: NSHostingView<LockScreenPreviewScene>?
@@ -67,7 +66,7 @@ final class LockScreenWidgetPreviewManager: ObservableObject {
 
         ensurePreviewWindow()
 
-        if Defaults[.enableLockScreenTimerWidget] {
+        if false {
             ensureDemoTimerIfNeeded()
         } else {
             stopDemoTimerIfNeeded()
@@ -80,23 +79,13 @@ final class LockScreenWidgetPreviewManager: ObservableObject {
         stopDemoTimerIfNeeded()
     }
 
-    private func ensureDemoTimerIfNeeded() {
-        let timerManager = TimerManager.shared
-        guard !timerManager.isTimerActive else { return }
-        timerManager.startDemoTimer(duration: 1783)
-        startedDemoTimer = true
-    }
+    private func ensureDemoTimerIfNeeded() {}
 
-    private func stopDemoTimerIfNeeded() {
-        guard startedDemoTimer else { return }
-        TimerManager.shared.forceStopTimer()
-        startedDemoTimer = false
-    }
+    private func stopDemoTimerIfNeeded() {}
 
     private func observeDefaults() {
         observeKey(.enableLockScreenMediaWidget)
         observeKey(.enableLockScreenWeatherWidget)
-        observeKey(.enableLockScreenTimerWidget)
         observeKey(.lockScreenWeatherWidgetStyle)
         observeKey(.lockScreenWeatherProviderSource)
         observeKey(.lockScreenWeatherTemperatureUnit)
@@ -222,7 +211,7 @@ final class LockScreenWidgetPreviewManager: ObservableObject {
             screenSize: screen.frame.size,
             weatherSnapshot: mockWeatherSnapshot(),
             showsWeather: Defaults[.enableLockScreenWeatherWidget],
-            showsTimer: Defaults[.enableLockScreenTimerWidget],
+            showsTimer: false,
             showsMediaPanel: Defaults[.enableLockScreenMediaWidget]
         )
         let hosting = NSHostingView(rootView: scene)
@@ -247,7 +236,7 @@ final class LockScreenWidgetPreviewManager: ObservableObject {
             screenSize: screen.frame.size,
             weatherSnapshot: mockWeatherSnapshot(),
             showsWeather: Defaults[.enableLockScreenWeatherWidget],
-            showsTimer: Defaults[.enableLockScreenTimerWidget],
+            showsTimer: false,
             showsMediaPanel: Defaults[.enableLockScreenMediaWidget]
         )
 
@@ -412,12 +401,6 @@ private struct LockScreenPreviewScene: View {
                             }
                     }
 
-                    if showsTimer {
-                        LockScreenTimerWidget()
-                            .frame(width: timerFrame.width, height: timerFrame.height)
-                            .position(centerPoint(for: swiftUIFrame(for: timerFrame)))
-                    }
-
                     if showsWeather {
                         LockScreenWeatherWidget(snapshot: weatherSnapshot)
                             .fixedSize()
@@ -458,7 +441,7 @@ private struct LockScreenPreviewScene: View {
     }
 
     private var timerFrame: CGRect {
-        let size = LockScreenTimerWidget.preferredSize
+        let size = CGSize(width: 200, height: 80)
         let screenFrame = CGRect(origin: .zero, size: screenSize)
         let originX = screenFrame.midX - (size.width / 2)
         let defaultLowering: CGFloat = -18

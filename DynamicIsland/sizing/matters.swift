@@ -72,10 +72,6 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
-    // Timer tab (only in .tab display mode)
-    if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
-        count += 1
-    }
     // Terminal tab
     if Defaults[.enableTerminalFeature] {
         count += 1
@@ -130,10 +126,6 @@ var minimalisticOpenNotchSize: CGSize {
     if reminderCount > 0 {
         let reminderHeight = ReminderLiveActivityManager.additionalHeight(forRowCount: reminderCount)
         size.height += reminderHeight
-    }
-
-    if DynamicIslandViewCoordinator.shared.timerLiveActivityEnabled && TimerManager.shared.isExternalTimerActive {
-        size.height += minimalisticTimerCountdownBlockHeight
     }
 
     return size

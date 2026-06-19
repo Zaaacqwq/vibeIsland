@@ -73,7 +73,6 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case shelf
-    case timer
     case terminal
     case agents
     case calendar

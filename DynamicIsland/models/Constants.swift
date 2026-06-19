@@ -1035,10 +1035,6 @@ extension Defaults.Keys {
     static let terminalStickyMode = Key<Bool>("terminalStickyMode", default: false)
     
     // MARK: Timer Feature
-    static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
-    static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
-    static let timerPresets = Key<[TimerPreset]>("timerPresets", default: TimerPreset.defaultPresets)
-    static let showTimerPresetsInNotchTab = Key<Bool>("showTimerPresetsInNotchTab", default: true)
     static let timerIconColorMode = Key<TimerIconColorMode>("timerIconColorMode", default: .adaptive)
     static let timerSolidColor = Key<Color>("timerSolidColor", default: .blue)
     static let timerShowsCountdown = Key<Bool>("timerShowsCountdown", default: true)

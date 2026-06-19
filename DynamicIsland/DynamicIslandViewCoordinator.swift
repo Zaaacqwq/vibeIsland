@@ -100,12 +100,13 @@ struct ExpandedItem {
     var autoHideDuration: TimeInterval? = nil
 }
 
+@MainActor
 class DynamicIslandViewCoordinator: ObservableObject {
     static let shared = DynamicIslandViewCoordinator()
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .terminal, .extensionExperience]
+    private static let tabOrder: [NotchViews] = [.home, .shelf, .terminal, .extensionExperience]
     
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
@@ -131,8 +132,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
     @AppStorage("musicLiveActivityEnabled") var musicLiveActivityEnabled: Bool = true
     @AppStorage("timerLiveActivityEnabled") var timerLiveActivityEnabled: Bool = true
 
-    @Default(.enableTimerFeature) private var enableTimerFeature
-    @Default(.timerDisplayMode) private var timerDisplayMode
     
     @AppStorage("alwaysShowTabs") var alwaysShowTabs: Bool = true {
         didSet {
@@ -169,20 +168,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
     
     private init() {
         selectedScreen = preferredScreen
-        Defaults.publisher(.timerDisplayMode)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] change in
-                self?.handleTimerDisplayModeChange(change.newValue)
-            }
-            .store(in: &cancellables)
-
-        Defaults.publisher(.enableTimerFeature)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] change in
-                self?.handleTimerFeatureToggle(change.newValue)
-            }
-            .store(in: &cancellables)
-
         Defaults.publisher(.enableMinimalisticUI)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] change in
@@ -226,8 +211,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableTimerFeature).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.timerDisplayMode).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableTerminalFeature).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher()
         )
@@ -247,20 +230,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
 
     func suppressHoverOpen(for duration: TimeInterval = 0.35) {
         hoverOpenSuppressedUntil = Date().addingTimeInterval(max(0, duration))
-    }
-
-    private func handleTimerDisplayModeChange(_ mode: TimerDisplayMode) {
-        guard mode == .popover, currentView == .timer else { return }
-        withAnimation(.smooth) {
-            currentView = .home
-        }
-    }
-
-    private func handleTimerFeatureToggle(_ isEnabled: Bool) {
-        guard !isEnabled, currentView == .timer else { return }
-        withAnimation(.smooth) {
-            currentView = .home
-        }
     }
 
     private func handleMinimalisticModeChange(_ isEnabled: Bool) {
@@ -335,7 +304,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
             resolvedDuration = duration
         }
         sneakPeekDuration = resolvedDuration
-        let bypassedTypes: [SneakContentType] = [.music, .timer, .reminder, .bluetoothAudio]
+        let bypassedTypes: [SneakContentType] = [.music, .reminder, .bluetoothAudio]
         
         // Check if it's an extension type
         let isExtensionType: Bool

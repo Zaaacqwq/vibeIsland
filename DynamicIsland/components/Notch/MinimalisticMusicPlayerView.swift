@@ -33,14 +33,12 @@ struct MinimalisticMusicPlayerView: View {
     @Default(.showMediaOutputControl) private var showMediaOutputControl
     @Default(.musicSkipBehavior) private var musicSkipBehavior
     @ObservedObject private var reminderManager = ReminderLiveActivityManager.shared
-    @ObservedObject private var timerManager = TimerManager.shared
     @ObservedObject private var coordinator = DynamicIslandViewCoordinator.shared
     @State private var hudValue: Double = 0
     @State private var hudDragging: Bool = false
     @State private var hudLastDragged: Date = .distantPast
     @Default(.enableReminderLiveActivity) private var enableReminderLiveActivity
     @Default(.enableLyrics) private var enableLyrics
-    @Default(.timerPresets) private var timerPresets
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 8
 
@@ -213,32 +211,10 @@ struct MinimalisticMusicPlayerView: View {
         ReminderLiveActivityManager.additionalHeight(forRowCount: reminderEntries.count)
     }
 
-    private var shouldShowTimerCountdown: Bool {
-        coordinator.timerLiveActivityEnabled && timerManager.isExternalTimerActive
-    }
+    private var shouldShowTimerCountdown: Bool { false }
 
     private var brandAccentColor: Color {
         musicManager.brandAccentColor
-    }
-
-    private var timerCountdownColor: Color {
-        let baseColor: Color
-        if let presetId = timerManager.activePresetId,
-           let preset = timerPresets.first(where: { $0.id == presetId }) {
-            baseColor = preset.color
-        } else {
-            baseColor = timerManager.timerColor
-        }
-        return baseColor.ensureMinimumBrightness(factor: 0.75)
-    }
-
-    private var timerCountdownText: String {
-        timerManager.formattedRemainingTime()
-    }
-
-    private var timerDisplayName: String {
-        let trimmed = timerManager.timerName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Timer" : trimmed
     }
 
     private var dynamicHeightSignature: Int {
@@ -297,42 +273,7 @@ struct MinimalisticMusicPlayerView: View {
         .custom("SF Pro Display", size: size)
     }
 
-    private var timerCountdownView: some View {
-        GeometryReader { geometry in
-            let availableWidth = geometry.size.width
-            let preferredCountdownWidth = max(availableWidth * 0.42, 150)
-            let maxCountdownWidth = max(availableWidth - 60, 0)
-            let countdownWidth = min(preferredCountdownWidth, maxCountdownWidth)
-            let marqueeWidth = max(availableWidth - countdownWidth - 12, 0)
-
-            HStack(alignment: .lastTextBaseline, spacing: 12) {
-                MarqueeText(
-                    .init(get: { timerDisplayName }, set: { _ in }),
-                    font: .system(size: 16, weight: .semibold),
-                    nsFont: .title3,
-                    textColor: timerCountdownColor.opacity(0.85),
-                    frameWidth: max(marqueeWidth, 1)
-                )
-                .alignmentGuide(.lastTextBaseline) { dimensions in
-                    dimensions[VerticalAlignment.bottom]
-                }
-
-                Spacer(minLength: 8)
-
-                Text(timerCountdownText)
-                    .font(displayFont(size: 56))
-                    .monospacedDigit()
-                    .foregroundStyle(timerManager.isOvertime ? Color.red : timerCountdownColor)
-                    .contentTransition(.numericText())
-                    .animation(.smooth(duration: 0.25), value: timerManager.remainingTime)
-                    .lineLimit(1)
-                    .frame(width: countdownWidth, alignment: .trailing)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, 4)
-        .frame(height: minimalisticTimerCountdownContentHeight, alignment: .top)
-    }
+    private var timerCountdownView: some View { EmptyView() }
 
     private var reminderList: some View {
         MinimalisticReminderEventListView(reminders: reminderEntries)
