@@ -720,12 +720,15 @@ struct NotchHomeView: View {
                     MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
                 }
             } else {
-                // Normal mode: Show full music player with optional calendar and webcam
-                if shouldShowMusicPlayer {
+                // Normal mode: Show full music player with optional calendar and webcam.
+                // When the Agents panel is shown, keep music as a persistent left
+                // panel (whenever media controls are enabled) rather than auto-hiding
+                // it while idle, so the home tab keeps its music + agents split.
+                if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                
+
                 if Defaults[.enableAgentMonitoring] {
                     // Agent monitor takes the home view's secondary panel;
                     // the calendar moves to its own tab.
