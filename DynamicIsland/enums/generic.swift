@@ -76,6 +76,7 @@ public enum NotchViews {
     case terminal
     case agents
     case calendar
+    case notifications
     case extensionExperience
 }
 

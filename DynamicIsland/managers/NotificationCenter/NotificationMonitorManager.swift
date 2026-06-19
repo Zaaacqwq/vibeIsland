@@ -70,6 +70,11 @@ final class NotificationMonitorManager: ObservableObject {
         pollTimer = nil
     }
 
+    /// Clear the in-app feed. Does not affect the system Notification Center.
+    func clearFeed() {
+        notifications = []
+    }
+
     // MARK: - Initial load
 
     private func loadInitialFeed() {

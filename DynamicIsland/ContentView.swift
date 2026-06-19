@@ -1029,6 +1029,9 @@ struct ContentView: View {
                                     .onDisappear {
                                         vm.setScrollGestureSuppression(false, token: calendarTabScrollSuppressionToken)
                                     }
+                            case .notifications:
+                                NotchNotificationCenterView()
+                                    .environmentObject(vm)
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)
