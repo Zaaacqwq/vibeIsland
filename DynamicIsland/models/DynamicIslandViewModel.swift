@@ -47,7 +47,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var isBatteryPopoverActive: Bool = false
     @Published var isReminderPopoverActive: Bool = false
     @Published var isMediaOutputPopoverActive: Bool = false
-    @Published var isTimerPopoverActive: Bool = false
     @Published var shouldRecheckHover: Bool = false
     @Published var isScrollGestureActive: Bool = false
     private var scrollGestureSuppressionTokens: Set<UUID> = []
@@ -175,15 +174,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
-        TimerManager.shared.$activeSource
-            .combineLatest(TimerManager.shared.$isTimerActive)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _, _ in
-                self?.handleMinimalisticTimerHeightChange()
-            }
-            .store(in: &cancellables)
-
 
         Empty<Void, Never>()
             .sink { [weak self] _ in

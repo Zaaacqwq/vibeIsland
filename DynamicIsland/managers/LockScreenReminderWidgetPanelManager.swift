@@ -133,7 +133,7 @@ final class LockScreenReminderWidgetPanelManager {
             originX = screenFrame.midX - (size.width / 2)
         }
         let musicTop = LockScreenPanelManager.shared.latestFrame?.maxY ?? (screenFrame.midY - 32)
-        let timerFrame = LockScreenTimerWidgetPanelManager.shared.latestFrame
+        let timerFrame = (nil as CGRect?)
 
         let marginAboveMusic: CGFloat = 16
         let marginAboveTimer: CGFloat = 24

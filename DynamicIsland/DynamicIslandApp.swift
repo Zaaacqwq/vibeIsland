@@ -109,7 +109,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let downloadManager = DownloadManager.shared  // NEW: Chromium downloads detection
     let lockScreenPanelManager = LockScreenPanelManager.shared  // NEW: Lock screen music panel
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
-    let systemTimerBridge = SystemTimerBridge.shared
     let extensionXPCServiceHost = ExtensionXPCServiceHost.shared
     let extensionRPCServer = ExtensionRPCServer.shared
     var closeNotchWorkItem: DispatchWorkItem?
@@ -443,9 +442,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
         
         // Use a consistent height for different view types
-        if coordinator.currentView == .timer {
-            baseSize.height = 250 // Extra space for timer presets
-        } else if coordinator.currentView == .terminal {
+        if coordinator.currentView == .terminal {
             let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
             let maxFraction = Defaults[.terminalMaxHeightFraction]
             baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
@@ -674,25 +671,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        TimerManager.shared.$activeSource
-            .combineLatest(TimerManager.shared.$isTimerActive)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.debouncedUpdateWindowSize()
-            }
-            .store(in: &cancellables)
-
         Defaults.publisher(.enableShortcuts, options: []).sink { [weak self] change in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 KeyboardShortcuts.isEnabled = change.newValue
                 self.updateFeatureShortcutAvailability()
-            }
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.enableTimerFeature, options: []).sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateFeatureShortcutAvailability()
             }
         }.store(in: &cancellables)
 
@@ -860,10 +843,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Warm up the lock screen timer widget manager so it can observe timer/default
-        // changes immediately instead of waiting for the first lock event.
-        let timerWidgetManager = LockScreenTimerWidgetManager.shared
-        timerWidgetManager.handleLockStateChange(isLocked: LockScreenManager.shared.currentLockStatus)
 
     }
 
@@ -1020,11 +999,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard !optionalShortcutHandlersRegistered else { return }
         optionalShortcutHandlersRegistered = true
 
-        KeyboardShortcuts.onKeyDown(for: .startDemoTimer) {
-            guard Defaults[.enableShortcuts], Defaults[.enableTimerFeature] else { return }
-            TimerManager.shared.startDemoTimer(duration: 300)
-        }
-
         KeyboardShortcuts.onKeyDown(for: .toggleTerminalTab) { [weak self] in
             guard let self else { return }
             guard Defaults[.enableShortcuts], Defaults[.enableTerminalFeature] else { return }
@@ -1075,7 +1049,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func updateFeatureShortcutAvailability() {
-        updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
         updateShortcut(.screenAssistantPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableScreenAssistant])
         updateShortcut(.toggleTerminalTab, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTerminalFeature])
     }
