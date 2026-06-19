@@ -43,7 +43,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     var onViewTeardown: (() -> Void)?
     
     @Published var hideOnClosed: Bool = true
-    @Published var isHoveringCalendar: Bool = false
     @Published var isBatteryPopoverActive: Bool = false
     @Published var isReminderPopoverActive: Bool = false
     @Published var isMediaOutputPopoverActive: Bool = false
