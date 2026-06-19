@@ -1167,6 +1167,10 @@ extension Defaults.Keys {
     static let enableNotificationMonitoring = Key<Bool>("enableNotificationMonitoring", default: false)
     /// Whether incoming notifications pop up as a closed-pill live activity.
     static let showNotificationLiveActivity = Key<Bool>("showNotificationLiveActivity", default: true)
+    /// Hide notification body text in the feed and popup (privacy).
+    static let hideNotificationContent = Key<Bool>("hideNotificationContent", default: false)
+    /// Bundle identifiers whose notifications are muted (excluded from the feed and popups).
+    static let mutedNotificationApps = Key<Set<String>>("mutedNotificationApps", default: [])
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.

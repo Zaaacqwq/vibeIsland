@@ -62,6 +62,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case shortcuts
     case terminal
     case agents
+    case notifications
     case about
 
     var id: String { rawValue }
@@ -70,7 +71,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     var group: SettingsTabGroup {
         switch self {
         case .general, .appearance:                                          return .core
-        case .media, .liveActivities, .lockScreen, .devices:                 return .mediaAndDisplay
+        case .media, .liveActivities, .lockScreen, .devices, .notifications: return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
         case .calendar:                                      return .productivity
         case .screenAssistant, .shelf,
@@ -99,6 +100,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return String(localized: "Shortcuts")
         case .terminal: return String(localized: "Terminal")
         case .agents: return String(localized: "Agents")
+        case .notifications: return String(localized: "Notifications")
         case .about: return String(localized: "About")
         }
     }
@@ -121,6 +123,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return "keyboard"
         case .terminal: return "apple.terminal"
         case .agents: return "sparkles"
+        case .notifications: return "bell.fill"
         case .about: return "info.circle"
         }
     }
@@ -143,6 +146,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shortcuts: return .orange
         case .terminal: return Color(red: 0.2, green: 0.8, blue: 0.4)
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
+        case .notifications: return .red
         case .about: return .secondary
         }
     }
@@ -472,6 +476,7 @@ struct SettingsView: View {
             // Media & Display
             .media,
             .liveActivities,
+            .notifications,
             .lockScreen,
             .devices,
             // System
@@ -955,6 +960,10 @@ struct SettingsView: View {
         case .agents:
             SettingsForm(tab: .agents) {
                 AgentsSettings()
+            }
+        case .notifications:
+            SettingsForm(tab: .notifications) {
+                NotificationsSettings()
             }
         case .about:
             if let controller = updaterController {

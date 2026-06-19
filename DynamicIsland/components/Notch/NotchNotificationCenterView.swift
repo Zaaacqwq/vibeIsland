@@ -17,6 +17,7 @@
  */
 
 import AppKit
+import Defaults
 import SwiftUI
 
 /// Open-notch tab acting as a mini Notification Center: lists notifications
@@ -84,7 +85,7 @@ struct NotchNotificationCenterView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 6) {
                     ForEach(monitor.notifications) { notification in
-                        NotificationRow(notification: notification)
+                        NotificationRow(notification: notification, hideContent: Defaults[.hideNotificationContent])
                             .onTapGesture { open(notification) }
                     }
                 }
@@ -138,6 +139,7 @@ struct NotchNotificationCenterView: View {
 /// A single notification row: app icon, app name + relative time, title, body.
 private struct NotificationRow: View {
     let notification: IslandNotification
+    let hideContent: Bool
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
@@ -171,7 +173,7 @@ private struct NotificationRow: View {
                         .lineLimit(1)
                 }
                 let preview = notification.preview
-                if !preview.isEmpty {
+                if !preview.isEmpty && !hideContent {
                     Text(preview)
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.72))

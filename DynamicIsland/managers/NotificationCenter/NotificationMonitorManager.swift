@@ -32,12 +32,14 @@ import os
 final class NotificationMonitorManager: ObservableObject {
     static let shared = NotificationMonitorManager()
 
-    /// Rolling feed, newest first, capped at `maxStored`.
+    /// Rolling feed, newest first, capped at `maxStored`. Excludes muted apps.
     @Published private(set) var notifications: [IslandNotification] = []
     /// Whether the database is currently readable (proxy for Full Disk Access).
     @Published private(set) var hasFullDiskAccess: Bool = NotificationCenterReader.hasAccess
     /// The most recent newly delivered notification, for the live-activity popup.
     @Published private(set) var latestDelivery: IslandNotification?
+    /// Every bundle id seen this session (including muted), for the per-app filter UI.
+    @Published private(set) var seenApps: [String] = []
 
     private let reader = NotificationCenterReader()
     private let logger = os.Logger(subsystem: "com.zaaacqwq.VibeIsland", category: "Notifications")
@@ -75,6 +77,34 @@ final class NotificationMonitorManager: ObservableObject {
         notifications = []
     }
 
+    // MARK: - Per-app filtering
+
+    func isMuted(_ bundleID: String) -> Bool {
+        Defaults[.mutedNotificationApps].contains(bundleID)
+    }
+
+    /// Mute or unmute an app. Unmuted apps reappear on their next notification;
+    /// muting also drops the app's existing entries from the current feed.
+    func setMuted(_ muted: Bool, bundleID: String) {
+        if muted {
+            Defaults[.mutedNotificationApps].insert(bundleID)
+            notifications.removeAll { $0.bundleID == bundleID }
+        } else {
+            Defaults[.mutedNotificationApps].remove(bundleID)
+        }
+    }
+
+    private func recordSeenApps(_ records: [IslandNotification]) {
+        var changed = false
+        for record in records where !seenApps.contains(record.bundleID) {
+            seenApps.append(record.bundleID)
+            changed = true
+        }
+        if changed {
+            seenApps.sort { NotificationAppCatalog.displayName(for: $0) < NotificationAppCatalog.displayName(for: $1) }
+        }
+    }
+
     // MARK: - Initial load
 
     private func loadInitialFeed() {
@@ -83,7 +113,8 @@ final class NotificationMonitorManager: ObservableObject {
             // Pull the tail of history for the tab (rec_id > baseline - window).
             let window: Int64 = 50
             let history = try reader.fetchRecords(sinceRecordID: max(0, baseline - window), limit: 50)
-            notifications = history.reversed()  // newest first
+            recordSeenApps(history)
+            notifications = history.reversed().filter { !isMuted($0.bundleID) }  // newest first
             lastSeenRecordID = baseline
             hasFullDiskAccess = true
             logger.info("Loaded \(history.count) notifications, baseline rec_id=\(baseline)")
@@ -106,11 +137,15 @@ final class NotificationMonitorManager: ObservableObject {
     private func poll() {
         guard isRunning, isEnabled else { return }
         do {
-            let fresh = try reader.fetchRecords(sinceRecordID: lastSeenRecordID)
+            let allFresh = try reader.fetchRecords(sinceRecordID: lastSeenRecordID)
             hasFullDiskAccess = true
-            guard !fresh.isEmpty else { return }
+            guard !allFresh.isEmpty else { return }
 
-            lastSeenRecordID = max(lastSeenRecordID, fresh.map(\.recordID).max() ?? lastSeenRecordID)
+            lastSeenRecordID = max(lastSeenRecordID, allFresh.map(\.recordID).max() ?? lastSeenRecordID)
+            recordSeenApps(allFresh)
+
+            let fresh = allFresh.filter { !isMuted($0.bundleID) }
+            guard !fresh.isEmpty else { return }
 
             // Prepend newest-first, dedupe by record id, cap.
             let merged = (fresh.reversed() + notifications)
