@@ -1163,6 +1163,10 @@ extension Defaults.Keys {
     static let enableAgentMonitoring = Key<Bool>("enableAgentMonitoring", default: false)
     /// Whether agent status / permission prompts appear as a closed-pill live activity.
     static let showAgentLiveActivity = Key<Bool>("showAgentLiveActivity", default: true)
+    /// Mirror the macOS Notification Center into VibeIsland (requires Full Disk Access). Off by default.
+    static let enableNotificationMonitoring = Key<Bool>("enableNotificationMonitoring", default: false)
+    /// Whether incoming notifications pop up as a closed-pill live activity.
+    static let showNotificationLiveActivity = Key<Bool>("showNotificationLiveActivity", default: true)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.

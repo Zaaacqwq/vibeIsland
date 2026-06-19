@@ -611,6 +611,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // Setup Notification Center mirror — reads the system notification
+        // database (requires Full Disk Access) to feed the notifications tab
+        // and closed-pill popups.
+        if Defaults[.enableNotificationMonitoring] {
+            NotificationMonitorManager.shared.startIfNeeded()
+        }
+        Defaults.publisher(.enableNotificationMonitoring, options: [])
+            .sink { change in
+                if change.newValue {
+                    NotificationMonitorManager.shared.startIfNeeded()
+                } else {
+                    NotificationMonitorManager.shared.stop()
+                }
+            }
+            .store(in: &cancellables)
+
         // When a Claude session finishes, peek the notch open on the Agents tab.
         NotificationCenter.default.publisher(for: .vibeIslandAgentDidComplete)
             .receive(on: RunLoop.main)
