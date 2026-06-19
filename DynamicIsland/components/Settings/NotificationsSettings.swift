@@ -43,6 +43,9 @@ struct NotificationsSettings: View {
                     Defaults.Toggle(key: .showNotificationLiveActivity) {
                         Text("Pop up the notch on new notifications")
                     }
+                    Defaults.Toggle(key: .notificationSoundEnabled) {
+                        Text("Play a sound on new notifications")
+                    }
                     Defaults.Toggle(key: .hideNotificationContent) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Hide message content")
