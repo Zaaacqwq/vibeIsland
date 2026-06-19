@@ -116,10 +116,31 @@ final class NotificationMonitorManager: ObservableObject {
             if let newest = fresh.last {
                 latestDelivery = newest
                 logger.info("New notification from \(newest.bundleID, privacy: .public)")
+                presentPopup(for: newest)
             }
         } catch {
             handle(error)
         }
+    }
+
+    // MARK: - Popup
+
+    private let popupDuration: TimeInterval = 4
+
+    /// Pop the closed-pill notification toast via the shared sneak-peek machinery,
+    /// which handles notch widening + auto-hide. No-op while the notch is open.
+    private func presentPopup(for notification: IslandNotification) {
+        guard Defaults[.showNotificationLiveActivity] else { return }
+        let coordinator = DynamicIslandViewCoordinator.shared
+
+        let appName = NotificationAppCatalog.displayName(for: notification.bundleID)
+        coordinator.toggleSneakPeek(
+            status: true,
+            type: .notification,
+            duration: popupDuration,
+            title: notification.title.isEmpty ? appName : notification.title,
+            subtitle: notification.preview
+        )
     }
 
     // MARK: - Errors
