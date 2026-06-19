@@ -1171,6 +1171,8 @@ extension Defaults.Keys {
     static let hideNotificationContent = Key<Bool>("hideNotificationContent", default: false)
     /// Bundle identifiers whose notifications are muted (excluded from the feed and popups).
     static let mutedNotificationApps = Key<Set<String>>("mutedNotificationApps", default: [])
+    /// Play a sound when a new notification arrives.
+    static let notificationSoundEnabled = Key<Bool>("notificationSoundEnabled", default: false)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.

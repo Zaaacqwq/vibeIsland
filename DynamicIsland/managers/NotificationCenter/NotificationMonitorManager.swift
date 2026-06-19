@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import AppKit
 import Combine
 import Defaults
 import Foundation
@@ -44,11 +45,15 @@ final class NotificationMonitorManager: ObservableObject {
     private let reader = NotificationCenterReader()
     private let logger = os.Logger(subsystem: "com.zaaacqwq.VibeIsland", category: "Notifications")
 
-    private var pollTimer: Timer?
+    private var watcher: NotificationDatabaseWatcher?
+    private var safetyTimer: Timer?
     private var lastSeenRecordID: Int64 = 0
     private var isRunning = false
     private let maxStored = 200
-    private let pollInterval: TimeInterval = 2.0
+    /// Coarse backstop in case FSEvents misses a write; real-time updates come
+    /// from the file watcher.
+    private let safetyPollInterval: TimeInterval = 15.0
+    private var soundPlayer: NSSound?
 
     private init() {}
 
@@ -63,13 +68,15 @@ final class NotificationMonitorManager: ObservableObject {
         // Establish a baseline from existing history without replaying it as
         // popups: load the recent feed, then mark everything seen.
         loadInitialFeed()
-        startPolling()
+        startWatching()
     }
 
     func stop() {
         isRunning = false
-        pollTimer?.invalidate()
-        pollTimer = nil
+        watcher?.stop()
+        watcher = nil
+        safetyTimer?.invalidate()
+        safetyTimer = nil
     }
 
     /// Clear the in-app feed. Does not affect the system Notification Center.
@@ -123,15 +130,25 @@ final class NotificationMonitorManager: ObservableObject {
         }
     }
 
-    // MARK: - Polling
+    // MARK: - Watching
 
-    private func startPolling() {
-        pollTimer?.invalidate()
-        let timer = Timer(timeInterval: pollInterval, repeats: true) { [weak self] _ in
+    private func startWatching() {
+        // Real-time: FSEvents on the database directory.
+        if let directory = NotificationCenterReader.databaseURL?.deletingLastPathComponent() {
+            let watcher = NotificationDatabaseWatcher { [weak self] in
+                Task { @MainActor in self?.poll() }
+            }
+            watcher.start(directory: directory)
+            self.watcher = watcher
+        }
+
+        // Backstop poll in case an event is missed.
+        safetyTimer?.invalidate()
+        let timer = Timer(timeInterval: safetyPollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
         RunLoop.main.add(timer, forMode: .common)
-        pollTimer = timer
+        safetyTimer = timer
     }
 
     private func poll() {
@@ -156,11 +173,23 @@ final class NotificationMonitorManager: ObservableObject {
             if let newest = fresh.last {
                 latestDelivery = newest
                 logger.info("New notification from \(newest.bundleID, privacy: .public)")
+                playSoundIfEnabled()
                 presentPopup(for: newest)
             }
         } catch {
             handle(error)
         }
+    }
+
+    // MARK: - Sound
+
+    private func playSoundIfEnabled() {
+        guard Defaults[.notificationSoundEnabled] else { return }
+        if soundPlayer == nil {
+            soundPlayer = NSSound(named: "Tink")
+        }
+        soundPlayer?.stop()
+        soundPlayer?.play()
     }
 
     // MARK: - Popup
