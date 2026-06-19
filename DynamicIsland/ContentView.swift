@@ -1459,6 +1459,7 @@ struct ContentView: View {
     }
 
     private func resolvedExtensionMusicPayload() -> ExtensionLiveActivityPayload? {
+        guard Defaults[.enableThirdPartyExtensions] else { return nil }
         let candidates = extensionLiveActivityManager.sortedActivities(for: true)
         guard let payload = candidates.first else {
             ExtensionRoutingDiagnostics.shared.logSuppression(
@@ -1538,6 +1539,7 @@ struct ContentView: View {
     }
 
     private func resolvedExtensionStandalonePayload(excluding musicPayloadID: String?) -> ExtensionLiveActivityPayload? {
+        guard Defaults[.enableThirdPartyExtensions] else { return nil }
         let baseCandidates = extensionLiveActivityManager.sortedActivities()
         guard !baseCandidates.isEmpty else {
             ExtensionRoutingDiagnostics.shared.logSuppression(
