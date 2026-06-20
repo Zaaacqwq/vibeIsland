@@ -58,7 +58,8 @@ func maxAllowedNotchWidth() -> CGFloat {
 // MARK: - Tab-Based Notch Width
 
 /// Counts the number of currently enabled standard notch tabs.
-/// Mirrors the tab-building logic in ``TabSelectionView``.
+/// Mirrors the tab-building logic in ``TabSelectionView`` and
+/// ``DynamicIslandViewCoordinator.orderedVisibleTabs``.
 func enabledStandardTabCount() -> Int {
     var count = 0
 
@@ -66,25 +67,39 @@ func enabledStandardTabCount() -> Int {
     if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] || Defaults[.showMirror] {
         count += 1
     }
-
     // Shelf tab
     if Defaults[.dynamicShelf] {
         count += 1
     }
-
     // Terminal tab
     if Defaults[.enableTerminalFeature] {
+        count += 1
+    }
+    // Agents tab
+    if Defaults[.enableAgentMonitoring] {
+        count += 1
+    }
+    // Calendar tab
+    if Defaults[.showCalendar] {
+        count += 1
+    }
+    // Notifications tab
+    if Defaults[.enableNotificationMonitoring] {
         count += 1
     }
 
     return count
 }
 
-/// Returns the recommended minimum notch width for the given tab count.
+/// Returns the recommended minimum notch width for the given tab count, sized
+/// so the tab row never extends behind the physical notch.
 func recommendedMinimumNotchWidth(forTabCount count: Int) -> CGFloat {
-    if count >= 6 { return 770 }
-    if count >= 5 { return 690 }
-    return 640
+    switch count {
+    case ...4: return 640
+    case 5: return 720
+    case 6: return 800
+    default: return 880
+    }
 }
 
 /// Returns the recommended minimum notch width for the current tab configuration.
@@ -108,6 +123,10 @@ func enforceMinimumNotchWidth() {
 }
 private let minimalisticBaseOpenNotchSize: CGSize = .init(width: 420, height: 180)
 private let minimalisticLyricsExtraHeight: CGFloat = 40
+
+/// Extra height added below the closed notch pill to show the current synced
+/// lyric line when `showLyricsInClosedNotch` is enabled (standard notch only).
+let closedLyricsBandHeight: CGFloat = 28
 let minimalisticTimerCountdownTopPadding: CGFloat = 12
 let minimalisticTimerCountdownContentHeight: CGFloat = 82
 let minimalisticTimerCountdownBlockHeight: CGFloat = minimalisticTimerCountdownTopPadding + minimalisticTimerCountdownContentHeight
@@ -126,6 +145,10 @@ var minimalisticOpenNotchSize: CGSize {
     if reminderCount > 0 {
         let reminderHeight = ReminderLiveActivityManager.additionalHeight(forRowCount: reminderCount)
         size.height += reminderHeight
+    }
+
+    if DynamicIslandViewCoordinator.shared.timerLiveActivityEnabled && TimerManager.shared.isExternalTimerActive {
+        size.height += minimalisticTimerCountdownBlockHeight
     }
 
     return size
@@ -210,6 +233,18 @@ func shouldUseDynamicIslandMode(for screenName: String?) -> Bool {
 
     // Physical notch screens always use standard notch shape
     return screen.safeAreaInsets.top <= 0
+}
+
+/// Whether the closed-notch lyrics band should be shown (and the closed window
+/// grown downward) on the given screen. Standard notch only — excludes
+/// minimalistic UI and Dynamic Island pill mode, per the feature scope.
+@MainActor
+func closedNotchLyricsBandActive(for screenName: String?) -> Bool {
+    guard Defaults[.showLyricsInClosedNotch] else { return false }
+    guard !Defaults[.enableMinimalisticUI] else { return false }
+    guard !shouldUseDynamicIslandMode(for: screenName) else { return false }
+    let music = MusicManager.shared
+    return music.isPlaying && (music.hasDisplayableLyricLine || music.isLoadingLyricLine)
 }
 
 /// Corner radius insets for the Dynamic Island pill shape.

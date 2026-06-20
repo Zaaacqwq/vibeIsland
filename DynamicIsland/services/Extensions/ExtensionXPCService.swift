@@ -29,7 +29,6 @@ final class ExtensionXPCService: NSObject, AtollXPCServiceProtocol {
 
     private let authorizationManager = ExtensionAuthorizationManager.shared
     private let liveActivityManager = ExtensionLiveActivityManager.shared
-    private let widgetManager = ExtensionLockScreenWidgetManager.shared
     private let notchExperienceManager = ExtensionNotchExperienceManager.shared
     private let decoder = JSONDecoder()
 
@@ -112,38 +111,16 @@ final class ExtensionXPCService: NSObject, AtollXPCServiceProtocol {
         }
     }
 
-    // MARK: Lock Screen Widgets
-
     func presentLockScreenWidget(descriptorData: Data, reply: @escaping (Bool, Error?) -> Void) {
-        respond(reply: reply) { service in
-            let descriptor = try service.decoder.decode(AtollLockScreenWidgetDescriptor.self, from: descriptorData)
-            try ExtensionDescriptorValidator.validate(descriptor)
-            service.logDiagnostics("Received lock screen widget payload from \(service.bundleIdentifier) (id: \(descriptor.id), style: \(descriptor.layoutStyle))")
-            try service.widgetManager.present(descriptor: descriptor, bundleIdentifier: service.bundleIdentifier)
-            service.logDiagnostics("Lock screen widget \(descriptor.id) stored for \(service.bundleIdentifier); active widgets: \(service.widgetManager.activeWidgets.count)")
-        }
+        reply(false, ExtensionValidationError.unsupportedContent.asNSError)
     }
 
     func updateLockScreenWidget(descriptorData: Data, reply: @escaping (Bool, Error?) -> Void) {
-        respond(reply: reply) { service in
-            let descriptor = try service.decoder.decode(AtollLockScreenWidgetDescriptor.self, from: descriptorData)
-            try ExtensionDescriptorValidator.validate(descriptor)
-            service.logDiagnostics("Received lock screen widget update from \(service.bundleIdentifier) (id: \(descriptor.id))")
-            try service.widgetManager.update(descriptor: descriptor, bundleIdentifier: service.bundleIdentifier)
-            service.logDiagnostics("Lock screen widget \(descriptor.id) updated for \(service.bundleIdentifier)")
-        }
+        reply(false, ExtensionValidationError.unsupportedContent.asNSError)
     }
 
     func dismissLockScreenWidget(widgetID: String, bundleIdentifier providedBundleIdentifier: String, reply: @escaping (Bool, Error?) -> Void) {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            guard self.validate(bundleIdentifier: providedBundleIdentifier, reply: reply) else { return }
-
-            self.logDiagnostics("Received lock screen widget dismissal from \(self.bundleIdentifier) (id: \(widgetID))")
-            self.widgetManager.dismiss(widgetID: widgetID, bundleIdentifier: self.bundleIdentifier)
-            self.logDiagnostics("Lock screen widget \(widgetID) dismissed for \(self.bundleIdentifier)")
-            reply(true, nil)
-        }
+        reply(false, ExtensionValidationError.unsupportedContent.asNSError)
     }
 
     // MARK: Notch Experiences

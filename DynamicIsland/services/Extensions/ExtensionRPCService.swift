@@ -30,7 +30,6 @@ final class ExtensionRPCService {
     private weak var server: ExtensionRPCServer?
 
     private let liveActivityManager = ExtensionLiveActivityManager.shared
-    private let widgetManager = ExtensionLockScreenWidgetManager.shared
     private let notchManager = ExtensionNotchExperienceManager.shared
     private let authorizationManager = ExtensionAuthorizationManager.shared
 
@@ -77,15 +76,6 @@ final class ExtensionRPCService {
 
         case "atoll.dismissLiveActivity":
             result = handleDismissLiveActivity(params: request.params, id: request.id)
-
-        case "atoll.presentLockScreenWidget":
-            result = handlePresentLockScreenWidget(params: request.params, id: request.id)
-
-        case "atoll.updateLockScreenWidget":
-            result = handleUpdateLockScreenWidget(params: request.params, id: request.id)
-
-        case "atoll.dismissLockScreenWidget":
-            result = handleDismissLockScreenWidget(params: request.params, id: request.id)
 
         case "atoll.presentNotchExperience":
             result = handlePresentNotchExperience(params: request.params, id: request.id)
@@ -220,58 +210,6 @@ final class ExtensionRPCService {
         let bi = params?["bundleIdentifier"]?.stringValue ?? bundleIdentifier
         liveActivityManager.dismiss(activityID: activityID, bundleIdentifier: bi)
         logDiagnostics("RPC: Dismissed live activity \(activityID) for \(bi)")
-        return RPCSuccessResponse(result: ["success": .bool(true)], id: id)
-    }
-
-    // MARK: - Lock Screen Widgets
-
-    private func handlePresentLockScreenWidget(params: RPCParams?, id: String) -> Codable {
-        guard let descriptorData = params?.jsonData(for: "descriptor") else {
-            return errorResponse(code: RPCErrorCode.invalidParams, message: "Missing descriptor", id: id)
-        }
-
-        do {
-            let transformed = Self.transformClientJSON(descriptorData)
-            let descriptor = try decoder.decode(AtollLockScreenWidgetDescriptor.self, from: transformed)
-            try ExtensionDescriptorValidator.validate(descriptor)
-            try widgetManager.present(descriptor: descriptor, bundleIdentifier: descriptor.bundleIdentifier)
-            logDiagnostics("RPC: Presented widget \(descriptor.id) for \(descriptor.bundleIdentifier)")
-            return RPCSuccessResponse(result: ["success": .bool(true)], id: id)
-        } catch let error as ExtensionValidationError {
-            return errorResponse(from: error, id: id)
-        } catch {
-            logDiagnostics("RPC: Decode error for presentWidget: \(error)")
-            logDiagnostics("RPC: Raw payload: \(String(data: descriptorData, encoding: .utf8) ?? "<binary>")")
-            return errorResponse(code: RPCErrorCode.internalError, message: error.localizedDescription, id: id)
-        }
-    }
-
-    private func handleUpdateLockScreenWidget(params: RPCParams?, id: String) -> Codable {
-        guard let descriptorData = params?.jsonData(for: "descriptor") else {
-            return errorResponse(code: RPCErrorCode.invalidParams, message: "Missing descriptor", id: id)
-        }
-
-        do {
-            let transformed = Self.transformClientJSON(descriptorData)
-            let descriptor = try decoder.decode(AtollLockScreenWidgetDescriptor.self, from: transformed)
-            try widgetManager.update(descriptor: descriptor, bundleIdentifier: descriptor.bundleIdentifier)
-            logDiagnostics("RPC: Updated widget \(descriptor.id) for \(descriptor.bundleIdentifier)")
-            return RPCSuccessResponse(result: ["success": .bool(true)], id: id)
-        } catch let error as ExtensionValidationError {
-            return errorResponse(from: error, id: id)
-        } catch {
-            logDiagnostics("RPC: Decode error for updateWidget: \(error)")
-            return errorResponse(code: RPCErrorCode.internalError, message: error.localizedDescription, id: id)
-        }
-    }
-
-    private func handleDismissLockScreenWidget(params: RPCParams?, id: String) -> Codable {
-        guard let widgetID = params?["widgetID"]?.stringValue else {
-            return errorResponse(code: RPCErrorCode.invalidParams, message: "Missing widgetID", id: id)
-        }
-        let bi = params?["bundleIdentifier"]?.stringValue ?? bundleIdentifier
-        widgetManager.dismiss(widgetID: widgetID, bundleIdentifier: bi)
-        logDiagnostics("RPC: Dismissed widget \(widgetID) for \(bi)")
         return RPCSuccessResponse(result: ["success": .bool(true)], id: id)
     }
 

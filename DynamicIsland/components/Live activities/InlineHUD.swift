@@ -294,6 +294,14 @@ struct InlineHUD: View {
                         .multilineTextAlignment(.trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .contentTransition(.interpolate)
+                } else if (type == .timer) {
+                    Text(TimerManager.shared.formattedRemainingTime())
+                        .foregroundStyle(TimerManager.shared.timerColor)
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .contentTransition(.interpolate)
                 } else if (type == .capsLock) {
                     if showCapsLockLabel {
                         Text("Caps Lock")

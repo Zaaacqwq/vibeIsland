@@ -45,7 +45,6 @@ final class ReminderLiveActivityManager: ObservableObject {
     @Published private(set) var currentDate: Date = Date()
     @Published private(set) var upcomingEntries: [ReminderEntry] = []
     @Published private(set) var activeWindowReminders: [ReminderEntry] = []
-    @Published private(set) var lockScreenSnapshot: LockScreenReminderWidgetSnapshot?
 
     private let logger: os.Logger = os.Logger(subsystem: "com.ebullioscopic.VibeIsland", category: "ReminderLiveActivity")
 
@@ -65,17 +64,6 @@ final class ReminderLiveActivityManager: ObservableObject {
     private var pendingSettingsAction: (() -> Void)?
     private var pendingSettingsReason: String?
     private let settingsUpdateDebounceInterval: TimeInterval = 0.2
-    private var suppressUpdatesForLock = false
-    private var deferredLockResumeTask: Task<Void, Never>? { didSet { oldValue?.cancel() } }
-    private var nextAllowedLockResumeRefresh: Date = .distantPast
-    private let lockResumeCooldown: TimeInterval = 5
-    private let lockScreenTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter
-    }()
-
     private var lastAppliedLeadTime = Defaults[.reminderLeadTime]
     private var lastAppliedHideAllDay = Defaults[.hideAllDayEvents]
     private var lastAppliedHideCompleted = Defaults[.hideCompletedReminders]
@@ -156,13 +144,6 @@ final class ReminderLiveActivityManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        LockScreenManager.shared.$isLocked
-            .removeDuplicates()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] locked in
-                self?.handleLockStateChange(isLocked: locked)
-            }
-            .store(in: &cancellables)
     }
 
     private func scheduleSettingsRecalculation(reason: String, action: @escaping () -> Void) {
@@ -202,7 +183,6 @@ final class ReminderLiveActivityManager: ObservableObject {
         upcomingEntries = []
         activeWindowReminders = []
         cancelAllTimers()
-        lockScreenSnapshot = nil
     }
 
     private func handleCalendarEventsUpdate(_ events: [EventModel]) {
@@ -216,7 +196,6 @@ final class ReminderLiveActivityManager: ObservableObject {
         }
         pendingEventsSnapshot = events
         pendingEventsSignature = signature
-        guard !suppressUpdatesForLock else { return }
         schedulePendingEventsSnapshotApplication()
     }
 
@@ -232,7 +211,6 @@ final class ReminderLiveActivityManager: ObservableObject {
 
     @MainActor
     private func applyPendingEventsSnapshot() {
-        guard !suppressUpdatesForLock else { return }
         guard let snapshot = pendingEventsSnapshot else { return }
         pendingEventsSnapshot = nil
         let previousEvents = latestEvents
@@ -251,71 +229,6 @@ final class ReminderLiveActivityManager: ObservableObject {
         }
         logger.debug("[Reminder] Applying calendar snapshot update (events=\(snapshot.count, privacy: .public))")
         recalculateUpcomingEntries(reason: "calendar-events")
-    }
-
-    private func handleLockStateChange(isLocked: Bool) {
-        Logger.log("Lock state changed: \(isLocked)", category: .lifecycle)
-        suppressUpdatesForLock = isLocked
-        if isLocked {
-            eventsUpdateDebounceTask = nil
-            upcomingComputationTask = nil
-            settingsUpdateTask = nil
-            pendingSettingsAction = nil
-            pendingSettingsReason = nil
-            pauseReminderActivityForLock()
-            deferredLockResumeTask = nil
-        } else {
-            resumeAfterLockIfNeeded()
-        }
-    }
-
-    private func pauseReminderActivityForLock() {
-        Logger.log("Pausing reminder activity for lock", category: .lifecycle)
-        tickerTask = nil
-        evaluationTask?.cancel()
-        evaluationTask = nil
-    }
-
-    private func resumeAfterLockIfNeeded() {
-        Logger.log("Resuming reminder activity after lock", category: .lifecycle)
-        let now = Date()
-        if now < nextAllowedLockResumeRefresh {
-            let delay = nextAllowedLockResumeRefresh.timeIntervalSince(now)
-            scheduleDeferredLockResume(after: delay)
-            return
-        }
-        performLockResumeRefresh()
-    }
-
-    private func scheduleDeferredLockResume(after delay: TimeInterval) {
-        guard delay > 0 else {
-            performLockResumeRefresh()
-            return
-        }
-        deferredLockResumeTask = Task { [weak self] in
-            let nanoseconds = UInt64(delay * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanoseconds)
-            guard !Task.isCancelled else {
-                Logger.log("deferredLockResumeTask cancelled after sleep", category: .debug)
-                return
-            }
-            await MainActor.run {
-                self?.performLockResumeRefresh()
-            }
-        }
-    }
-
-    @MainActor
-    private func performLockResumeRefresh() {
-        deferredLockResumeTask = nil
-        nextAllowedLockResumeRefresh = Date().addingTimeInterval(lockResumeCooldown)
-        if pendingEventsSnapshot != nil {
-            schedulePendingEventsSnapshotApplication()
-        } else {
-            Task { [weak self] in
-                await self?.evaluateCurrentState(at: Date(), source: "performLockResumeRefresh")
-            }
-        }
     }
 
     private func recalculateUpcomingEntries(referenceDate: Date = Date(), reason: String) {
@@ -460,8 +373,6 @@ final class ReminderLiveActivityManager: ObservableObject {
             return
         }
 
-        defer { publishLockScreenSnapshot(referenceDate: date) }
-
         currentDate = date
         updateActiveWindowReminders(for: date)
 
@@ -559,74 +470,6 @@ final class ReminderLiveActivityManager: ObservableObject {
             logger.debug("[Reminder] Active window reminder count -> \(filtered.count, privacy: .public)")
             activeWindowReminders = filtered
         }
-    }
-
-    private func publishLockScreenSnapshot(referenceDate: Date) {
-        guard Defaults[.enableLockScreenReminderWidget] else {
-            if lockScreenSnapshot != nil {
-                lockScreenSnapshot = nil
-            }
-            return
-        }
-        guard let entry = activeReminder else {
-            if lockScreenSnapshot != nil {
-                lockScreenSnapshot = nil
-            }
-            return
-        }
-
-        let snapshot = buildLockScreenSnapshot(for: entry, now: referenceDate)
-        if lockScreenSnapshot != snapshot {
-            Logger.log("Publishing new lock screen snapshot: \(snapshot.title)", category: .debug)
-            lockScreenSnapshot = snapshot
-        }
-    }
-
-    private func buildLockScreenSnapshot(for entry: ReminderEntry, now: Date) -> LockScreenReminderWidgetSnapshot {
-        let title = entry.event.title.isEmpty ? "Upcoming Reminder" : entry.event.title
-        let isCritical = lockScreenCriticalWindowContains(entry: entry, now: now)
-        return LockScreenReminderWidgetSnapshot(
-            title: title,
-            eventTimeText: lockScreenTimeFormatter.string(from: entry.event.start),
-            relativeDescription: lockScreenRelativeDescription(for: entry, now: now),
-            accent: lockScreenAccentColor(for: entry, isCritical: isCritical),
-            chipStyle: Defaults[.lockScreenReminderChipStyle],
-            isCritical: isCritical,
-            iconName: isCritical ? Self.criticalIconName : Self.standardIconName
-        )
-    }
-
-    private func lockScreenAccentColor(for entry: ReminderEntry, isCritical: Bool) -> LockScreenReminderWidgetSnapshot.RGBAColor {
-        if isCritical {
-            return .init(nsColor: .systemRed)
-        }
-
-        let boosted = Color(nsColor: entry.event.calendar.color).ensureMinimumBrightness(factor: 0.7)
-        return .init(nsColor: NSColor(boosted))
-    }
-
-    private func lockScreenRelativeDescription(for entry: ReminderEntry, now: Date) -> String? {
-        let remaining = entry.event.start.timeIntervalSince(now)
-        if remaining <= 0 {
-            return String(format: String(localized: "now"))
-        }
-
-        let minutes = Int(ceil(remaining / 60))
-        switch minutes {
-        case ..<1:
-            return String(format: String(localized: "now"))
-        case 1:
-            return String(format: String(localized: "in %@"), String(localized: "1 min"))
-        default:
-            return "\(String(format: String(localized: "in \(minutes)"))) \(String(format: String(localized: "min")))"
-        }
-    }
-
-    private func lockScreenCriticalWindowContains(entry: ReminderEntry, now: Date) -> Bool {
-        let window = TimeInterval(Defaults[.reminderSneakPeekDuration])
-        guard window > 0 else { return false }
-        let remaining = entry.event.start.timeIntervalSince(now)
-        return remaining > 0 && remaining <= window
     }
 
     static func additionalHeight(forRowCount rowCount: Int) -> CGFloat {

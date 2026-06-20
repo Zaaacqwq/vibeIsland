@@ -81,8 +81,75 @@ struct DynamicNotchApp: App {
 }
 
 final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    /// Set after creation so the view can detect when the cursor is near the
+    /// closed notch (to retract the lyrics dropdown) without plumbing geometry.
+    weak var viewModel: DynamicIslandViewModel?
+
+    private var notchProximityArea: NSTrackingArea?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
+    }
+
+    /// A fixed rect covering the closed pill plus the lyrics-band strip below it
+    /// (with a little margin), centered on the notch. Fixed — independent of
+    /// whether the band is currently shown — so retracting it can't cause a
+    /// hover flicker. `nil` when there's no pill to anchor to.
+    private func notchProximityRect() -> CGRect? {
+        guard let vm = viewModel else { return nil }
+        let pillHeight = vm.effectiveClosedNotchHeight
+        guard pillHeight > 0 else { return nil }
+        let zoneHeight = pillHeight + closedLyricsBandHeight + 8
+        // Widen past the physical notch to roughly cover the music wings.
+        let zoneWidth = vm.closedNotchSize.width + 4 * pillHeight
+        let x = (bounds.width - zoneWidth) / 2
+        let y = isFlipped ? 0 : bounds.height - zoneHeight
+        return CGRect(x: x, y: y, width: zoneWidth, height: zoneHeight)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area = notchProximityArea {
+            removeTrackingArea(area)
+            notchProximityArea = nil
+        }
+        guard let zone = notchProximityRect(), zone.width > 0, zone.height > 0 else { return }
+        let area = NSTrackingArea(
+            rect: zone,
+            options: [.activeAlways, .mouseEnteredAndExited, .enabledDuringMouseDrag],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        notchProximityArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        // Must call super so SwiftUI's own hover tracking (`.onHover`, which
+        // drives the notch's hover-to-open) keeps working — only treat OUR
+        // tracking area as the notch-proximity signal.
+        super.mouseEntered(with: event)
+        if event.trackingArea == notchProximityArea {
+            setMouseNearNotch(true)
+        }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        if event.trackingArea == notchProximityArea {
+            setMouseNearNotch(false)
+        }
+    }
+
+    /// Animate the retract/expand from the SOURCE so the band height change runs
+    /// in its OWN smooth transaction — decoupled from the notch's hover/notchState
+    /// animations that fire in the same frame (otherwise the change either gets
+    /// the bouncy hover curve or snaps instantly).
+    private func setMouseNearNotch(_ value: Bool) {
+        guard let vm = viewModel, vm.mouseNearNotch != value else { return }
+        withAnimation(.smooth(duration: 0.35)) {
+            vm.mouseNearNotch = value
+        }
     }
 }
 
@@ -107,15 +174,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let bluetoothAudioManager = BluetoothAudioManager.shared  // NEW: Bluetooth audio detection
     let idleAnimationManager = IdleAnimationManager.shared  // NEW: Custom idle animations
     let downloadManager = DownloadManager.shared  // NEW: Chromium downloads detection
-    let lockScreenPanelManager = LockScreenPanelManager.shared  // NEW: Lock screen music panel
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
+    let systemTimerBridge = SystemTimerBridge.shared
     let extensionXPCServiceHost = ExtensionXPCServiceHost.shared
     let extensionRPCServer = ExtensionRPCServer.shared
     var closeNotchWorkItem: DispatchWorkItem?
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
-    private var windowsHiddenForLock = false
     private var optionalShortcutHandlersRegistered = false
     private weak var focusWithoutDevToolsMenuItem: NSMenuItem?
     private weak var focusUseDevToolsMenuItem: NSMenuItem?
@@ -254,50 +320,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         LunarManager.shared.appWillTerminate()
     }
     
-    @objc func onScreenLocked(_: Notification) {
-        print("Screen locked")
-        hideWindowsForLock()
-    }
-
-    @objc func onScreenUnlocked(_: Notification) {
-        print("Screen unlocked")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            self.restoreWindowsAfterLock()
-            self.adjustWindowPosition(changeAlpha: true)
-        }
-    }
-
-    private func hideWindowsForLock() {
-        guard !windowsHiddenForLock else { return }
-        windowsHiddenForLock = true
-
-        if Defaults[.showOnAllDisplays] {
-            for window in windows.values {
-                window.alphaValue = 0
-                window.orderOut(nil)
-            }
-        } else if let window = window {
-            window.alphaValue = 0
-            window.orderOut(nil)
-        }
-    }
-
-    private func restoreWindowsAfterLock() {
-        guard windowsHiddenForLock else { return }
-        windowsHiddenForLock = false
-
-        if Defaults[.showOnAllDisplays] {
-            for window in windows.values {
-                window.orderFrontRegardless()
-                window.alphaValue = 1
-            }
-        } else if let window = window {
-            window.orderFrontRegardless()
-            window.alphaValue = 1
-        }
-    }
-    
     private func cleanupWindows(shouldInvert: Bool = false) {
         if shouldInvert ? !Defaults[.showOnAllDisplays] : Defaults[.showOnAllDisplays] {
             for (screen, window) in windows {
@@ -336,12 +358,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         window.animationBehavior = .none
         
-        window.contentView = FirstMouseHostingView(
+        let hostingView = FirstMouseHostingView(
             rootView: ContentView()
                 .environmentObject(viewModel)
                 .environmentObject(webcamManager)
                 //.moveToSky()
         )
+        hostingView.viewModel = viewModel
+        window.contentView = hostingView
         
         window.orderFrontRegardless()
         NotchSpaceManager.shared.notchSpace.windows.insert(window)
@@ -442,7 +466,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
         
         // Use a consistent height for different view types
-        if coordinator.currentView == .terminal {
+        if coordinator.currentView == .timer {
+            baseSize.height = 250 // Extra space for timer presets
+        } else if coordinator.currentView == .terminal {
             let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
             let maxFraction = Defaults[.terminalMaxHeightFraction]
             baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
@@ -552,8 +578,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             deliverImmediately: true
         )
 
-        LockScreenLiveActivityWindowManager.shared.configure(viewModel: vm)
-        LockScreenManager.shared.configure(viewModel: vm)
         extensionXPCServiceHost.start()
         extensionRPCServer.start()
         
@@ -708,11 +732,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        TimerManager.shared.$activeSource
+            .combineLatest(TimerManager.shared.$isTimerActive)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.debouncedUpdateWindowSize()
+            }
+            .store(in: &cancellables)
+
         Defaults.publisher(.enableShortcuts, options: []).sink { [weak self] change in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 KeyboardShortcuts.isEnabled = change.newValue
                 self.updateFeatureShortcutAvailability()
+            }
+        }.store(in: &cancellables)
+
+        Defaults.publisher(.enableTimerFeature, options: []).sink { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateFeatureShortcutAvailability()
             }
         }.store(in: &cancellables)
 
@@ -795,13 +833,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        DistributedNotificationCenter.default().addObserver(
-            self, selector: #selector(onScreenLocked(_:)),
-            name: NSNotification.Name(rawValue: "com.apple.screenIsLocked"), object: nil)
-        DistributedNotificationCenter.default().addObserver(
-            self, selector: #selector(onScreenUnlocked(_:)),
-            name: NSNotification.Name(rawValue: "com.apple.screenIsUnlocked"), object: nil)
-
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self else { return }
             guard Defaults[.enableShortcuts] else { return }
@@ -872,14 +903,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         previousScreens = NSScreen.screens
-
-        if Defaults[.enableLockScreenWeatherWidget] {
-            LockScreenWeatherManager.shared.prepareLocationAccess()
-            Task { @MainActor in
-                await LockScreenWeatherManager.shared.refresh(force: true)
-            }
-        }
-
 
     }
 
@@ -1036,6 +1059,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard !optionalShortcutHandlersRegistered else { return }
         optionalShortcutHandlersRegistered = true
 
+        KeyboardShortcuts.onKeyDown(for: .startDemoTimer) {
+            guard Defaults[.enableShortcuts], Defaults[.enableTimerFeature] else { return }
+            TimerManager.shared.startDemoTimer(duration: 300)
+        }
+
         KeyboardShortcuts.onKeyDown(for: .toggleTerminalTab) { [weak self] in
             guard let self else { return }
             guard Defaults[.enableShortcuts], Defaults[.enableTerminalFeature] else { return }
@@ -1086,6 +1114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func updateFeatureShortcutAvailability() {
+        updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
         updateShortcut(.screenAssistantPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableScreenAssistant])
         updateShortcut(.toggleTerminalTab, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTerminalFeature])
     }
@@ -1307,10 +1336,8 @@ final class MediaControlsStateCoordinator {
         }
 
         if showStandard {
-            restoreLockScreenPanelIfNeeded()
             restoreMusicControlWindowIfNeeded()
         } else {
-            cacheAndDisableLockScreenPanel()
             cacheAndDisableMusicControlWindow()
         }
     }
@@ -1335,23 +1362,6 @@ final class MediaControlsStateCoordinator {
         if clearCache {
             Defaults[.cachedMusicLiveActivityPreference] = nil
         }
-    }
-
-    private func cacheAndDisableLockScreenPanel() {
-        if Defaults[.cachedLockScreenMediaWidgetPreference] == nil {
-            Defaults[.cachedLockScreenMediaWidgetPreference] = Defaults[.enableLockScreenMediaWidget]
-        }
-
-        if Defaults[.enableLockScreenMediaWidget] {
-            Defaults[.enableLockScreenMediaWidget] = false
-            LockScreenPanelManager.shared.hidePanel()
-        }
-    }
-
-    private func restoreLockScreenPanelIfNeeded() {
-        guard let cached = Defaults[.cachedLockScreenMediaWidgetPreference] else { return }
-        Defaults[.enableLockScreenMediaWidget] = cached
-        Defaults[.cachedLockScreenMediaWidgetPreference] = nil
     }
 
     private func cacheAndDisableMusicControlWindow() {

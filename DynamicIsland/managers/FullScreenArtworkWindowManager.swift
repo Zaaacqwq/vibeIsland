@@ -248,7 +248,6 @@ private struct FullScreenLyricsOverlayContent: View {
 
 private struct SpotifyCanvasFallbackLayoutFrames {
     let artworkFrame: NSRect
-    let panelFrame: NSRect
     let groupFrame: NSRect
     let lyricsFrame: NSRect?
 }
@@ -329,7 +328,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
     private var wallpaperTransitionWindow: NSWindow?
     private var wallpaperTransitionView: WallpaperTransitionImageView?
     private var wallpaperTransitionHideTask: Task<Void, Never>?
-    private var panelFrameChangeObserver: NSObjectProtocol?
     private var liveWallpaperTask: Task<Void, Never>?
     private var deferredTrackRefreshTask: Task<Void, Never>?
     private var isLiveWallpaperAllowed = false
@@ -338,7 +336,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
     private var pendingFallbackStaticURL: URL?
     private var pendingFallbackWallpaperKey: String?
     private var fallbackRightClickMonitor: Any?
-    private var artworkLayoutOverCanvasPreferenceCancellable: AnyCancellable?
     private var lyricsTextCancellable: AnyCancellable?
     private var lyricsPreferenceCancellable: AnyCancellable?
     private let spotifyCanvasFallbackHorizontalMargin: CGFloat = 48
@@ -346,8 +343,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
     private init() {
         observeArtworkChanges()
         observeVideoArtworkChanges()
-        observePanelFrameChanges()
-        observeArtworkLayoutOverCanvasPreference()
         observeLyricsChanges()
         observeLyricsPreference()
         observePlaybackStateChanges()
@@ -376,7 +371,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
         activeWallpaperKey = nil
         pendingFallbackStaticURL = nil
         pendingFallbackWallpaperKey = nil
-        let shouldRestoreStandardPanelLayout = isShowingSpotifyCanvasFallback
         isShowingSpotifyCanvasFallback = false
         removeFallbackRightClickMonitor()
         trackChangeCancellable?.cancel()
@@ -391,9 +385,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
         hideLyricsOverlay()
         hideWallpaperTransition()
         hideClickReceiver()
-        if shouldRestoreStandardPanelLayout, LockScreenManager.shared.isLocked {
-            LockScreenPanelManager.shared.applyOffsetAdjustment(animated: true)
-        }
         restoreWallpaper()
 
         activeSongTitle = nil
@@ -537,7 +528,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
         let shouldUseFallbackLayout = shouldUseSpotifyFallbackLayout(videoURL: videoURL)
         let effectiveVideoURL = resolvedVideoURL(videoURL: videoURL)
         let overlayMode = artworkOverlayMode(shouldUseFallbackLayout: shouldUseFallbackLayout)
-        let previousFallbackState = isShowingSpotifyCanvasFallback
 
         guard let rawArtworkFileURL = persistedArtworkFileURL(for: artwork, fingerprint: artworkFingerprint) else { return }
         let expectCanvas = effectiveVideoURL != nil
@@ -603,10 +593,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
 
         updateLyricsOverlayIfNeeded(on: screen)
 
-        if previousFallbackState != shouldUseFallbackLayout, LockScreenManager.shared.isLocked {
-            LockScreenPanelManager.shared.applyOffsetAdjustment(animated: true)
-        }
-
         showClickReceiver(on: screen)
         scheduleLiveWallpaperPreparation(for: effectiveVideoURL, artwork: artwork, identifier: artworkID)
 
@@ -630,28 +616,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
             on: screen,
             backupWallpaperConfiguration: false
         )
-    }
-
-    private func observePanelFrameChanges() {
-        panelFrameChangeObserver = NotificationCenter.default.addObserver(
-            forName: .atollLockScreenPanelFrameDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateArtworkOverlayFrameIfNeeded()
-                self?.updateLyricsOverlayIfNeeded()
-            }
-        }
-    }
-
-    private func observeArtworkLayoutOverCanvasPreference() {
-        artworkLayoutOverCanvasPreferenceCancellable = Defaults.publisher(.lockScreenUseArtworkLayoutOverFullscreenCanvas)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self, self.isShowing else { return }
-                self.refreshPresentationForCurrentTrack()
-            }
     }
 
     private func observeLyricsChanges() {
@@ -689,7 +653,7 @@ final class FullScreenArtworkWindowManager: ObservableObject {
             return true
         }
 
-        return Defaults[.lockScreenUseArtworkLayoutOverFullscreenCanvas]
+        return true
     }
 
     private func resolvedVideoURL(videoURL: URL?) -> URL? {
@@ -1406,17 +1370,15 @@ final class FullScreenArtworkWindowManager: ObservableObject {
 
     private func spotifyCanvasFallbackLayoutFrames(on screen: NSScreen) -> SpotifyCanvasFallbackLayoutFrames? {
         let screenFrame = screen.frame
-        guard let panelFrame = LockScreenPanelManager.shared.latestFrame else { return nil }
 
         let overlaySide = spotifyCanvasFallbackArtworkSideLength(
             screenFrame: screenFrame,
-            panelSize: panelFrame.size
+            panelSize: NSSize(width: screenFrame.width * 0.18, height: screenFrame.height * 0.18)
         )
-        let spacing = spotifyCanvasFallbackInterItemSpacing(screenFrame: screenFrame)
-        let targetX = panelFrame.minX - spacing - overlaySide
-        let targetY = panelFrame.midY - (overlaySide / 2)
+        let targetX = screenFrame.midX - (overlaySide / 2)
+        let targetY = screenFrame.midY - (overlaySide / 2)
         let artworkFrame = NSRect(x: targetX, y: targetY, width: overlaySide, height: overlaySide)
-        let groupFrame = artworkFrame.union(panelFrame)
+        let groupFrame = artworkFrame
         let lyricsGap = min(max(screenFrame.height * 0.022, 18), 28)
         let bottomMargin = min(max(screenFrame.height * 0.16, 140), 220)
         let availableHeight = groupFrame.minY - lyricsGap - (screenFrame.minY + bottomMargin)
@@ -1437,7 +1399,6 @@ final class FullScreenArtworkWindowManager: ObservableObject {
 
         return SpotifyCanvasFallbackLayoutFrames(
             artworkFrame: artworkFrame,
-            panelFrame: panelFrame,
             groupFrame: groupFrame,
             lyricsFrame: lyricsFrame
         )

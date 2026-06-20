@@ -31,16 +31,6 @@ struct ExtensionLiveActivityPayload: Identifiable, Hashable, Codable {
     var priority: AtollLiveActivityPriority { descriptor.priority }
 }
 
-struct ExtensionLockScreenWidgetPayload: Identifiable, Hashable, Codable {
-    let bundleIdentifier: String
-    let descriptor: AtollLockScreenWidgetDescriptor
-    let receivedAt: Date
-
-    var id: String { descriptor.id }
-
-    var priority: AtollLiveActivityPriority { descriptor.priority }
-}
-
 struct ExtensionNotchExperiencePayload: Identifiable, Hashable, Codable {
     let bundleIdentifier: String
     let descriptor: AtollNotchExperienceDescriptor

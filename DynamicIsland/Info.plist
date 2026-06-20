@@ -8,7 +8,7 @@
 		<true/>
 	</dict>
 	<key>NSAppleMusicUsageDescription</key>
-	<string>VibeIsland uses Apple Music to fetch animated artwork for the lock screen wallpaper.</string>
+	<string>VibeIsland uses Apple Music to fetch animated artwork for fullscreen media artwork.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>VibeIsland needs audio capture permission to display the real-time music waveform visualizer.</string>
 	<key>NSScreenCaptureUsageDescription</key>

@@ -502,8 +502,8 @@
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "VibeIsland needs access to save and read shelf dragged files.";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "VibeIsland needs access to read files in the downloads folder.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationUsageDescription = "VibeIsland uses your location to display accurate lock screen weather.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "VibeIsland uses your location to display accurate lock screen weather.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "VibeIsland uses your location for location-aware features.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "VibeIsland uses your location for location-aware features.";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "VibeIsland needs Reminders access to show your reminders";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -575,8 +575,8 @@
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "VibeIsland needs access to save and read shelf dragged files.";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "VibeIsland needs access to read files in the downloads folder.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationUsageDescription = "VibeIsland uses your location to display accurate lock screen weather.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "VibeIsland uses your location to display accurate lock screen weather.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "VibeIsland uses your location for location-aware features.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "VibeIsland uses your location for location-aware features.";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "VibeIsland needs Reminders access to show your reminders";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

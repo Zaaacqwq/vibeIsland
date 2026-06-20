@@ -141,14 +141,12 @@ enum AnimationSource: Codable, Hashable, Equatable {
 
 enum ExtensionPermissionScope: String, CaseIterable, Codable, Defaults.Serializable {
     case liveActivities
-    case lockScreenWidgets
     case notchExperiences
     case fileSharing
 
     var displayName: String {
         switch self {
         case .liveActivities: return "Live Activities"
-        case .lockScreenWidgets: return "Lock Screen Widgets"
         case .notchExperiences: return "Notch Experiences"
         case .fileSharing: return "File Sharing"
         }
@@ -856,74 +854,7 @@ extension Defaults.Keys {
     static let showStandardMediaControls = Key<Bool>("showStandardMediaControls", default: true)
     static let autoHideInactiveNotchMediaPlayer = Key<Bool>("autoHideInactiveNotchMediaPlayer", default: true)
     static let cachedMusicLiveActivityPreference = Key<Bool?>("cachedMusicLiveActivityPreference", default: nil)
-    static let cachedLockScreenMediaWidgetPreference = Key<Bool?>("cachedLockScreenMediaWidgetPreference", default: nil)
     static let cachedMusicControlWindowPreference = Key<Bool?>("cachedMusicControlWindowPreference", default: nil)
-    // Enable lock screen media widget (shows the standalone panel when screen is locked)
-    static let enableLockScreenMediaWidget = Key<Bool>("enableLockScreenMediaWidget", default: true)
-    static let enableLockScreenWeatherWidget = Key<Bool>("enableLockScreenWeatherWidget", default: true)
-    static let enableLockScreenFocusWidget = Key<Bool>("enableLockScreenFocusWidget", default: true)
-    static let enableLockScreenReminderWidget = Key<Bool>("enableLockScreenReminderWidget", default: true)
-    static let enableLockScreenTimerWidget = Key<Bool>("enableLockScreenTimerWidget", default: true)
-    static let lockScreenWeatherRefreshInterval = Key<TimeInterval>("lockScreenWeatherRefreshInterval", default: 30 * 60)
-    static let lockScreenWeatherShowsLocation = Key<Bool>("lockScreenWeatherShowsLocation", default: true)
-    static let lockScreenWeatherShowsSunrise = Key<Bool>("lockScreenWeatherShowsSunrise", default: true)
-    static let lockScreenWeatherWidgetStyle = Key<LockScreenWeatherWidgetStyle>("lockScreenWeatherWidgetStyle", default: .inline)
-    static let lockScreenWeatherTemperatureUnit = Key<LockScreenWeatherTemperatureUnit>("lockScreenWeatherTemperatureUnit", default: .celsius)
-    static let lockScreenWeatherShowsAQI = Key<Bool>("lockScreenWeatherShowsAQI", default: true)
-    static let lockScreenWeatherAQIScale = Key<LockScreenWeatherAirQualityScale>("lockScreenWeatherAQIScale", default: .us)
-    static let lockScreenWeatherUsesGaugeTint = Key<Bool>("lockScreenWeatherUsesGaugeTint", default: false)
-    static let lockScreenWeatherProviderSource = Key<LockScreenWeatherProviderSource>("lockScreenWeatherProviderSource", default: .openMeteo)
-    static let lockScreenWeatherVerticalOffset = Key<Double>("lockScreenWeatherVerticalOffset", default: 0)
-    static let lockScreenMusicVerticalOffset = Key<Double>("lockScreenMusicVerticalOffset", default: 0)
-    static let lockScreenMusicPanelWidth = Key<Double>("lockScreenMusicPanelWidth", default: 350)
-    static let lockScreenMusicAlbumParallaxEnabled = Key<Bool>("lockScreenMusicAlbumParallaxEnabled", default: false)
-    static let lockScreenTimerVerticalOffset = Key<Double>("lockScreenTimerVerticalOffset", default: 0)
-    static let lockScreenTimerWidgetWidth = Key<Double>("lockScreenTimerWidgetWidth", default: 350)
-    static let lockScreenGlassStyle = Key<LockScreenGlassStyle>("lockScreenGlassStyle", default: .liquid)
-    static let lockScreenGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
-        "lockScreenGlassCustomizationMode",
-        default: .standard
-    )
-    static let lockScreenTimerGlassStyle = Key<LockScreenGlassStyle>("lockScreenTimerGlassStyle", default: .frosted)
-    static let lockScreenTimerGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
-        "lockScreenTimerGlassCustomizationMode",
-        default: .standard
-    )
-    static let lockScreenMusicLiquidGlassVariant = Key<LiquidGlassVariant>(
-        "lockScreenMusicLiquidGlassVariant",
-        default: .defaultVariant
-    )
-    static let lockScreenTimerLiquidGlassVariant = Key<LiquidGlassVariant>(
-        "lockScreenTimerLiquidGlassVariant",
-        default: .defaultVariant
-    )
-    static let lockScreenShowAppIcon = Key<Bool>("lockScreenShowAppIcon", default: false)
-    static let lockScreenPanelShowsBorder = Key<Bool>("lockScreenPanelShowsBorder", default: false)
-    static let lockScreenMusicUsesEnhancedLiquidBorder = Key<Bool>(
-        "lockScreenMusicUsesEnhancedLiquidBorder",
-        default: true
-    )
-    static let lockScreenPanelUsesBlur = Key<Bool>("lockScreenPanelUsesBlur", default: true)
-    static let lockScreenMusicMergedAirPlayOutput = Key<Bool>("lockScreenMusicMergedAirPlayOutput", default: true)
-    static let lockScreenMusicFullscreenArtworkEnabled = Key<Bool>("lockScreenMusicFullscreenArtworkEnabled", default: true)
-    static let lockScreenKeepAlbumArtVisibleDuringFullscreenArtwork = Key<Bool>("lockScreenKeepAlbumArtVisibleDuringFullscreenArtwork", default: false)
-    static let lockScreenMusicFullscreenVideoArtwork = Key<Bool>("lockScreenMusicFullscreenVideoArtwork", default: true)
-    static let lockScreenUseArtworkLayoutOverFullscreenCanvas = Key<Bool>("lockScreenShowCenteredAlbumArtOverFullscreenCanvas", default: true)
-    static let lockScreenTimerWidgetUsesBlur = Key<Bool>("lockScreenTimerWidgetUsesBlur", default: false)
-    static let lockScreenReminderChipStyle = Key<LockScreenReminderChipStyle>("lockScreenReminderChipStyle", default: .eventColor)
-    static let lockScreenReminderWidgetHorizontalAlignment = Key<String>("lockScreenReminderWidgetHorizontalAlignment", default: "center")
-    static let lockScreenReminderWidgetVerticalOffset = Key<Double>("lockScreenReminderWidgetVerticalOffset", default: 0)
-    static let lockScreenShowCalendarEvent = Key<Bool>("lockScreenShowCalendarEvent", default: true)
-    static let lockScreenCalendarEventLookaheadWindow = Key<String>("lockScreenCalendarEventLookaheadWindow", default: "3h")
-    static let lockScreenCalendarSelectionMode = Key<String>("lockScreenCalendarSelectionMode", default: "all")
-    static let lockScreenSelectedCalendarIDs = Key<Set<String>>("lockScreenSelectedCalendarIDs", default: [])
-    static let lockScreenShowCalendarCountdown = Key<Bool>("lockScreenShowCalendarCountdown", default: true)
-    static let lockScreenShowCalendarEventEntireDuration = Key<Bool>("lockScreenShowCalendarEventEntireDuration", default: true)
-    static let lockScreenShowCalendarEventAfterStartEnabled = Key<Bool>("lockScreenShowCalendarEventAfterStartEnabled", default: false)
-    static let lockScreenShowCalendarEventAfterStartWindow = Key<String>("lockScreenShowCalendarEventAfterStartWindow", default: "5m")
-    static let lockScreenShowCalendarTimeRemaining = Key<Bool>("lockScreenShowCalendarTimeRemaining", default: true)
-    static let lockScreenShowCalendarStartTimeAfterBegins = Key<Bool>("lockScreenShowCalendarStartTimeAfterBegins", default: true)
-    static let lockScreenWeatherWidgetRowOrder = Key<String>("lockScreenWeatherWidgetRowOrder", default: "weather_calendar_focus")
     
     // MARK: Third-party Calendar Integration
     static let enableThirdPartyCalendarApp = Key<Bool>("enableThirdPartyCalendarApp", default: false)
@@ -948,15 +879,6 @@ extension Defaults.Keys {
     static let lowBatteryHUDStyle = Key<BatteryNotificationStyle>("lowBatteryHUDStyle", default: .standard)
     static let fullBatteryHUDStyle = Key<BatteryNotificationStyle>("fullBatteryHUDStyle", default: .standard)
 
-    static let lockScreenBatteryShowsBatteryGauge = Key<Bool>(
-        "lockScreenWeatherShowsBatteryGauge",
-        default: BatteryActivityManager.shared.hasBattery()
-    )
-    static let lockScreenBatteryUsesLaptopSymbol = Key<Bool>("lockScreenWeatherBatteryUsesLaptopSymbol", default: true)
-    static let lockScreenBatteryShowsCharging = Key<Bool>("lockScreenWeatherShowsCharging", default: true)
-    static let lockScreenBatteryShowsChargingPercentage = Key<Bool>("lockScreenWeatherShowsChargingPercentage", default: true)
-    static let lockScreenBatteryShowsBluetooth = Key<Bool>("lockScreenWeatherShowsBluetooth", default: true)
-    
         // MARK: Downloads
     static let enableDownloadListener = Key<Bool>("enableDownloadListener", default: true)
     static let enableSafariDownloads = Key<Bool>("enableSafariDownloads", default: true)
@@ -977,7 +899,7 @@ extension Defaults.Keys {
     static let openShelfByDefault = Key<Bool>("openShelfByDefault", default: true)
         static let quickShareProvider = Key<String>("quickShareProvider", default: "AirDrop")
         static let localSendSelectedDeviceID = Key<String>("localSendSelectedDeviceID", default: "")
-        static let localSendDevicePickerGlassMode = Key<LockScreenGlassCustomizationMode>("localSendDevicePickerGlassMode", default: .standard)
+        static let localSendDevicePickerGlassMode = Key<GlassCustomizationMode>("localSendDevicePickerGlassMode", default: .standard)
         static let localSendDevicePickerLiquidGlassVariant = Key<LiquidGlassVariant>("localSendDevicePickerLiquidGlassVariant", default: .v11)
         static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
         static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
@@ -1015,7 +937,7 @@ extension Defaults.Keys {
     
     // MARK: Stats Feature
     static let autoStartStatsMonitoring = Key<Bool>("autoStartStatsMonitoring", default: true)
-    static let cpuTemperatureUnit = Key<LockScreenWeatherTemperatureUnit>("cpuTemperatureUnit", default: .celsius)
+    static let cpuTemperatureUnit = Key<TemperatureUnit>("cpuTemperatureUnit", default: .celsius)
     
     // MARK: Terminal Feature
     static let enableTerminalFeature = Key<Bool>("enableTerminalFeature", default: false)
@@ -1035,6 +957,10 @@ extension Defaults.Keys {
     static let terminalStickyMode = Key<Bool>("terminalStickyMode", default: false)
     
     // MARK: Timer Feature
+    static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
+    static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
+    static let timerPresets = Key<[TimerPreset]>("timerPresets", default: TimerPreset.defaultPresets)
+    static let showTimerPresetsInNotchTab = Key<Bool>("showTimerPresetsInNotchTab", default: true)
     static let timerIconColorMode = Key<TimerIconColorMode>("timerIconColorMode", default: .adaptive)
     static let timerSolidColor = Key<Color>("timerSolidColor", default: .blue)
     static let timerShowsCountdown = Key<Bool>("timerShowsCountdown", default: true)
@@ -1073,7 +999,6 @@ extension Defaults.Keys {
     // MARK: Third-Party Extensions
     static let enableThirdPartyExtensions = Key<Bool>("enableThirdPartyExtensions", default: true)
     static let enableExtensionLiveActivities = Key<Bool>("enableExtensionLiveActivities", default: true)
-    static let enableExtensionLockScreenWidgets = Key<Bool>("enableExtensionLockScreenWidgets", default: true)
     static let enableExtensionNotchExperiences = Key<Bool>("enableExtensionNotchExperiences", default: true)
     static let enableExtensionNotchTabs = Key<Bool>("enableExtensionNotchTabs", default: true)
     static let enableExtensionNotchMinimalisticOverrides = Key<Bool>("enableExtensionNotchMinimalisticOverrides", default: true)
@@ -1082,9 +1007,12 @@ extension Defaults.Keys {
     static let extensionRateLimitRecords = Key<[ExtensionRateLimitRecord]>("extensionRateLimitRecords", default: [])
     static let extensionDiagnosticsLoggingEnabled = Key<Bool>("extensionDiagnosticsLoggingEnabled", default: true)
     static let extensionLiveActivityCapacity = Key<Int>("extensionLiveActivityCapacity", default: 4)
-    static let extensionLockScreenWidgetCapacity = Key<Int>("extensionLockScreenWidgetCapacity", default: 4)
     static let extensionNotchExperienceCapacity = Key<Int>("extensionNotchExperienceCapacity", default: 2)
     static let enableExtensionFileSharing = Key<Bool>("enableExtensionFileSharing", default: true)
+    static let closedNotchActivityPriorityOrder = Key<[ClosedNotchActivityKind]>(
+        "closedNotchActivityPriorityOrder",
+        default: ClosedNotchActivityKind.defaultPriorityOrder
+    )
     
     // MARK: Keyboard Shortcuts
     static let enableShortcuts = Key<Bool>("enableShortcuts", default: true)
@@ -1117,7 +1045,7 @@ extension Defaults.Keys {
     static let verticalHUDPadding = Key<CGFloat>("verticalHUDPadding", default: 24)
     static let verticalHUDUseAccentColor = Key<Bool>("verticalHUDUseAccentColor", default: false)
     static let verticalHUDMaterial = Key<OSDMaterial>("verticalHUDMaterial", default: .frosted)
-    static let verticalHUDLiquidGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
+    static let verticalHUDLiquidGlassCustomizationMode = Key<GlassCustomizationMode>(
         "verticalHUDLiquidGlassCustomizationMode",
         default: .standard
     )
@@ -1147,7 +1075,7 @@ extension Defaults.Keys {
     static let enableOSDBrightness = Key<Bool>("enableOSDBrightness", default: true)
     static let enableOSDKeyboardBacklight = Key<Bool>("enableOSDKeyboardBacklight", default: true)
     static let osdMaterial = Key<OSDMaterial>("osdMaterial", default: .frosted)
-    static let osdLiquidGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
+    static let osdLiquidGlassCustomizationMode = Key<GlassCustomizationMode>(
         "osdLiquidGlassCustomizationMode",
         default: .standard
     )
@@ -1195,10 +1123,6 @@ extension Defaults.Keys {
     static let enableCameraDetection = Key<Bool>("enableCameraDetection", default: true)
     static let enableMicrophoneDetection = Key<Bool>("enableMicrophoneDetection", default: true)
     
-    // MARK: Lock Screen Features
-    static let enableLockScreenLiveActivity = Key<Bool>("enableLockScreenLiveActivity", default: true)
-    static let enableLockSounds = Key<Bool>("enableLockSounds", default: true)
-    
     // MARK: Caps Lock Indicator
     static let enableCapsLockIndicator = Key<Bool>("enableCapsLockIndicator", default: true)
     static let capsLockIndicatorUseGreenColor = Key<Bool>("capsLockIndicatorUseGreenColor", default: false) // Legacy toggle
@@ -1214,6 +1138,9 @@ extension Defaults.Keys {
     
     // MARK: Lyrics Feature
     static let enableLyrics = Key<Bool>("enableLyrics", default: false)
+    /// Pops the current synced lyric line down beneath the closed notch pill
+    /// while music plays. Independent of `enableLyrics` (open-notch lyrics).
+    static let showLyricsInClosedNotch = Key<Bool>("showLyricsInClosedNotch", default: false)
     static let showLiveCanvasInDynamicIsland = Key<Bool>("showLiveCanvasInDynamicIsland", default: false)
     
     // MARK: Notes Feature

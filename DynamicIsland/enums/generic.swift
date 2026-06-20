@@ -73,11 +73,91 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case shelf
+    case timer
     case terminal
     case agents
     case calendar
     case notifications
     case extensionExperience
+}
+
+enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
+    case music
+    case agent
+    case timer
+    case reminder
+    case recording
+    case download
+    case localSend
+    case privacy
+    case shelf
+    case focus
+    case extensionActivity
+
+    enum SidePreference {
+        case left
+        case right
+        case automatic
+    }
+
+    var id: String { rawValue }
+
+    static let defaultPriorityOrder: [ClosedNotchActivityKind] = [
+        .music,
+        .agent,
+        .timer,
+        .reminder,
+        .recording,
+        .download,
+        .localSend,
+        .privacy,
+        .shelf,
+        .focus,
+        .extensionActivity
+    ]
+
+    var displayName: String {
+        switch self {
+        case .music: return String(localized: "Music")
+        case .agent: return String(localized: "Claude")
+        case .timer: return String(localized: "Timer")
+        case .reminder: return String(localized: "Reminder")
+        case .recording: return String(localized: "Recording")
+        case .download: return String(localized: "Downloads")
+        case .localSend: return String(localized: "LocalSend")
+        case .privacy: return String(localized: "Privacy")
+        case .shelf: return String(localized: "Shelf")
+        case .focus: return String(localized: "Focus")
+        case .extensionActivity: return String(localized: "Extensions")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .music: return "music.note"
+        case .agent: return "sparkles"
+        case .timer: return "timer"
+        case .reminder: return "calendar.badge.clock"
+        case .recording: return "record.circle"
+        case .download: return "arrow.down.circle"
+        case .localSend: return "paperplane.fill"
+        case .privacy: return "camera.metering.center.weighted"
+        case .shelf: return "tray.and.arrow.down.fill"
+        case .focus: return "moon.fill"
+        case .extensionActivity: return "puzzlepiece.extension"
+        }
+    }
+
+    var sidePreference: SidePreference {
+        switch self {
+        case .music:
+            return .left
+        case .agent:
+            return .right
+        default:
+            return .automatic
+        }
+    }
 }
 
 enum NotesLayoutState: Equatable {
@@ -159,23 +239,7 @@ enum SliderColorEnum: String, CaseIterable, Defaults.Serializable {
     }
 }
 
-enum LockScreenGlassStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case liquid = "Liquid Glass"
-    case frosted = "Frosted Glass"
-    
-    var id: String { rawValue }
-    
-    var localizedName: String {
-        switch self {
-        case .liquid:
-            return String(localized: "Liquid Glass")
-        case .frosted:
-            return String(localized: "Frosted Glass")
-        }
-    }
-}
-
-enum LockScreenGlassCustomizationMode: String, CaseIterable, Defaults.Serializable, Identifiable {
+enum GlassCustomizationMode: String, CaseIterable, Defaults.Serializable, Identifiable {
     case standard = "Standard"
     case customLiquid = "Custom Liquid"
 
@@ -195,57 +259,7 @@ enum LockScreenGlassCustomizationMode: String, CaseIterable, Defaults.Serializab
     }
 }
 
-enum LockScreenTimerSurfaceMode: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case classic = "Classic"
-    case glass = "Glass"
-
-    var id: String { rawValue }
-    
-    var localizedName: String {
-        switch self {
-        case .classic:
-            return String(localized: "Classic")
-        case .glass:
-            return String(localized: "Glass")
-        }
-    }
-}
-
-enum LockScreenWeatherWidgetStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case inline = "Inline"
-    case circular = "Circular"
-
-    var id: String { rawValue }
-    
-    var localizedName: String {
-        switch self {
-        case .inline:
-            return String(localized: "Inline")
-        case .circular:
-            return String(localized: "Circular")
-        }
-    }
-}
-
-enum LockScreenWeatherProviderSource: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case wttr = "wttr.in"
-    case openMeteo = "Open Meteo"
-
-    var id: String { rawValue }
-
-    var displayName: String { rawValue }
-
-    var supportsAirQuality: Bool {
-        switch self {
-        case .wttr:
-            return false
-        case .openMeteo:
-            return true
-        }
-    }
-}
-
-enum LockScreenWeatherTemperatureUnit: String, CaseIterable, Defaults.Serializable, Identifiable {
+enum TemperatureUnit: String, CaseIterable, Defaults.Serializable, Identifiable {
     case celsius = "Celsius"
     case fahrenheit = "Fahrenheit"
 
@@ -268,67 +282,6 @@ enum LockScreenWeatherTemperatureUnit: String, CaseIterable, Defaults.Serializab
     }
 }
 
-enum LockScreenWeatherAirQualityScale: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case us = "U.S. AQI"
-    case european = "EAQI"
-
-    var id: String { rawValue }
-
-    var displayName: String { rawValue }
-
-    var compactLabel: String {
-        switch self {
-        case .us:
-            return String(localized: "AQI")
-        case .european:
-            return String(localized: "EAQI")
-        }
-    }
-
-    var accessibilityLabel: String {
-        switch self {
-        case .us:
-            return String(localized: "AQI")
-        case .european:
-            return String(localized: "EAQI")
-        }
-    }
-
-    var queryParameter: String {
-        switch self {
-        case .us:
-            return "us_aqi"
-        case .european:
-            return "european_aqi"
-        }
-    }
-
-    var gaugeRange: ClosedRange<Double> {
-        switch self {
-        case .us:
-            return 0...500
-        case .european:
-            return 0...120
-        }
-    }
-}
-
-enum LockScreenReminderChipStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case eventColor = "Event color"
-    case monochrome = "White"
-
-    var id: String { rawValue }
-    
-    var localizedName: String {
-            switch self {
-            case .eventColor:
-                return String(localized: "Event color")
-            case .monochrome:
-                return String(localized: "White")
-            }
-        }
-}
-
 enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
     case ruler = "Ruler"
     case manual = "Manual"
@@ -342,4 +295,3 @@ enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable 
         }
     }
 }
-
