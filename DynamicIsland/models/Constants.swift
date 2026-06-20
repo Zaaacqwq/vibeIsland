@@ -1013,6 +1013,12 @@ extension Defaults.Keys {
         "closedNotchActivityPriorityOrder",
         default: ClosedNotchActivityKind.defaultPriorityOrder
     )
+    /// Closed-notch live activities the user has switched off. Missing = enabled.
+    /// This is the single source of truth for per-activity live-activity toggles.
+    static let disabledClosedNotchActivities = Key<Set<ClosedNotchActivityKind>>(
+        "disabledClosedNotchActivities",
+        default: []
+    )
     
     // MARK: Keyboard Shortcuts
     static let enableShortcuts = Key<Bool>("enableShortcuts", default: true)
@@ -1089,8 +1095,6 @@ extension Defaults.Keys {
     /// Master switch for the AI coding-agent monitor (Claude Code sessions in
     /// the notch). Off by default — turning it on starts the local bridge.
     static let enableAgentMonitoring = Key<Bool>("enableAgentMonitoring", default: false)
-    /// Whether agent status / permission prompts appear as a closed-pill live activity.
-    static let showAgentLiveActivity = Key<Bool>("showAgentLiveActivity", default: true)
     /// Mirror the macOS Notification Center into VibeIsland (requires Full Disk Access). Off by default.
     static let enableNotificationMonitoring = Key<Bool>("enableNotificationMonitoring", default: false)
     /// Whether incoming notifications pop up as a closed-pill live activity.
@@ -1110,8 +1114,6 @@ extension Defaults.Keys {
     static let weatherShowsAQI = Key<Bool>("weatherShowsAQI", default: true)
     static let weatherAQIScale = Key<WeatherAirQualityScale>("weatherAQIScale", default: .us)
     static let weatherRefreshInterval = Key<TimeInterval>("weatherRefreshInterval", default: 30 * 60)
-    /// Show the current temperature as a closed-pill live activity when idle.
-    static let showWeatherLiveActivity = Key<Bool>("showWeatherLiveActivity", default: true)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.

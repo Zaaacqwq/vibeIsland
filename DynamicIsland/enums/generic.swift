@@ -115,8 +115,8 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         .privacy,
         .shelf,
         .focus,
-        .extensionActivity,
-        .weather
+        .weather,
+        .extensionActivity
     ]
 
     var displayName: String {

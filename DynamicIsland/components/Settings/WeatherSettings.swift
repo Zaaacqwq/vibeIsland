@@ -38,11 +38,6 @@ struct WeatherSettings: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                if enableWeather {
-                    Defaults.Toggle(key: .showWeatherLiveActivity) {
-                        Text("Show temperature in the notch (live activity)")
-                    }
-                }
             } header: {
                 Text("General")
             } footer: {

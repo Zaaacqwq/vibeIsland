@@ -3537,6 +3537,7 @@ struct LiveActivitiesSettings: View {
     @Default(.focusIndicatorNonPersistent) var focusIndicatorNonPersistent
     @Default(.capsLockIndicatorTintMode) var capsLockTintMode
     @Default(.closedNotchActivityPriorityOrder) private var closedNotchActivityPriorityOrder
+    @Default(.disabledClosedNotchActivities) private var disabledClosedNotchActivities
 
     private func highlightID(_ title: String) -> String {
         SettingsTab.liveActivities.highlightID(for: title)
@@ -3552,8 +3553,23 @@ struct LiveActivitiesSettings: View {
                             .foregroundStyle(.secondary)
                             .frame(width: 22, alignment: .trailing)
 
+                        Toggle("", isOn: Binding(
+                            get: { !disabledClosedNotchActivities.contains(kind) },
+                            set: { isOn in
+                                if isOn {
+                                    disabledClosedNotchActivities.remove(kind)
+                                } else {
+                                    disabledClosedNotchActivities.insert(kind)
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+
                         Label(kind.displayName, systemImage: kind.systemImage)
                             .labelStyle(.titleAndIcon)
+                            .foregroundStyle(disabledClosedNotchActivities.contains(kind) ? .secondary : .primary)
 
                         Spacer()
 
@@ -3587,7 +3603,7 @@ struct LiveActivitiesSettings: View {
             } header: {
                 Text("Closed Notch Priority")
             } footer: {
-                Text("Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side.")
+                Text("Toggle each live activity on or off with its switch, and drag with the arrows to set priority. Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side.")
             }
 
             Section {

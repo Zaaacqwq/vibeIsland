@@ -40,9 +40,6 @@ struct AgentsSettings: View {
                 }
 
                 if enableAgentMonitoring {
-                    Defaults.Toggle(key: .showAgentLiveActivity) {
-                        Text("Show status in the notch (live activity)")
-                    }
                     Defaults.Toggle(key: .agentCompletionSoundEnabled) {
                         Text("Play a sound when Claude finishes")
                     }
