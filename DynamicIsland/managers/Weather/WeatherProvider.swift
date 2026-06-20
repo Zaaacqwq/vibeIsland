@@ -96,7 +96,8 @@ actor WeatherProvider {
             locationName: payload.nearestArea.first?.preferredName,
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
-            sunCycle: nil
+            sunCycle: nil,
+            daily: []
         )
     }
 
@@ -110,8 +111,8 @@ actor WeatherProvider {
             URLQueryItem(name: "latitude", value: latitude),
             URLQueryItem(name: "longitude", value: longitude),
             URLQueryItem(name: "current", value: "temperature_2m,weather_code,is_day,pressure_msl"),
-            URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min,sunrise,sunset"),
-            URLQueryItem(name: "forecast_days", value: "2"),
+            URLQueryItem(name: "daily", value: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"),
+            URLQueryItem(name: "forecast_days", value: "7"),
             URLQueryItem(name: "timezone", value: "auto")
         ]
         if let parameter = unit.openMeteoTemperatureParameter {
@@ -151,6 +152,8 @@ actor WeatherProvider {
             airQualityInfo = try? await fetchOpenMeteoAirQuality(latitude: latitude, longitude: longitude, scale: Defaults[.weatherAQIScale])
         }
 
+        let daily = buildDailyForecast(from: payload.daily, timezoneIdentifier: payload.timezone, offsetSeconds: payload.utcOffsetSeconds)
+
         return WeatherSnapshot(
             temperatureText: temperatureText,
             symbolName: symbolName,
@@ -158,8 +161,37 @@ actor WeatherProvider {
             locationName: nil,
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
-            sunCycle: sunCycle
+            sunCycle: sunCycle,
+            daily: daily
         )
+    }
+
+    private func buildDailyForecast(from daily: OpenMeteoForecastResponse.Daily?, timezoneIdentifier: String?, offsetSeconds: Int?) -> [WeatherSnapshot.DailyForecast] {
+        guard let daily, let times = daily.time else { return [] }
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        if let identifier = timezoneIdentifier, let timeZone = TimeZone(identifier: identifier) {
+            dayFormatter.timeZone = timeZone
+        } else if let offset = offsetSeconds, let timeZone = TimeZone(secondsFromGMT: offset) {
+            dayFormatter.timeZone = timeZone
+        }
+
+        func value<T>(_ array: [T]?, _ index: Int) -> T? {
+            guard let array, array.indices.contains(index) else { return nil }
+            return array[index]
+        }
+
+        return times.enumerated().compactMap { index, dayString in
+            guard let date = dayFormatter.date(from: dayString) else { return nil }
+            let code = value(daily.weatherCode, index) ?? 0
+            return WeatherSnapshot.DailyForecast(
+                date: date,
+                symbolName: OpenMeteoSymbolMapper.mapping(for: code).symbol,
+                high: value(daily.temperature2MMax, index),
+                low: value(daily.temperature2MMin, index)
+            )
+        }
     }
 
     private func fetchOpenMeteoAirQuality(latitude: String, longitude: String, scale: WeatherAirQualityScale) async throws -> WeatherSnapshot.AirQualityInfo? {
@@ -289,6 +321,8 @@ private struct OpenMeteoForecastResponse: Decodable {
         let isDay: Int?
     }
     struct Daily: Decodable {
+        let time: [String]?
+        let weatherCode: [Int]?
         let temperature2MMax: [Double]?
         let temperature2MMin: [Double]?
         let sunrise: [String]?

@@ -43,45 +43,68 @@ struct NotchWeatherView: View {
     // MARK: - Content
 
     private func content(_ snapshot: WeatherSnapshot) -> some View {
-        HStack(spacing: 18) {
-            // Left: icon + temperature
-            VStack(spacing: 4) {
+        VStack(spacing: 10) {
+            current(snapshot)
+            if !snapshot.daily.isEmpty {
+                Divider().overlay(Color.white.opacity(0.12))
+                forecastRow(snapshot)
+            }
+        }
+    }
+
+    private func current(_ snapshot: WeatherSnapshot) -> some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 10) {
                 Image(systemName: snapshot.symbolName)
                     .symbolRenderingMode(.multicolor)
-                    .font(.system(size: 44))
+                    .font(.system(size: 34))
                 Text(temperatureDisplay(snapshot))
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
             }
-            .frame(maxWidth: .infinity)
 
-            // Right: details
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(snapshot.description)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .lineLimit(1)
                 if let location = snapshot.locationName {
                     Label(location, systemImage: "location.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(.white.opacity(0.6))
                         .labelStyle(.titleAndIcon)
-                }
-                if let temp = snapshot.temperatureInfo, let high = temp.displayMaximum, let low = temp.displayMinimum {
-                    detailRow(icon: "thermometer.medium",
-                              text: "H:\(high)° L:\(low)°")
+                        .lineLimit(1)
                 }
                 if let aq = snapshot.airQuality {
                     detailRow(icon: "aqi.medium",
                               text: "\(aq.scale.compactLabel) \(aq.index) · \(aq.category.displayName)",
                               tint: aqiColor(aq))
                 }
-                if let next = nextSunEvent(snapshot.sunCycle) {
-                    detailRow(icon: next.isSunrise ? "sunrise.fill" : "sunset.fill",
-                              text: next.time)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func forecastRow(_ snapshot: WeatherSnapshot) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(snapshot.daily.prefix(7).enumerated()), id: \.element.id) { index, day in
+                VStack(spacing: 4) {
+                    Text(weekdayLabel(day.date, isFirst: index == 0))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Image(systemName: day.symbolName)
+                        .symbolRenderingMode(.multicolor)
+                        .font(.system(size: 15))
+                        .frame(height: 18)
+                    Text(tempLabel(day.high))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text(tempLabel(day.low))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -131,6 +154,18 @@ struct NotchWeatherView: View {
     private func temperatureDisplay(_ snapshot: WeatherSnapshot) -> String {
         guard let temp = snapshot.temperatureInfo else { return snapshot.temperatureText }
         return "\(temp.displayCurrent)\(temp.unitSymbol)"
+    }
+
+    private func weekdayLabel(_ date: Date, isFirst: Bool) -> String {
+        if isFirst { return String(localized: "Today") }
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return formatter.string(from: date)
+    }
+
+    private func tempLabel(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return "\(Int(round(value)))°"
     }
 
     private func aqiColor(_ aq: WeatherSnapshot.AirQualityInfo) -> Color {
