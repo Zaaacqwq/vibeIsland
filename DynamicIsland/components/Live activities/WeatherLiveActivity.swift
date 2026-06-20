@@ -81,17 +81,17 @@ struct WeatherTemperatureBadge: View {
     }
 }
 
-/// The wing shown when weather is paired beside another activity (e.g. music):
-/// a small weather glyph + temperature.
+/// The wing shown when weather is paired beside another activity (dual mode):
+/// just the temperature, so it stays legible in the narrow side accessory
+/// (the weather glyph appears in single mode and the album-art badge).
 struct WeatherMusicWingView: View {
     let snapshot: WeatherSnapshot
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: snapshot.symbolName)
-                .symbolRenderingMode(.multicolor)
-                .font(.system(size: 14))
-            WeatherTemperatureBadge(snapshot: snapshot)
-        }
+        Text(snapshot.temperatureText)
+            .font(.system(size: 15, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize()
     }
 }
