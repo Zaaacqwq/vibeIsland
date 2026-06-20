@@ -72,11 +72,12 @@ struct WeatherTemperatureBadge: View {
     let snapshot: WeatherSnapshot
 
     var body: some View {
-        Text("\(snapshot.temperatureText)\(snapshot.temperatureInfo?.unitSymbol ?? "")")
+        // temperatureText already carries the degree glyph (e.g. "20°").
+        Text(snapshot.temperatureText)
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
             .lineLimit(1)
-            .minimumScaleFactor(0.7)
+            .fixedSize()
     }
 }
 

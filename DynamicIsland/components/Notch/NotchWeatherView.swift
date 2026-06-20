@@ -49,7 +49,7 @@ struct NotchWeatherView: View {
                 Image(systemName: snapshot.symbolName)
                     .symbolRenderingMode(.multicolor)
                     .font(.system(size: 44))
-                Text("\(snapshot.temperatureText)\(snapshot.temperatureInfo?.unitSymbol ?? "")")
+                Text(temperatureDisplay(snapshot))
                     .font(.system(size: 34, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
             }
@@ -126,6 +126,12 @@ struct NotchWeatherView: View {
     }
 
     // MARK: - Helpers
+
+    /// "20°C" — built from the raw value + unit so the degree glyph isn't doubled.
+    private func temperatureDisplay(_ snapshot: WeatherSnapshot) -> String {
+        guard let temp = snapshot.temperatureInfo else { return snapshot.temperatureText }
+        return "\(temp.displayCurrent)\(temp.unitSymbol)"
+    }
 
     private func aqiColor(_ aq: WeatherSnapshot.AirQualityInfo) -> Color {
         switch aq.category {
