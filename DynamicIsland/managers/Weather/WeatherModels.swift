@@ -143,6 +143,16 @@ struct WeatherSnapshot: Equatable {
         let scale: WeatherAirQualityScale
     }
 
+    /// A single day in the multi-day forecast.
+    struct DailyForecast: Equatable, Identifiable {
+        let date: Date
+        let symbolName: String
+        let high: Double?
+        let low: Double?
+
+        var id: TimeInterval { date.timeIntervalSinceReferenceDate }
+    }
+
     let temperatureText: String
     let symbolName: String
     let description: String
@@ -150,6 +160,7 @@ struct WeatherSnapshot: Equatable {
     let airQuality: AirQualityInfo?
     let temperatureInfo: TemperatureInfo?
     let sunCycle: SunCycleInfo?
+    let daily: [DailyForecast]
 }
 
 extension WeatherSnapshot.AirQualityInfo.Category {
