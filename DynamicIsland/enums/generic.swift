@@ -94,6 +94,7 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
     case shelf
     case focus
     case extensionActivity
+    case weather
 
     enum SidePreference {
         case left
@@ -114,7 +115,8 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         .privacy,
         .shelf,
         .focus,
-        .extensionActivity
+        .extensionActivity,
+        .weather
     ]
 
     var displayName: String {
@@ -130,6 +132,7 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         case .shelf: return String(localized: "Shelf")
         case .focus: return String(localized: "Focus")
         case .extensionActivity: return String(localized: "Extensions")
+        case .weather: return String(localized: "Weather")
         }
     }
 
@@ -146,6 +149,7 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         case .shelf: return "tray.and.arrow.down.fill"
         case .focus: return "moon.fill"
         case .extensionActivity: return "puzzlepiece.extension"
+        case .weather: return "cloud.sun.fill"
         }
     }
 

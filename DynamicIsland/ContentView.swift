@@ -55,6 +55,7 @@ struct ContentView: View {
     @ObservedObject var shelfState = ShelfStateViewModel.shared
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
     @ObservedObject var notificationMonitor = NotificationMonitorManager.shared
+    @ObservedObject var weatherManager = WeatherManager.shared
 
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
@@ -1140,6 +1141,8 @@ struct ContentView: View {
                 .transition(.opacity.animation(.smooth(duration: 0.25)))
         case .capsLock:
             InlineHUD(type: .constant(.capsLock), value: .constant(1.0), icon: .constant(""), hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
+        case .weather(let snapshot):
+            WeatherLiveActivity(snapshot: snapshot)
         }
     }
 
@@ -1406,6 +1409,10 @@ struct ContentView: View {
             candidates.append(.extensionPayload(extensionPayload))
         }
 
+        if Defaults[.enableWeather], Defaults[.showWeatherLiveActivity], let snapshot = weatherManager.snapshot {
+            candidates.append(.weather(snapshot))
+        }
+
         return candidates
     }
 
@@ -1455,6 +1462,8 @@ struct ContentView: View {
             return baseWidth
         case .agent:
             return baseWidth
+        case .weather:
+            return max(baseWidth, 56)
         }
     }
 
@@ -1599,6 +1608,8 @@ struct ContentView: View {
                     .contentTransition(.numericText(countsDown: false))
             case .agent(let state):
                 HaloRingView(state: state, size: max(18, notchHeight - 4))
+            case .weather(let snapshot):
+                WeatherMusicWingView(snapshot: snapshot)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
@@ -1691,6 +1702,10 @@ struct ContentView: View {
                         .foregroundStyle(.white)
                 case .agent(let state):
                     HaloRingView(state: state, size: badgeSize * 0.92)
+                case .weather(let snapshot):
+                    Image(systemName: snapshot.symbolName)
+                        .symbolRenderingMode(.multicolor)
+                        .font(.system(size: badgeSize * 0.55, weight: .semibold))
                 }
             }
             .frame(width: badgeSize, height: badgeSize)
@@ -1767,6 +1782,9 @@ struct ContentView: View {
                 .frame(alignment: .center)
         case .agent(let state):
             HaloRingView(state: state, size: max(18, notchHeight - 4))
+                .frame(maxWidth: .infinity, alignment: .center)
+        case .weather(let snapshot):
+            WeatherMusicWingView(snapshot: snapshot)
                 .frame(maxWidth: .infinity, alignment: .center)
         case .none:
             spectrumView(
@@ -2756,6 +2774,7 @@ private enum ClosedNotchActivityCandidate: Equatable {
     case extensionPayload(ExtensionLiveActivityPayload)
     case shelf(count: Int)
     case agent(HaloState)
+    case weather(WeatherSnapshot)
 
     var id: String {
         switch self {
@@ -2783,6 +2802,8 @@ private enum ClosedNotchActivityCandidate: Equatable {
             return "extension-\(payload.id)"
         case .shelf(let count):
             return "shelf-\(count)"
+        case .weather:
+            return "weather"
         }
     }
 
@@ -2812,6 +2833,8 @@ private enum ClosedNotchActivityCandidate: Equatable {
             return .extensionActivity
         case .shelf:
             return .shelf
+        case .weather:
+            return .weather
         }
     }
 }
