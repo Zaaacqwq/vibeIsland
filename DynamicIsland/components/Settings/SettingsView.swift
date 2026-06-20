@@ -63,6 +63,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case terminal
     case agents
     case notifications
+    case weather
     case about
 
     var id: String { rawValue }
@@ -71,7 +72,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     var group: SettingsTabGroup {
         switch self {
         case .general, .appearance:                                          return .core
-        case .media, .liveActivities, .devices, .notifications: return .mediaAndDisplay
+        case .media, .liveActivities, .devices, .notifications, .weather: return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
         case .timer, .calendar:                                      return .productivity
         case .screenAssistant, .shelf,
@@ -101,6 +102,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .terminal: return String(localized: "Terminal")
         case .agents: return String(localized: "Agents")
         case .notifications: return String(localized: "Notifications")
+        case .weather: return String(localized: "Weather")
         case .about: return String(localized: "About")
         }
     }
@@ -124,6 +126,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .terminal: return "apple.terminal"
         case .agents: return "sparkles"
         case .notifications: return "bell.fill"
+        case .weather: return "cloud.sun.fill"
         case .about: return "info.circle"
         }
     }
@@ -147,6 +150,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .terminal: return Color(red: 0.2, green: 0.8, blue: 0.4)
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .notifications: return .red
+        case .weather: return .cyan
         case .about: return .secondary
         }
     }
@@ -477,6 +481,7 @@ struct SettingsView: View {
             .media,
             .liveActivities,
             .notifications,
+            .weather,
             .devices,
             // System
             .hudAndOSD,
@@ -935,6 +940,10 @@ struct SettingsView: View {
         case .notifications:
             SettingsForm(tab: .notifications) {
                 NotificationsSettings()
+            }
+        case .weather:
+            SettingsForm(tab: .weather) {
+                WeatherSettings()
             }
         case .about:
             if let controller = updaterController {
