@@ -25,7 +25,11 @@ struct DynamicIslandHeader: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
+    @ObservedObject var timerManager = TimerManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
+    @State private var showTimerPopover = false
+    @Default(.enableTimerFeature) var enableTimerFeature
+    @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.showBatteryIndicator) var showBatteryIndicator
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
@@ -75,6 +79,36 @@ struct DynamicIslandHeader: View {
                                 }
                         }
                         .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    if Defaults[.enableTimerFeature] && timerDisplayMode == .popover {
+                        Button(action: {
+                            withAnimation(.smooth) {
+                                showTimerPopover.toggle()
+                            }
+                        }) {
+                            Capsule()
+                                .fill(.black)
+                                .frame(width: 30, height: 30)
+                                .overlay {
+                                    Image(systemName: "timer")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .imageScale(.medium)
+                                }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .popover(isPresented: $showTimerPopover, arrowEdge: .bottom) {
+                            TimerPopover()
+                        }
+                        .onChange(of: showTimerPopover) { isActive in
+                            vm.isTimerPopoverActive = isActive
+                            if !isActive {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    vm.shouldRecheckHover.toggle()
+                                }
+                            }
+                        }
                     }
                     
                     if Defaults[.settingsIconInNotch] {
@@ -146,12 +180,25 @@ struct DynamicIslandHeader: View {
         }
         .foregroundColor(.gray)
         .environmentObject(vm)
+        .onChange(of: enableTimerFeature) { _, newValue in
+            if !newValue {
+                showTimerPopover = false
+                vm.isTimerPopoverActive = false
+            }
+        }
+        .onChange(of: timerDisplayMode) { _, mode in
+            if mode == .tab {
+                showTimerPopover = false
+                vm.isTimerPopoverActive = false
+            }
+        }
     }
 }
 
 private extension DynamicIslandHeader {
     var shouldSuppressStatusIndicators: Bool {
         Defaults[.settingsIconInNotch]
+            && Defaults[.enableTimerFeature]
     }
 }
 

@@ -37,10 +37,6 @@ final class ExtensionEventBridge {
         broadcast(payloads, channel: .liveActivities)
     }
 
-    func broadcastLockScreenWidgetSnapshot(_ payloads: [ExtensionLockScreenWidgetPayload]) {
-        broadcast(payloads, channel: .lockScreenWidgets)
-    }
-
     func broadcastNotchExperienceSnapshot(_ payloads: [ExtensionNotchExperiencePayload]) {
         broadcast(payloads, channel: .notchExperiences)
     }
@@ -49,20 +45,12 @@ final class ExtensionEventBridge {
         loadSnapshot(channel: .liveActivities)
     }
 
-    func loadPersistedLockScreenWidgets() -> [ExtensionLockScreenWidgetPayload] {
-        loadSnapshot(channel: .lockScreenWidgets)
-    }
-
     func loadPersistedNotchExperiences() -> [ExtensionNotchExperiencePayload] {
         loadSnapshot(channel: .notchExperiences)
     }
 
     func observeLiveActivitySnapshots(_ handler: @escaping ([ExtensionLiveActivityPayload], Int32) -> Void) -> NSObjectProtocol {
         observe(channel: .liveActivities, handler: handler)
-    }
-
-    func observeLockScreenWidgetSnapshots(_ handler: @escaping ([ExtensionLockScreenWidgetPayload], Int32) -> Void) -> NSObjectProtocol {
-        observe(channel: .lockScreenWidgets, handler: handler)
     }
 
     func observeNotchExperienceSnapshots(_ handler: @escaping ([ExtensionNotchExperiencePayload], Int32) -> Void) -> NSObjectProtocol {
@@ -120,8 +108,6 @@ final class ExtensionEventBridge {
         switch channel {
         case .liveActivities:
             return directory.appendingPathComponent("live_activities.json", isDirectory: false)
-        case .lockScreenWidgets:
-            return directory.appendingPathComponent("lock_screen_widgets.json", isDirectory: false)
         case .notchExperiences:
             return directory.appendingPathComponent("notch_experiences.json", isDirectory: false)
         }
@@ -151,15 +137,12 @@ final class ExtensionEventBridge {
 
     private enum Channel: CustomStringConvertible {
         case liveActivities
-        case lockScreenWidgets
         case notchExperiences
 
         var notificationName: Notification.Name {
             switch self {
             case .liveActivities:
                 return Notification.Name("com.ebullioscopic.VibeIsland.extensions.liveActivitySnapshot")
-            case .lockScreenWidgets:
-                return Notification.Name("com.ebullioscopic.VibeIsland.extensions.lockScreenWidgetSnapshot")
             case .notchExperiences:
                 return Notification.Name("com.ebullioscopic.VibeIsland.extensions.notchExperienceSnapshot")
             }
@@ -169,8 +152,6 @@ final class ExtensionEventBridge {
             switch self {
             case .liveActivities:
                 return "live-activities"
-            case .lockScreenWidgets:
-                return "lock-screen-widgets"
             case .notchExperiences:
                 return "notch-experiences"
             }

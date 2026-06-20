@@ -46,6 +46,7 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var isBatteryPopoverActive: Bool = false
     @Published var isReminderPopoverActive: Bool = false
     @Published var isMediaOutputPopoverActive: Bool = false
+    @Published var isTimerPopoverActive: Bool = false
     @Published var shouldRecheckHover: Bool = false
     @Published var isScrollGestureActive: Bool = false
     private var scrollGestureSuppressionTokens: Set<UUID> = []
@@ -96,7 +97,12 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
 
     @Published var notchSize: CGSize = getClosedNotchSize()
     @Published var closedNotchSize: CGSize = getClosedNotchSize()
-    
+
+    /// True while the cursor is near the closed notch. The lyrics dropdown
+    /// retracts while this is true so it doesn't obscure / block what's behind
+    /// it, and re-expands when the cursor leaves. Driven by an AppKit tracking area.
+    @Published var mouseNearNotch: Bool = false
+
     @MainActor
     deinit {
         destroy()
@@ -173,6 +179,15 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
                 }
             }
             .store(in: &cancellables)
+
+        TimerManager.shared.$activeSource
+            .combineLatest(TimerManager.shared.$isTimerActive)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _, _ in
+                self?.handleMinimalisticTimerHeightChange()
+            }
+            .store(in: &cancellables)
+
 
         Empty<Void, Never>()
             .sink { [weak self] _ in
@@ -328,17 +343,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
             coordinator.currentView = .shelf
         } else if !coordinator.openLastTabByDefault {
             coordinator.currentView = .home
-        }
-    }
-
-    func closeForLockScreen() {
-        let targetSize = getClosedNotchSize(screen: screen)
-        withAnimation(.none) {
-            notchSize = targetSize
-            closedNotchSize = targetSize
-            notchState = .closed
-            resetScrollGestureSuppression()
-            resetAutoCloseSuppression()
         }
     }
 

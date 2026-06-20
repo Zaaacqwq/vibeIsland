@@ -37,18 +37,6 @@ struct ExtensionDescriptorValidator {
         }
     }
 
-    static func validate(_ descriptor: AtollLockScreenWidgetDescriptor) throws {
-        guard descriptor.isValid else {
-            throw ExtensionValidationError.invalidDescriptor("Missing mandatory fields")
-        }
-        guard descriptor.content.count <= 12 else {
-            throw ExtensionValidationError.invalidDescriptor("Too many content elements")
-        }
-        guard descriptor.size.width <= 480, descriptor.size.height <= 280 else {
-            throw ExtensionValidationError.invalidDescriptor("Widget exceeds size limits")
-        }
-    }
-
     static func validate(_ descriptor: AtollNotchExperienceDescriptor) throws {
         guard descriptor.isValid else {
             throw ExtensionValidationError.invalidDescriptor("Missing mandatory fields")

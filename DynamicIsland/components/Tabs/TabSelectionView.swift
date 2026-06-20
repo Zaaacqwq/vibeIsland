@@ -49,6 +49,8 @@ struct TabSelectionView: View {
     @StateObject private var quickShareService = QuickShareService.shared
     @Default(.quickShareProvider) private var quickShareProvider
     @State private var showQuickSharePopover = false
+    @Default(.enableTimerFeature) var enableTimerFeature
+    @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.enableThirdPartyExtensions) private var enableThirdPartyExtensions
     @Default(.enableExtensionNotchExperiences) private var enableExtensionNotchExperiences
     @Default(.enableExtensionNotchTabs) private var enableExtensionNotchTabs
@@ -67,6 +69,10 @@ struct TabSelectionView: View {
 
         if Defaults[.dynamicShelf] {
             tabsArray.append(TabModel(label: "Shelf", icon: "tray.fill", view: .shelf))
+        }
+        
+        if enableTimerFeature && timerDisplayMode == .tab {
+            tabsArray.append(TabModel(label: "Timer", icon: "timer", view: .timer))
         }
         if Defaults[.enableTerminalFeature] {
             tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))

@@ -206,6 +206,7 @@ func applyProfileSettings(_ profiles: Set<String>) {
     let isDeveloper = profiles.contains("developer")
     if isDeveloper {
         Defaults[.enableTerminalFeature] = true
+        Defaults[.enableTimerFeature] = true
         Defaults[.enableScreenAssistant] = true
         Defaults[.showMirror] = false
         Defaults[.enableMinimalisticUI] = false
@@ -217,6 +218,7 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.showMirror] = true
         Defaults[.lightingEffect] = true
         Defaults[.inlineHUD] = true
+        Defaults[.enableTimerFeature] = false
         Defaults[.enableMinimalisticUI] = false
         Defaults[.enableScreenAssistant] = false
     }
@@ -226,6 +228,7 @@ func applyProfileSettings(_ profiles: Set<String>) {
     if isLightUse {
         Defaults[.enableMinimalisticUI] = true
         Defaults[.showMirror] = false
+        Defaults[.enableTimerFeature] = true
         Defaults[.inlineHUD] = true
         Defaults[.enableScreenAssistant] = false
         Defaults[.enableLyrics] = false
@@ -234,6 +237,7 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Student Profile Settings
     let isStudent = profiles.contains("student")
     if isStudent {
+        Defaults[.enableTimerFeature] = true
         Defaults[.showCalendar] = true
         Defaults[.showMirror] = false
         Defaults[.enableMinimalisticUI] = false
@@ -252,21 +256,11 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Lyrics disabled by default for all profiles
     Defaults[.enableLyrics] = false
     
-    // Weather widget defaults to inline style
-    Defaults[.lockScreenWeatherWidgetStyle] = .inline
-    
     // Auto-detect notch: Dynamic Island for non-notch Macs, standard notch otherwise
     if mainScreenHasNotch() {
         Defaults[.externalDisplayStyle] = .notch
     } else {
         Defaults[.externalDisplayStyle] = .dynamicIsland
-    }
-    
-    // Lock screen glass: custom liquid glass v11 on macOS 26+
-    if #available(macOS 26.0, *) {
-        Defaults[.lockScreenGlassStyle] = .liquid
-        Defaults[.lockScreenGlassCustomizationMode] = .customLiquid
-        Defaults[.lockScreenMusicLiquidGlassVariant] = .v11
     }
     
     print("✅ Applied profile settings for: \(profiles.joined(separator: ", "))")

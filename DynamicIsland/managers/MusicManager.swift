@@ -509,6 +509,62 @@ class MusicManager: ObservableObject {
     @Published var showLyrics: Bool = false
     @Published var currentLyricIndex: Int = -1
 
+    /// Lyrics should be fetched and synced when *either* the open-notch lyrics
+    /// feature or the closed-notch lyrics band is enabled.
+    var lyricsFeatureEnabled: Bool {
+        Defaults[.enableLyrics] || Defaults[.showLyricsInClosedNotch]
+    }
+
+    /// Placeholder shown while a lyrics fetch is in flight.
+    static let loadingLyricsPlaceholder = "Loading lyrics..."
+
+    /// Placeholder strings used while fetching / when nothing is found. These
+    /// are not real lyric lines.
+    static let lyricsPlaceholders: Set<String> = [loadingLyricsPlaceholder, "No lyrics found"]
+
+    /// True when `currentLyrics` holds a real lyric line (not empty / placeholder).
+    var hasDisplayableLyricLine: Bool {
+        let line = currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !line.isEmpty && !Self.lyricsPlaceholders.contains(line)
+    }
+
+    /// True while a lyrics fetch is in flight (the band shows a loading hint).
+    var isLoadingLyricLine: Bool {
+        currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines) == Self.loadingLyricsPlaceholder
+    }
+
+    /// How long the current synced lyric line stays on screen — i.e. the gap to
+    /// the next line's timestamp (or song end for the last line). Used to pace
+    /// the closed-notch scroll so a long line finishes revealing before it
+    /// switches. Returns 0 when unknown (no synced lyrics / no current line).
+    var currentLyricDisplayDuration: TimeInterval {
+        guard currentLyricIndex >= 0, currentLyricIndex < syncedLyrics.count,
+              let end = lyricLineEnd(for: currentLyricIndex) else { return 0 }
+        return max(0, end - syncedLyrics[currentLyricIndex].timestamp)
+    }
+
+    /// 0…1 fraction of the current synced line that has already been played —
+    /// drives the KTV-style left-to-right highlight fill. Linear within the line
+    /// (LRCLIB gives line-level timing only, not per-word).
+    var currentLyricProgress: Double {
+        guard currentLyricIndex >= 0, currentLyricIndex < syncedLyrics.count,
+              let end = lyricLineEnd(for: currentLyricIndex) else { return 0 }
+        let start = syncedLyrics[currentLyricIndex].timestamp
+        guard end > start else { return 0 }
+        let pos = estimatedPlaybackPosition()
+        return min(1, max(0, (pos - start) / (end - start)))
+    }
+
+    /// End time of the lyric line at `index`: the next line's start, or the song
+    /// end for the final line. `nil` when unknown.
+    private func lyricLineEnd(for index: Int) -> TimeInterval? {
+        guard index >= 0, index < syncedLyrics.count else { return nil }
+        if index + 1 < syncedLyrics.count {
+            return syncedLyrics[index + 1].timestamp
+        }
+        return songDuration > syncedLyrics[index].timestamp ? songDuration : nil
+    }
+
     // Task used to periodically sync displayed lyric with playback position
     private var lyricSyncTask: Task<Void, Never>?
     private var lyricsFetchTask: Task<Void, Never>?
@@ -573,6 +629,13 @@ class MusicManager: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] change in
                 self?.handleLyricsPreferenceChange(isEnabled: change.newValue)
+            }
+            .store(in: &cancellables)
+
+        Defaults.publisher(.showLyricsInClosedNotch)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.reevaluateLyricsFeatureState()
             }
             .store(in: &cancellables)
 
@@ -786,6 +849,21 @@ class MusicManager: ObservableObject {
         let shouldAutoPeekOnTrackChange = Defaults[.showSneakPeekOnTrackChange]
 
         if hasContentChange {
+            // Assign the track metadata that the lyrics and video-artwork
+            // lookups depend on BEFORE fetching, so a track switch fetches the
+            // NEW track's lyrics immediately. Previously `songTitle`/`artistName`
+            // were only assigned further below (after this block), so the fetch
+            // built its lookup key from the *previous* track and the correct
+            // lyrics only loaded once a later metadata update (e.g. artwork
+            // resolving seconds later) retriggered the fetch.
+            if state.title != self.songTitle { self.songTitle = state.title }
+            if state.artist != self.artistName { self.artistName = state.artist }
+            if state.album != self.album { self.album = state.album }
+            // Capture duration early too: the lyrics lookup uses it to pick the
+            // LRCLIB variant whose timeline matches THIS recording (avoids a
+            // wrong-length variant whose timestamps are consistently off).
+            if state.duration > 0, state.duration != self.songDuration { self.songDuration = state.duration }
+
             self.triggerFlipAnimation()
 
             if artworkChanged, let artwork = state.artwork {
@@ -873,7 +951,7 @@ class MusicManager: ObservableObject {
         self.timestampDate = state.lastUpdated
 
         // Manage lyric sync task based on playback/lyrics availability
-        if Defaults[.enableLyrics] && !self.syncedLyrics.isEmpty {
+        if self.lyricsFeatureEnabled && !self.syncedLyrics.isEmpty {
             // Ensure syncing runs while lyrics are enabled
             startLyricSync()
         } else {
@@ -1321,9 +1399,15 @@ class MusicManager: ObservableObject {
 
     private func handleLyricsPreferenceChange(isEnabled: Bool) {
         showLyrics = isEnabled
+        reevaluateLyricsFeatureState()
+    }
 
-        if isEnabled {
-            prepareLyricsForCurrentTrack(prioritizeVisibleResult: true)
+    /// Re-derives lyric fetch/sync from the combined open + closed-notch state.
+    /// Called whenever either lyrics toggle changes so disabling one feature
+    /// does not stop syncing while the other is still enabled.
+    private func reevaluateLyricsFeatureState() {
+        if lyricsFeatureEnabled {
+            prepareLyricsForCurrentTrack(prioritizeVisibleResult: Defaults[.enableLyrics])
         } else {
             stopLyricSync()
         }
@@ -1343,8 +1427,8 @@ class MusicManager: ObservableObject {
         }
 
         let key = lookup.key
-        let lyricsEnabled = Defaults[.enableLyrics]
-        let shouldShowLoading = lyricsEnabled && prioritizeVisibleResult
+        let lyricsEnabled = lyricsFeatureEnabled
+        let shouldShowLoading = Defaults[.enableLyrics] && prioritizeVisibleResult
         let trackChanged = activeLyricsKey != key
         activeLyricsKey = key
 
@@ -1377,6 +1461,7 @@ class MusicManager: ObservableObject {
         let requestArtist = lookup.requestArtist
         let requestTitle = lookup.requestTitle
         let requestAlbum = lookup.requestAlbum
+        let requestDuration = lookup.requestDuration
 
         lyricsFetchTask = Task { [weak self] in
             guard let self else { return }
@@ -1385,7 +1470,8 @@ class MusicManager: ObservableObject {
                 let lyrics = try await self.fetchLyricsFromAPI(
                     artist: requestArtist,
                     title: requestTitle,
-                    album: requestAlbum
+                    album: requestAlbum,
+                    duration: requestDuration
                 )
                 guard !Task.isCancelled else { return }
 
@@ -1404,14 +1490,14 @@ class MusicManager: ObservableObject {
                     self.lyricsFetchTask = nil
                     self.syncedLyrics = []
                     self.currentLyricIndex = -1
-                    self.currentLyrics = lyricsEnabled ? "No lyrics found" : ""
+                    self.currentLyrics = Defaults[.enableLyrics] ? "No lyrics found" : ""
                     self.stopLyricSync()
                 }
             }
         }
     }
 
-    private func fetchLyricsFromAPI(artist: String, title: String, album: String) async throws -> [LyricLine] {
+    private func fetchLyricsFromAPI(artist: String, title: String, album: String, duration: TimeInterval = 0) async throws -> [LyricLine] {
         guard !artist.isEmpty, !title.isEmpty else { return [] }
 
         // Normalize input and percent-encode
@@ -1431,7 +1517,7 @@ class MusicManager: ObservableObject {
         if let http = response as? HTTPURLResponse, http.statusCode == 200 {
             // Try parse as array JSON (preferred)
             if let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-               let bestMatch = bestLyricsMatch(in: jsonArray, artist: cleanArtist, title: cleanTitle, album: cleanAlbum) {
+               let bestMatch = bestLyricsMatch(in: jsonArray, artist: cleanArtist, title: cleanTitle, album: cleanAlbum, duration: duration) {
                 let first = bestMatch
                 let plain = (first["plainLyrics"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 let synced = (first["syncedLyrics"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -1474,10 +1560,11 @@ class MusicManager: ObservableObject {
         }
     }
 
-    private func currentLyricsLookupContext() -> (key: LyricsLookupKey, requestArtist: String, requestTitle: String, requestAlbum: String)? {
+    private func currentLyricsLookupContext() -> (key: LyricsLookupKey, requestArtist: String, requestTitle: String, requestAlbum: String, requestDuration: TimeInterval)? {
         let requestArtist = normalizedLyricsRequestComponent(artistName)
         let requestTitle = normalizedLyricsTitle(songTitle)
         let requestAlbum = normalizedLyricsRequestComponent(album)
+        let requestDuration = songDuration > 0 ? songDuration : 0
 
         let key = LyricsLookupKey(
             title: requestTitle.lowercased(),
@@ -1485,7 +1572,7 @@ class MusicManager: ObservableObject {
             album: requestAlbum.lowercased()
         )
 
-        return key.isValid ? (key, requestArtist, requestTitle, requestAlbum) : nil
+        return key.isValid ? (key, requestArtist, requestTitle, requestAlbum, requestDuration) : nil
     }
 
     private func normalizedLyricsRequestComponent(_ value: String) -> String {
@@ -1515,18 +1602,18 @@ class MusicManager: ObservableObject {
         return normalizedLyricsRequestComponent(normalized)
     }
 
-    private func bestLyricsMatch(in results: [[String: Any]], artist: String, title: String, album: String) -> [String: Any]? {
+    private func bestLyricsMatch(in results: [[String: Any]], artist: String, title: String, album: String, duration: TimeInterval = 0) -> [String: Any]? {
         let normalizedArtist = artist.lowercased()
         let normalizedTitle = title.lowercased()
         let normalizedAlbum = album.lowercased()
 
         return results.max { lhs, rhs in
-            lyricsMatchScore(for: lhs, artist: normalizedArtist, title: normalizedTitle, album: normalizedAlbum)
-                < lyricsMatchScore(for: rhs, artist: normalizedArtist, title: normalizedTitle, album: normalizedAlbum)
+            lyricsMatchScore(for: lhs, artist: normalizedArtist, title: normalizedTitle, album: normalizedAlbum, duration: duration)
+                < lyricsMatchScore(for: rhs, artist: normalizedArtist, title: normalizedTitle, album: normalizedAlbum, duration: duration)
         }
     }
 
-    private func lyricsMatchScore(for result: [String: Any], artist: String, title: String, album: String) -> Int {
+    private func lyricsMatchScore(for result: [String: Any], artist: String, title: String, album: String, duration: TimeInterval = 0) -> Int {
         let resultArtist = ((result["artistName"] as? String) ?? "").lowercased()
         let resultTitle = ((result["trackName"] as? String) ?? "").lowercased()
         let resultAlbum = ((result["albumName"] as? String) ?? "").lowercased()
@@ -1546,6 +1633,20 @@ class MusicManager: ObservableObject {
 
         if !(result["syncedLyrics"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             score += 3
+        }
+
+        // Duration match is decisive between same-song variants (different
+        // releases/edits whose timelines differ). LRCLIB reports each result's
+        // duration in seconds; prefer the one closest to THIS recording so the
+        // synced timestamps actually line up with playback.
+        if duration > 0, let resultDuration = (result["duration"] as? NSNumber)?.doubleValue, resultDuration > 0 {
+            let diff = abs(resultDuration - duration)
+            switch diff {
+            case ..<1.5: score += 25
+            case ..<3:   score += 12
+            case ..<6:   score += 4
+            default:     score -= Int(min(diff, 120))
+            }
         }
 
         return score
@@ -1568,7 +1669,7 @@ class MusicManager: ObservableObject {
             currentLyrics = firstLine
         }
 
-        if Defaults[.enableLyrics] {
+        if lyricsFeatureEnabled {
             startLyricSync()
         } else {
             stopLyricSync()
@@ -1579,8 +1680,15 @@ class MusicManager: ObservableObject {
         let lines = lrc.components(separatedBy: .newlines)
         var lyrics: [LyricLine] = []
 
-        // Accept patterns like [m:ss], [mm:ss], [mm:ss.xx] where centiseconds are optional
-        let pattern = "\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,2}))?\\]"
+        // Optional global offset, e.g. [offset:+250] (milliseconds). Per the LRC
+        // convention a positive value makes the lyrics appear earlier, so we
+        // subtract it from every timestamp.
+        let offsetSeconds = Self.parseLRCOffsetSeconds(lines)
+
+        // Accept [m:ss], [mm:ss], and a fractional part of 1–3 digits separated
+        // by '.' or ':' — e.g. [mm:ss.x] (tenths), [mm:ss.xx] (hundredths),
+        // [mm:ss.xxx] (milliseconds).
+        let pattern = "\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?\\]"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return [] }
 
         for line in lines {
@@ -1589,16 +1697,20 @@ class MusicManager: ObservableObject {
             if let match = regex.firstMatch(in: line, options: [], range: fullRange) {
                 let minRange = match.range(at: 1)
                 let secRange = match.range(at: 2)
-                let centiRange = match.range(at: 3)
+                let fracRange = match.range(at: 3)
 
                 let minStr = minRange.location != NSNotFound ? nsLine.substring(with: minRange) : "0"
                 let secStr = secRange.location != NSNotFound ? nsLine.substring(with: secRange) : "0"
-                let centiStr = (centiRange.location != NSNotFound) ? nsLine.substring(with: centiRange) : "0"
+                let fracStr = (fracRange.location != NSNotFound) ? nsLine.substring(with: fracRange) : ""
 
                 let minutes = Double(minStr) ?? 0
                 let seconds = Double(secStr) ?? 0
-                let centis = Double(centiStr) ?? 0
-                let timestamp = minutes * 60 + seconds + centis / 100.0
+                // Scale the fractional part by its digit count so the magnitude
+                // is correct regardless of precision: ".5"=0.5s, ".50"=0.5s,
+                // ".500"=0.5s. (The old code always divided by 100, turning a
+                // 1-digit ".5" into 0.05s — a ~0.45s drift.)
+                let fraction = fracStr.isEmpty ? 0 : (Double(fracStr) ?? 0) / pow(10, Double(fracStr.count))
+                let timestamp = max(0, minutes * 60 + seconds + fraction - offsetSeconds)
 
                 let textStart = match.range.location + match.range.length
                 if textStart <= nsLine.length {
@@ -1611,6 +1723,24 @@ class MusicManager: ObservableObject {
         }
 
         return lyrics.sorted(by: { $0.timestamp < $1.timestamp })
+    }
+
+    /// Reads the optional `[offset:±ms]` LRC metadata tag and returns it in
+    /// seconds (0 when absent). Positive = shift lyrics earlier.
+    private static func parseLRCOffsetSeconds(_ lines: [String]) -> TimeInterval {
+        guard let regex = try? NSRegularExpression(pattern: "\\[offset:\\s*([+-]?\\d+)\\]", options: [.caseInsensitive]) else {
+            return 0
+        }
+        for line in lines {
+            let nsLine = line as NSString
+            let range = NSRange(location: 0, length: nsLine.length)
+            if let match = regex.firstMatch(in: line, options: [], range: range),
+               match.range(at: 1).location != NSNotFound {
+                let ms = Double(nsLine.substring(with: match.range(at: 1))) ?? 0
+                return ms / 1000.0
+            }
+        }
+        return 0
     }
 
     func updateCurrentLyric(for elapsedTime: TimeInterval) {
@@ -1648,8 +1778,8 @@ class MusicManager: ObservableObject {
                     self.updateCurrentLyric(for: position)
                 }
 
-                // Sleep ~300ms between updates
-                try? await Task.sleep(nanoseconds: 300_000_000)
+                // Sleep ~100ms between updates for tighter lyric sync
+                try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
     }
@@ -1662,10 +1792,6 @@ class MusicManager: ObservableObject {
     // MARK: - Video Artwork
 
     func fetchVideoArtwork() {
-        guard Defaults[.lockScreenMusicFullscreenVideoArtwork] else {
-            videoArtworkURL = nil
-            return
-        }
         // Se il player non è Apple Music, non toccare videoArtworkURL:
         // SpotifyController gestisce il canvas in modo autonomo tramite liveArtworkURL.
         guard bundleIdentifier == "com.apple.Music" else {
