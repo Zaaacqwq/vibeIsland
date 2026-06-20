@@ -1101,6 +1101,17 @@ extension Defaults.Keys {
     static let mutedNotificationApps = Key<Set<String>>("mutedNotificationApps", default: [])
     /// Play a sound when a new notification arrives.
     static let notificationSoundEnabled = Key<Bool>("notificationSoundEnabled", default: false)
+    // MARK: Weather (notch)
+    /// Show weather in the notch (tab + live activity). Off by default; uses location.
+    static let enableWeather = Key<Bool>("enableWeather", default: false)
+    /// Weather data source. Open-Meteo (free, no key) with a wttr.in fallback.
+    static let weatherProviderSource = Key<WeatherProviderSource>("weatherProviderSource", default: .openMeteo)
+    static let weatherTemperatureUnit = Key<WeatherTemperatureUnit>("weatherTemperatureUnit", default: .celsius)
+    static let weatherShowsAQI = Key<Bool>("weatherShowsAQI", default: true)
+    static let weatherAQIScale = Key<WeatherAirQualityScale>("weatherAQIScale", default: .us)
+    static let weatherRefreshInterval = Key<TimeInterval>("weatherRefreshInterval", default: 30 * 60)
+    /// Show the current temperature as a closed-pill live activity when idle.
+    static let showWeatherLiveActivity = Key<Bool>("showWeatherLiveActivity", default: true)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.

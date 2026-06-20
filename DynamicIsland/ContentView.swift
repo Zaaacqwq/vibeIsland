@@ -976,6 +976,9 @@ struct ContentView: View {
                             case .notifications:
                                 NotchNotificationCenterView()
                                     .environmentObject(vm)
+                            case .weather:
+                                NotchWeatherView()
+                                    .environmentObject(vm)
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)

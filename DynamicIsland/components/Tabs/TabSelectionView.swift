@@ -86,6 +86,9 @@ struct TabSelectionView: View {
         if Defaults[.enableNotificationMonitoring] {
             tabsArray.append(TabModel(label: "Notifications", icon: "bell.fill", view: .notifications))
         }
+        if Defaults[.enableWeather] {
+            tabsArray.append(TabModel(label: "Weather", icon: "cloud.sun.fill", view: .weather))
+        }
         if extensionTabsEnabled {
             for payload in extensionTabPayloads {
                 guard let tab = payload.descriptor.tab else { continue }

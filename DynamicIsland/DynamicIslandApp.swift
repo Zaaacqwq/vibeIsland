@@ -665,6 +665,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // Weather (notch tab + live activity) — opt-in, uses location.
+        if Defaults[.enableWeather] {
+            WeatherManager.shared.startIfNeeded()
+        }
+        Defaults.publisher(.enableWeather, options: [])
+            .sink { change in
+                if change.newValue {
+                    WeatherManager.shared.startIfNeeded()
+                } else {
+                    WeatherManager.shared.stop()
+                }
+            }
+            .store(in: &cancellables)
+
         // When a Claude session finishes, peek the notch open on the Agents tab.
         NotificationCenter.default.publisher(for: .vibeIslandAgentDidComplete)
             .receive(on: RunLoop.main)
