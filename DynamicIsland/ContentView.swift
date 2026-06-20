@@ -826,7 +826,7 @@ struct ContentView: View {
                       } else if !scheduledActivities.isEmpty {
                           ClosedNotchScheduledActivity(scheduledActivities)
                               .transition(closedLiveActivitySwapTransition)
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !enableMinimalisticUI {
+                      } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !enableMinimalisticUI && isClosedNotchActivityEnabled(.shelf) {
                           ShelfInlineLiveActivity()
                               .transition(.opacity.animation(.smooth(duration: 0.25)))
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
@@ -1367,7 +1367,7 @@ struct ContentView: View {
             candidates.append(.music)
         }
 
-        if Defaults[.enableAgentMonitoring], Defaults[.showAgentLiveActivity],
+        if Defaults[.enableAgentMonitoring],
            agentMonitor.hasClosedActivity, let halo = agentMonitor.aggregateHaloState {
             candidates.append(.agent(halo))
         }
@@ -1409,11 +1409,17 @@ struct ContentView: View {
             candidates.append(.extensionPayload(extensionPayload))
         }
 
-        if Defaults[.enableWeather], Defaults[.showWeatherLiveActivity], let snapshot = weatherManager.snapshot {
+        if Defaults[.enableWeather], let snapshot = weatherManager.snapshot {
             candidates.append(.weather(snapshot))
         }
 
-        return candidates
+        // Per-activity live-activity toggle (single source of truth, edited in
+        // Settings → Live Activities → Closed Notch Priority).
+        return candidates.filter { isClosedNotchActivityEnabled($0.kind) }
+    }
+
+    private func isClosedNotchActivityEnabled(_ kind: ClosedNotchActivityKind) -> Bool {
+        !Defaults[.disabledClosedNotchActivities].contains(kind)
     }
 
     private func normalizedClosedNotchPriorityOrder() -> [ClosedNotchActivityKind] {
