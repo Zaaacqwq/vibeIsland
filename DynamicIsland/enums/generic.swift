@@ -78,6 +78,7 @@ public enum NotchViews {
     case agents
     case calendar
     case notifications
+    case weather
     case extensionExperience
 }
 

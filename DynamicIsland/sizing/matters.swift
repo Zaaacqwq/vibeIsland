@@ -87,6 +87,10 @@ func enabledStandardTabCount() -> Int {
     if Defaults[.enableNotificationMonitoring] {
         count += 1
     }
+    // Weather tab
+    if Defaults[.enableWeather] {
+        count += 1
+    }
 
     return count
 }
