@@ -96,10 +96,6 @@ struct WeatherMusicWingView: View {
     let snapshot: WeatherSnapshot
 
     var body: some View {
-        Text(snapshot.temperatureText)
-            .font(.system(size: 15, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .lineLimit(1)
-            .fixedSize()
+        WeatherTemperatureBadge(snapshot: snapshot)
     }
 }
