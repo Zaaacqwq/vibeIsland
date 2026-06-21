@@ -59,15 +59,15 @@ enum Geist {
     // MARK: - Typography (SF Pro at the Geist scale)
 
     enum Typography {
-        static let displayMd = Font.system(size: 24, weight: .semibold)
-        static let titleLg = Font.system(size: 20, weight: .semibold)
-        static let title = Font.system(size: 17, weight: .semibold)
-        static let bodyLg = Font.system(size: 16, weight: .regular)
-        static let body = Font.system(size: 13, weight: .regular)
-        static let bodyStrong = Font.system(size: 13, weight: .medium)
-        static let caption = Font.system(size: 11, weight: .regular)
-        static let captionStrong = Font.system(size: 11, weight: .medium)
-        static let mono = Font.system(size: 12, weight: .regular, design: .monospaced)
+        static let displayMd = Font.system(size: 20, weight: .semibold)
+        static let titleLg = Font.system(size: 17, weight: .semibold)
+        static let title = Font.system(size: 15, weight: .semibold)
+        static let bodyLg = Font.system(size: 14, weight: .regular)
+        static let body = Font.system(size: 12, weight: .regular)
+        static let bodyStrong = Font.system(size: 12, weight: .medium)
+        static let caption = Font.system(size: 10.5, weight: .regular)
+        static let captionStrong = Font.system(size: 10.5, weight: .medium)
+        static let mono = Font.system(size: 11, weight: .regular, design: .monospaced)
     }
 
     // MARK: - Spacing (8pt scale)
