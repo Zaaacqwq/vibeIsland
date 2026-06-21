@@ -28,124 +28,92 @@ struct AgentsSettings: View {
     @Default(.enableAgentMonitoring) var enableAgentMonitoring
 
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableAgentMonitoring) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable agent monitoring")
-                        Text("Track AI coding-agent sessions (Claude Code) in the notch.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code) in the notch.") {
+            GeistSection(
+                footer: "Adds an Agents tab and a closed-notch live activity showing running Claude Code sessions, permission prompts, and one-click jump-back to the terminal."
+            ) {
+                GeistToggleRow(
+                    title: "Enable agent monitoring",
+                    description: "Track AI coding-agent sessions (Claude Code) in the notch.",
+                    isOn: $enableAgentMonitoring,
+                    divider: enableAgentMonitoring
+                )
                 if enableAgentMonitoring {
-                    Defaults.Toggle(key: .agentCompletionSoundEnabled) {
-                        Text("Play a sound when Claude finishes")
-                    }
-                    Defaults.Toggle(key: .agentExpandOnComplete) {
-                        Text("Expand the notch to Agents when Claude finishes")
-                    }
+                    GeistToggleRow(title: "Play a sound when Claude finishes", isOn: geistBinding(.agentCompletionSoundEnabled))
+                    GeistToggleRow(title: "Expand the notch to Agents when Claude finishes", isOn: geistBinding(.agentExpandOnComplete), divider: false)
                 }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("Adds an Agents tab and a closed-notch live activity showing running Claude Code sessions, permission prompts, and one-click jump-back to the terminal.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             if enableAgentMonitoring {
-                Section {
-                    HStack {
-                        Text("Bridge")
-                        Spacer()
-                        Label(
-                            agentMonitor.isBridgeReady ? "Connected" : "Starting…",
-                            systemImage: agentMonitor.isBridgeReady ? "checkmark.circle.fill" : "clock"
-                        )
-                        .foregroundStyle(agentMonitor.isBridgeReady ? .green : .secondary)
-                        .labelStyle(.titleAndIcon)
+                GeistSection(
+                    title: "Claude Code",
+                    footer: "Installing writes VibeIsland-namespaced hooks into ~/.claude/settings.json. Hooks fail open — if VibeIsland isn't running, Claude is unaffected."
+                ) {
+                    GeistLabeledRow(title: "Bridge") {
+                        Label(agentMonitor.isBridgeReady ? "Connected" : "Starting…",
+                              systemImage: agentMonitor.isBridgeReady ? "checkmark.circle.fill" : "clock")
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(agentMonitor.isBridgeReady ? Geist.Colors.success : Geist.Colors.mute)
+                            .labelStyle(.titleAndIcon)
                     }
-
-                    HStack {
-                        Text("Claude Code hooks")
-                        Spacer()
-                        hookStatusLabel
-                    }
-
-                    HStack(spacing: 8) {
-                        switch agentMonitor.hookStatus {
-                        case .installed:
-                            Button("Reinstall") { agentMonitor.installHooks() }
-                            Button("Remove", role: .destructive) { agentMonitor.uninstallHooks() }
-                        case .notInstalled, .unknown:
-                            Button("Install hooks") { agentMonitor.installHooks() }
+                    GeistLabeledRow(title: "Claude Code hooks") { hookStatusLabel }
+                    GeistRow(divider: false) {
+                        HStack(spacing: Geist.Spacing.xs) {
+                            switch agentMonitor.hookStatus {
+                            case .installed:
+                                Button("Reinstall") { agentMonitor.installHooks() }.buttonStyle(.geist)
+                                Button("Remove") { agentMonitor.uninstallHooks() }.buttonStyle(.geist)
+                            case .notInstalled, .unknown:
+                                Button("Install hooks") { agentMonitor.installHooks() }.buttonStyle(.geistProminent)
+                            }
                         }
                     }
-                } header: {
-                    Text("Claude Code")
-                } footer: {
-                    Text("Installing writes VibeIsland-namespaced hooks into ~/.claude/settings.json. Hooks fail open — if VibeIsland isn't running, Claude is unaffected.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
-                Section {
-                    HStack {
-                        Text("Usage status line")
-                        Spacer()
+                GeistSection(
+                    title: "Usage",
+                    footer: "Installs a managed Claude Code status line that reports your 5-hour and 7-day rate-limit usage. Modifies the statusLine entry in ~/.claude/settings.json."
+                ) {
+                    GeistLabeledRow(title: "Usage status line") {
                         if agentMonitor.statusLineInstalled {
                             Label("Installed", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .labelStyle(.titleAndIcon)
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.success).labelStyle(.titleAndIcon)
                         } else {
                             Label("Not installed", systemImage: "xmark.circle")
-                                .foregroundStyle(.secondary)
-                                .labelStyle(.titleAndIcon)
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.mute).labelStyle(.titleAndIcon)
                         }
                     }
-
                     if let usage = agentMonitor.usage, !usage.isEmpty {
-                        if let five = usage.fiveHour {
-                            usageRow(label: "5-hour limit", window: five)
-                        }
-                        if let week = usage.sevenDay {
-                            usageRow(label: "7-day limit", window: week)
-                        }
+                        if let five = usage.fiveHour { GeistRow { usageRow(label: "5-hour limit", window: five) } }
+                        if let week = usage.sevenDay { GeistRow { usageRow(label: "7-day limit", window: week) } }
                         if let cachedAt = usage.cachedAt {
-                            Text("Updated \(relativeTime(cachedAt)) · refreshes on each Claude turn")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            GeistRow {
+                                Text("Updated \(relativeTime(cachedAt)) · refreshes on each Claude turn")
+                                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                            }
                         }
                     }
-
-                    HStack(spacing: 8) {
-                        if agentMonitor.statusLineInstalled {
-                            Button("Reinstall") { agentMonitor.installStatusLine() }
-                            Button("Remove", role: .destructive) { agentMonitor.uninstallStatusLine() }
-                        } else {
-                            Button("Install status line") { agentMonitor.installStatusLine() }
+                    GeistRow(divider: false) {
+                        HStack(spacing: Geist.Spacing.xs) {
+                            if agentMonitor.statusLineInstalled {
+                                Button("Reinstall") { agentMonitor.installStatusLine() }.buttonStyle(.geist)
+                                Button("Remove") { agentMonitor.uninstallStatusLine() }.buttonStyle(.geist)
+                            } else {
+                                Button("Install status line") { agentMonitor.installStatusLine() }.buttonStyle(.geistProminent)
+                            }
                         }
                     }
-                } header: {
-                    Text("Usage")
-                } footer: {
-                    Text("Installs a managed Claude Code status line that reports your 5-hour and 7-day rate-limit usage. Modifies the statusLine entry in ~/.claude/settings.json.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 if let error = agentMonitor.lastErrorMessage {
-                    Section {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                    GeistSection {
+                        GeistRow(divider: false) {
+                            Text(error).font(Geist.Typography.caption).foregroundStyle(Geist.Colors.error)
+                        }
                     }
                 }
             }
         }
-        .navigationTitle("Agents")
         .onAppear {
             agentMonitor.refreshHookStatus()
             agentMonitor.refreshStatusLineStatus()
