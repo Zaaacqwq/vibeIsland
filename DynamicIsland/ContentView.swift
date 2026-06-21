@@ -1124,7 +1124,7 @@ struct ContentView: View {
         case .privacy:
             PrivacyLiveActivity()
         case .agent:
-            AgentLiveActivity()
+            AgentLiveActivity(isHovering: isHovering)
         case .extensionPayload(let payload):
             let layout = extensionStandaloneLayout(
                 for: payload,
@@ -1142,7 +1142,7 @@ struct ContentView: View {
         case .capsLock:
             InlineHUD(type: .constant(.capsLock), value: .constant(1.0), icon: .constant(""), hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
         case .weather(let snapshot):
-            WeatherLiveActivity(snapshot: snapshot)
+            WeatherLiveActivity(snapshot: snapshot, isHovering: isHovering)
         }
     }
 

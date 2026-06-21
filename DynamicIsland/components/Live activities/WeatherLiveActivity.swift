@@ -24,7 +24,9 @@ import SwiftUI
 struct WeatherLiveActivity: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     let snapshot: WeatherSnapshot
-    @State private var isHovering: Bool = false
+    /// Driven by the notch's hover state so the pill scales/expands on hover
+    /// like the other live activities.
+    let isHovering: Bool
     @State private var isExpanded: Bool = false
 
     private var accessoryHeight: CGFloat {

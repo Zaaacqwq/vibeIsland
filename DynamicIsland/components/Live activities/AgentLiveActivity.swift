@@ -29,7 +29,8 @@ import Defaults
 struct AgentLiveActivity: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
-    @State private var isHovering: Bool = false
+    /// Driven by the notch's hover state so the pill scales/expands on hover.
+    let isHovering: Bool
     @State private var isExpanded: Bool = false
 
     // Claude brand orange (#d97742) and an attention amber (#ffb347).
