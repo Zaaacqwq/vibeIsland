@@ -39,7 +39,7 @@ struct WeatherLiveActivity: View {
 
     /// Gap between each accessory and the physical notch so the icon/temperature
     /// aren't clipped by the notch edge.
-    private let notchInset: CGFloat = 6
+    private let notchInset: CGFloat = 8
 
     var body: some View {
         HStack(spacing: 0) {

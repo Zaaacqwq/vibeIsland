@@ -32,6 +32,7 @@ struct AgentLiveActivity: View {
     /// Driven by the notch's hover state so the pill scales/expands on hover.
     let isHovering: Bool
     @State private var isExpanded: Bool = false
+    private let innerGap: CGFloat = 8
 
     // Claude brand orange (#d97742) and an attention amber (#ffb347).
     private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
@@ -52,22 +53,26 @@ struct AgentLiveActivity: View {
                 .background {
                     if isExpanded {
                         leadingGlyph
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     }
                 }
                 .frame(width: accessoryWidth, height: accessoryHeight)
+
+            Color.clear.frame(width: isExpanded ? innerGap : 0, height: accessoryHeight)
 
             // Centre — black notch fill
             Rectangle()
                 .fill(.black)
                 .frame(width: vm.physicalNotchWidth)
 
+            Color.clear.frame(width: isExpanded ? innerGap : 0, height: accessoryHeight)
+
             // Trailing — status indicator
             Color.clear
                 .background {
                     if isExpanded {
                         trailingStatus
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     }
                 }
                 .frame(width: accessoryWidth, height: accessoryHeight)
