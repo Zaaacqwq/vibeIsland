@@ -3205,280 +3205,173 @@ struct LiveActivitiesSettings: View {
     @Default(.closedNotchActivityPriorityOrder) private var closedNotchActivityPriorityOrder
     @Default(.disabledClosedNotchActivities) private var disabledClosedNotchActivities
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.liveActivities.highlightID(for: title)
+    @ViewBuilder
+    private func statusLabel(dot: Color?, text: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            if let dot {
+                Circle().fill(dot).frame(width: 8, height: 8)
+            }
+            Text(text).font(Geist.Typography.body).foregroundStyle(color)
+        }
     }
 
     var body: some View {
-        Form {
-            Section {
-                ForEach(Array(normalizedClosedNotchPriorityOrder.enumerated()), id: \.element) { index, kind in
-                    HStack(spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .frame(width: 22, alignment: .trailing)
-
-                        Toggle("", isOn: Binding(
-                            get: { !disabledClosedNotchActivities.contains(kind) },
-                            set: { isOn in
-                                if isOn {
-                                    disabledClosedNotchActivities.remove(kind)
-                                } else {
-                                    disabledClosedNotchActivities.insert(kind)
+        GeistSettingsPage(title: "Live Activities") {
+            GeistSection(
+                title: "Closed Notch Priority",
+                footer: "Toggle each live activity on or off with its switch, and drag with the arrows to set priority. Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side."
+            ) {
+                let order = normalizedClosedNotchPriorityOrder
+                ForEach(Array(order.enumerated()), id: \.element) { index, kind in
+                    GeistRow {
+                        HStack(spacing: Geist.Spacing.sm) {
+                            Text("\(index + 1)")
+                                .font(Geist.Typography.caption.monospacedDigit())
+                                .foregroundStyle(Geist.Colors.mute)
+                                .frame(width: 22, alignment: .trailing)
+                            Toggle("", isOn: Binding(
+                                get: { !disabledClosedNotchActivities.contains(kind) },
+                                set: { isOn in
+                                    if isOn { disabledClosedNotchActivities.remove(kind) }
+                                    else { disabledClosedNotchActivities.insert(kind) }
                                 }
+                            ))
+                            .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                            Label(kind.displayName, systemImage: kind.systemImage)
+                                .labelStyle(.titleAndIcon)
+                                .font(Geist.Typography.bodyStrong)
+                                .foregroundStyle(disabledClosedNotchActivities.contains(kind) ? Geist.Colors.mute : Geist.Colors.ink)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Button { moveClosedNotchActivity(kind, direction: -1) } label: {
+                                    Image(systemName: "chevron.up")
+                                }
+                                .buttonStyle(.borderless).disabled(index == 0).help("Raise priority")
+                                Button { moveClosedNotchActivity(kind, direction: 1) } label: {
+                                    Image(systemName: "chevron.down")
+                                }
+                                .buttonStyle(.borderless).disabled(index == order.count - 1).help("Lower priority")
                             }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-
-                        Label(kind.displayName, systemImage: kind.systemImage)
-                            .labelStyle(.titleAndIcon)
-                            .foregroundStyle(disabledClosedNotchActivities.contains(kind) ? .secondary : .primary)
-
-                        Spacer()
-
-                        HStack(spacing: 4) {
-                            Button {
-                                moveClosedNotchActivity(kind, direction: -1)
-                            } label: {
-                                Image(systemName: "chevron.up")
-                            }
-                            .buttonStyle(.borderless)
-                            .disabled(index == 0)
-                            .help("Raise priority")
-
-                            Button {
-                                moveClosedNotchActivity(kind, direction: 1)
-                            } label: {
-                                Image(systemName: "chevron.down")
-                            }
-                            .buttonStyle(.borderless)
-                            .disabled(index == normalizedClosedNotchPriorityOrder.count - 1)
-                            .help("Lower priority")
+                            .foregroundStyle(Geist.Colors.body)
                         }
                     }
-                    .settingsHighlight(id: highlightID("Closed Notch Priority \(kind.rawValue)"))
                 }
-
-                Button("Reset Closed Notch Priority") {
-                    closedNotchActivityPriorityOrder = ClosedNotchActivityKind.defaultPriorityOrder
+                GeistRow(divider: false) {
+                    Button("Reset Closed Notch Priority") {
+                        closedNotchActivityPriorityOrder = ClosedNotchActivityKind.defaultPriorityOrder
+                    }
+                    .buttonStyle(.geist)
                 }
-                .settingsHighlight(id: highlightID("Reset Closed Notch Priority"))
-            } header: {
-                Text("Closed Notch Priority")
-            } footer: {
-                Text("Toggle each live activity on or off with its switch, and drag with the arrows to set priority. Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side.")
             }
 
-            Section {
-                Defaults.Toggle(key: .enableScreenRecordingDetection) {
-                    Text("Enable Screen Recording Detection")
-                }
-                .settingsHighlight(id: highlightID("Enable Screen Recording Detection"))
-
-                Defaults.Toggle(key: .showRecordingIndicator) {
-                    Text("Show Recording Indicator")
-                }
-                .disabled(!enableScreenRecordingDetection)
-                .settingsHighlight(id: highlightID("Show Recording Indicator"))
-
+            GeistSection(
+                title: "Screen Recording",
+                footer: "Uses event-driven private API for real-time screen recording detection"
+            ) {
+                GeistToggleRow(title: "Enable Screen Recording Detection", isOn: $enableScreenRecordingDetection)
+                GeistToggleRow(title: "Show Recording Indicator", isOn: geistBinding(.showRecordingIndicator), divider: recordingManager.isMonitoring)
+                    .disabled(!enableScreenRecordingDetection)
                 if recordingManager.isMonitoring {
-                    HStack {
-                        Text("Detection Status")
-                        Spacer()
+                    GeistLabeledRow(title: "Detection Status", divider: false) {
                         if recordingManager.isRecording {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                Text("Recording Detected")
-                                    .foregroundColor(.red)
-                            }
+                            statusLabel(dot: .red, text: "Recording Detected", color: Geist.Colors.error)
                         } else {
-                            Text("Active - No Recording")
-                                .foregroundColor(.green)
+                            statusLabel(dot: nil, text: "Active - No Recording", color: Geist.Colors.success)
                         }
                     }
                 }
-            } header: {
-                Text("Screen Recording")
-            } footer: {
-                Text("Uses event-driven private API for real-time screen recording detection")
             }
 
-            Section {
-                if !fullDiskAccessPermission.isAuthorized {
-                    SettingsPermissionCallout(
-                        title: String(localized: "Custom Focus metadata"),
-                        message: String(localized: "Full Disk Access unlocks custom Focus icons, colors, and labels. Standard Focus detection still works without it—grant access only if you need personalized indicators."),
-                        icon: "externaldrive.fill",
-                        iconColor: .purple,
-                        requestButtonTitle: String(localized: "Request Full Disk Access"),
-                        openSettingsButtonTitle: String(localized: "Open Privacy & Security"),
-                        requestAction: { fullDiskAccessPermission.requestAccessPrompt() },
-                        openSettingsAction: { fullDiskAccessPermission.openSystemSettings() }
-                    )
-                }
-
-                Defaults.Toggle(key: .enableDoNotDisturbDetection) {
-                    Text("Enable Focus Detection")
-                }
-                .settingsHighlight(id: highlightID("Enable Focus Detection"))
-
-                Defaults.Toggle(key: .showDoNotDisturbIndicator) {
-                    Text("Show Focus Indicator")
-                }
-                .disabled(!enableDoNotDisturbDetection)
-                .settingsHighlight(id: highlightID("Show Focus Indicator"))
-
-                Defaults.Toggle(key: .showDoNotDisturbLabel) {
-                    Text("Show Focus Label")
-                }
-                .disabled(!enableDoNotDisturbDetection || focusIndicatorNonPersistent)
-                .help(focusIndicatorNonPersistent ? "Labels are forced to compact on/off text while brief toast mode is enabled." : "Show the active Focus name inside the indicator.")
-                .settingsHighlight(id: highlightID("Show Focus Label"))
-
-                Defaults.Toggle(key: .focusIndicatorNonPersistent) {
-                    Text("Show Focus as brief toast")
-                }
-                .disabled(!enableDoNotDisturbDetection)
-                .settingsHighlight(id: highlightID("Show Focus as brief toast"))
-                .help("When enabled, Focus appears briefly (on/off) and then collapses instead of staying visible.")
-
-                if doNotDisturbManager.isMonitoring {
-                    HStack {
-                        Text("Focus Status")
-                        Spacer()
-                        if doNotDisturbManager.isDoNotDisturbActive {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color.purple)
-                                    .frame(width: 8, height: 8)
-                                Text(doNotDisturbManager.currentFocusModeName.isEmpty ? "Focus Enabled" : doNotDisturbManager.currentFocusModeName)
-                                    .foregroundColor(.purple)
-                            }
-                        } else {
-                            Text("Active - No Focus")
-                                .foregroundColor(.green)
-                        }
-                    }
-                } else {
-                    HStack {
-                        Text("Focus Status")
-                        Spacer()
-                        Text("Disabled")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } header: {
-                Text("Do Not Disturb")
-            } footer: {
-                Text("Listens for Focus session changes via distributed notifications")
-            }
-
-            Section {
-                Defaults.Toggle(key: .enableCapsLockIndicator) {
-                    Text("Show Caps Lock Indicator")
-                }
-                .settingsHighlight(id: highlightID("Show Caps Lock Indicator"))
-
-                Defaults.Toggle(key: .showCapsLockLabel) {
-                    Text("Show Caps Lock label")
-                }
-                .disabled(!Defaults[.enableCapsLockIndicator])
-                .settingsHighlight(id: highlightID("Show Caps Lock label"))
-
-                Picker("Caps Lock color", selection: $capsLockTintMode) {
-                    ForEach(CapsLockIndicatorTintMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .disabled(!Defaults[.enableCapsLockIndicator])
-                .settingsHighlight(id: highlightID("Caps Lock color"))
-            } header: {
-                Text("Caps Lock Indicator")
-            } footer: {
-                Text("Adds a notch HUD when Caps Lock is enabled, with optional label and tint controls.")
-            }
-
-            Section {
-                Defaults.Toggle(key: .enableCameraDetection) {
-                    Text("Enable Camera Detection")
-                }
-                .settingsHighlight(id: highlightID("Enable Camera Detection"))
-                Defaults.Toggle(key: .enableMicrophoneDetection) {
-                    Text("Enable Microphone Detection")
-                }
-                .settingsHighlight(id: highlightID("Enable Microphone Detection"))
-
-                if privacyManager.isMonitoring {
-                    HStack {
-                        Text("Camera Status")
-                        Spacer()
-                        if privacyManager.cameraActive {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color.green)
-                                    .frame(width: 8, height: 8)
-                                Text("Camera Active")
-                                    .foregroundColor(.green)
-                            }
-                        } else {
-                            Text("Inactive")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    HStack {
-                        Text("Microphone Status")
-                        Spacer()
-                        if privacyManager.microphoneActive {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color.yellow)
-                                    .frame(width: 8, height: 8)
-                                Text("Microphone Active")
-                                    .foregroundColor(.yellow)
-                            }
-                        } else {
-                            Text("Inactive")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            } header: {
-                Text("Privacy Indicators")
-            } footer: {
-                Text("Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs.")
-            }
-
-            Section {
-                Toggle(
-                    "Enable music live activity",
-                    isOn: $coordinator.musicLiveActivityEnabled.animation()
+            if !fullDiskAccessPermission.isAuthorized {
+                SettingsPermissionCallout(
+                    title: String(localized: "Custom Focus metadata"),
+                    message: String(localized: "Full Disk Access unlocks custom Focus icons, colors, and labels. Standard Focus detection still works without it—grant access only if you need personalized indicators."),
+                    icon: "externaldrive.fill",
+                    iconColor: .purple,
+                    requestButtonTitle: String(localized: "Request Full Disk Access"),
+                    openSettingsButtonTitle: String(localized: "Open Privacy & Security"),
+                    requestAction: { fullDiskAccessPermission.requestAccessPrompt() },
+                    openSettingsAction: { fullDiskAccessPermission.openSystemSettings() }
                 )
-                .settingsHighlight(id: highlightID("Enable music live activity"))
-            } header: {
-                Text("Media Live Activity")
-            } footer: {
-                Text("Use the Media tab to configure sneak peek, lyrics, and floating media controls.")
             }
 
-            Section {
-                Defaults.Toggle(key: .enableReminderLiveActivity) {
-                    Text("Enable reminder live activity")
+            GeistSection(
+                title: "Do Not Disturb",
+                footer: "Listens for Focus session changes via distributed notifications"
+            ) {
+                GeistToggleRow(title: "Enable Focus Detection", isOn: $enableDoNotDisturbDetection)
+                GeistToggleRow(title: "Show Focus Indicator", isOn: geistBinding(.showDoNotDisturbIndicator))
+                    .disabled(!enableDoNotDisturbDetection)
+                GeistToggleRow(title: "Show Focus Label", isOn: geistBinding(.showDoNotDisturbLabel))
+                    .disabled(!enableDoNotDisturbDetection || focusIndicatorNonPersistent)
+                    .help(focusIndicatorNonPersistent ? "Labels are forced to compact on/off text while brief toast mode is enabled." : "Show the active Focus name inside the indicator.")
+                GeistToggleRow(title: "Show Focus as brief toast", isOn: geistBinding(.focusIndicatorNonPersistent))
+                    .disabled(!enableDoNotDisturbDetection)
+                    .help("When enabled, Focus appears briefly (on/off) and then collapses instead of staying visible.")
+                GeistLabeledRow(title: "Focus Status", divider: false) {
+                    if doNotDisturbManager.isMonitoring {
+                        if doNotDisturbManager.isDoNotDisturbActive {
+                            statusLabel(dot: .purple, text: doNotDisturbManager.currentFocusModeName.isEmpty ? "Focus Enabled" : doNotDisturbManager.currentFocusModeName, color: .purple)
+                        } else {
+                            statusLabel(dot: nil, text: "Active - No Focus", color: Geist.Colors.success)
+                        }
+                    } else {
+                        statusLabel(dot: nil, text: "Disabled", color: Geist.Colors.mute)
+                    }
                 }
-                .settingsHighlight(id: highlightID("Enable reminder live activity"))
-            } header: {
-                Text("Reminder Live Activity")
-            } footer: {
-                Text("Configure countdown style in the Calendar tab.")
+            }
+
+            GeistSection(
+                title: "Caps Lock Indicator",
+                footer: "Adds a notch HUD when Caps Lock is enabled, with optional label and tint controls."
+            ) {
+                GeistToggleRow(title: "Show Caps Lock Indicator", isOn: geistBinding(.enableCapsLockIndicator))
+                GeistToggleRow(title: "Show Caps Lock label", isOn: geistBinding(.showCapsLockLabel))
+                    .disabled(!Defaults[.enableCapsLockIndicator])
+                GeistSegmentedRow(title: "Caps Lock color", selection: $capsLockTintMode, divider: false) {
+                    ForEach(CapsLockIndicatorTintMode.allCases) { Text($0.displayName).tag($0) }
+                }
+                .disabled(!Defaults[.enableCapsLockIndicator])
+            }
+
+            GeistSection(
+                title: "Privacy Indicators",
+                footer: "Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs."
+            ) {
+                GeistToggleRow(title: "Enable Camera Detection", isOn: geistBinding(.enableCameraDetection))
+                GeistToggleRow(title: "Enable Microphone Detection", isOn: geistBinding(.enableMicrophoneDetection), divider: privacyManager.isMonitoring)
+                if privacyManager.isMonitoring {
+                    GeistLabeledRow(title: "Camera Status") {
+                        if privacyManager.cameraActive {
+                            statusLabel(dot: .green, text: "Camera Active", color: Geist.Colors.success)
+                        } else {
+                            statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
+                        }
+                    }
+                    GeistLabeledRow(title: "Microphone Status", divider: false) {
+                        if privacyManager.microphoneActive {
+                            statusLabel(dot: .yellow, text: "Microphone Active", color: .yellow)
+                        } else {
+                            statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
+                        }
+                    }
+                }
+            }
+
+            GeistSection(
+                title: "Media Live Activity",
+                footer: "Use the Media tab to configure sneak peek, lyrics, and floating media controls."
+            ) {
+                GeistToggleRow(title: "Enable music live activity", isOn: $coordinator.musicLiveActivityEnabled.animation(), divider: false)
+            }
+
+            GeistSection(
+                title: "Reminder Live Activity",
+                footer: "Configure countdown style in the Calendar tab."
+            ) {
+                GeistToggleRow(title: "Enable reminder live activity", isOn: geistBinding(.enableReminderLiveActivity), divider: false)
             }
         }
-        .navigationTitle("Live Activities")
         .onAppear {
             fullDiskAccessPermission.refreshStatus()
             normalizeClosedNotchActivityPriorityOrder()
