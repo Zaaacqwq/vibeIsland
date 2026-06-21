@@ -58,17 +58,30 @@ struct GeistSettingsPage<Content: View>: View {
 /// A titled group of rows inside a hairline-bordered card.
 struct GeistSection<Content: View>: View {
     var title: String?
+    var badge: String?
     var footer: String?
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
             if let title {
-                Text(title.uppercased())
-                    .font(Geist.Typography.captionStrong)
-                    .foregroundStyle(Geist.Colors.mute)
-                    .tracking(0.6)
-                    .padding(.leading, Geist.Spacing.xxs)
+                HStack(spacing: Geist.Spacing.xs) {
+                    Text(title.uppercased())
+                        .font(Geist.Typography.captionStrong)
+                        .foregroundStyle(Geist.Colors.mute)
+                        .tracking(0.6)
+                    if let badge {
+                        Text(badge.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Geist.Colors.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(
+                                Capsule().strokeBorder(Geist.Colors.accent.opacity(0.4), lineWidth: 1)
+                            )
+                    }
+                }
+                .padding(.leading, Geist.Spacing.xxs)
             }
             GeistCard { content }
             if let footer {
@@ -187,6 +200,103 @@ struct GeistLabeledRow<Trailing: View>: View {
                     .foregroundStyle(Geist.Colors.ink)
                 Spacer(minLength: 0)
                 trailing
+            }
+        }
+    }
+}
+
+/// A row with a leading label, a trailing value, and a slider underneath.
+struct GeistSliderRow<V: BinaryFloatingPoint>: View where V.Stride: BinaryFloatingPoint {
+    let title: String
+    var valueLabel: String?
+    @Binding var value: V
+    let range: ClosedRange<V>
+    var step: V.Stride = 1
+    var divider: Bool = true
+    var onChange: (() -> Void)?
+
+    var body: some View {
+        GeistRow(divider: divider) {
+            VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                HStack(spacing: Geist.Spacing.sm) {
+                    Text(title)
+                        .font(Geist.Typography.bodyStrong)
+                        .foregroundStyle(Geist.Colors.ink)
+                    Spacer(minLength: 0)
+                    if let valueLabel {
+                        Text(valueLabel)
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .monospacedDigit()
+                    }
+                }
+                Slider(value: $value, in: range, step: step)
+                    .controlSize(.small)
+                    .onChange(of: value) { _, _ in onChange?() }
+            }
+        }
+    }
+}
+
+/// A row with a leading label/description and a trailing native stepper.
+struct GeistStepperRow: View {
+    let title: String
+    var description: String?
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    var step: Int = 1
+    var divider: Bool = true
+    var valueLabel: String?
+    var onChange: (() -> Void)?
+
+    var body: some View {
+        GeistRow(divider: divider) {
+            HStack(alignment: .center, spacing: Geist.Spacing.md) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Geist.Typography.bodyStrong)
+                        .foregroundStyle(Geist.Colors.ink)
+                    if let description {
+                        Text(description)
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: Geist.Spacing.sm)
+                if let valueLabel {
+                    Text(valueLabel)
+                        .font(Geist.Typography.body)
+                        .foregroundStyle(Geist.Colors.mute)
+                        .monospacedDigit()
+                }
+                Stepper("", value: $value, in: range, step: step)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .onChange(of: value) { _, _ in onChange?() }
+            }
+        }
+    }
+}
+
+/// A row with a leading label and a trailing segmented picker. Falls back to a
+/// full-width segmented control underneath the label when space is tight.
+struct GeistSegmentedRow<T: Hashable, Options: View>: View {
+    let title: String
+    @Binding var selection: T
+    var divider: Bool = true
+    @ViewBuilder var options: Options
+
+    var body: some View {
+        GeistRow(divider: divider) {
+            VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                Text(title)
+                    .font(Geist.Typography.bodyStrong)
+                    .foregroundStyle(Geist.Colors.ink)
+                Picker("", selection: $selection) { options }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .font(Geist.Typography.body)
             }
         }
     }
