@@ -978,139 +978,32 @@ struct GeneralSettings: View {
     @Default(.externalDisplayStyle) var externalDisplayStyle
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.general.highlightID(for: title)
+    private var gestureSensitivityLabel: String {
+        gestureSensitivity == 100 ? "High" : gestureSensitivity == 200 ? "Medium" : "Low"
     }
 
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableMinimalisticUI) {
-                    Text("Enable Minimalistic UI")
-                }
-                .onChange(of: enableMinimalisticUI) { _, newValue in
-                    if newValue {
-                        // Auto-enable simpler animation mode
-                        Defaults[.useModernCloseAnimation] = true
-                    }
-                }
-                .settingsHighlight(id: highlightID("Enable Minimalistic UI"))
-
-                Defaults.Toggle(key: .showBatteryPercentInside) {
-                    Text("Show battery percentage inside icon")
-                }
-                .disabled(!enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Show battery percentage inside icon"))
-            } header: {
-                Text("UI Mode")
-            } footer: {
-                Text("Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations.")
-            }
-
-            Section {
-                Defaults.Toggle(key: .menubarIcon) {
-                    Text("Menubar icon")
-                }
-                .settingsHighlight(id: highlightID("Menubar icon"))
-                LaunchAtLogin.Toggle {
-                    Text("Launch at login")
-                }
-                .settingsHighlight(id: highlightID("Launch at login"))
-                Defaults.Toggle(key: .showOnAllDisplays) {
-                    Text("Show on all displays")
-                }
-                .onChange(of: showOnAllDisplays) {
-                    NotificationCenter.default.post(name: Notification.Name.showOnAllDisplaysChanged, object: nil)
-                }
-                .settingsHighlight(id: highlightID("Show on all displays"))
-                Picker("Show on a specific display", selection: $coordinator.preferredScreen) {
-                    ForEach(screens, id: \.self) { screen in
-                        Text(screen)
-                    }
-                }
-                .onChange(of: NSScreen.screens) {
-                    screens =  NSScreen.screens.compactMap({$0.localizedName})
-                }
-                .disabled(showOnAllDisplays)
-                .settingsHighlight(id: highlightID("Show on a specific display"))
-                Defaults.Toggle(key: .automaticallySwitchDisplay) {
-                    Text("Automatically switch displays")
-                }
-                .onChange(of: automaticallySwitchDisplay) {
-                    NotificationCenter.default.post(name: Notification.Name.automaticallySwitchDisplayChanged, object: nil)
-                }
-                .disabled(showOnAllDisplays)
-                .settingsHighlight(id: highlightID("Automatically switch displays"))
-                Defaults.Toggle(key: .hideDynamicIslandFromScreenCapture) {
-                    Text("Hide Dynamic Island during screenshots & recordings")
-                }
-                .settingsHighlight(id: highlightID("Hide Dynamic Island during screenshots & recordings"))
-            } header: {
-                Text("System features")
-            }
-
-            Section {
-                Picker(selection: $notchHeightMode, label:
-                        Text("Notch display height")) {
-                    Text("Match real notch size")
-                        .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("Match menubar height")
-                        .tag(WindowHeightMode.matchMenuBar)
-                    Text("Custom height")
-                        .tag(WindowHeightMode.custom)
-                }
-                        .onChange(of: notchHeightMode) {
-                            switch notchHeightMode {
-                            case .matchRealNotchSize:
-                                notchHeight = 38
-                            case .matchMenuBar:
-                                notchHeight = 44
-                            case .custom:
-                                notchHeight = 38
-                            }
-                            NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
+        GeistSettingsPage(title: "General") {
+            GeistSection(
+                title: "UI Mode",
+                footer: "Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations."
+            ) {
+                GeistToggleRow(title: "Enable Minimalistic UI", isOn: $enableMinimalisticUI)
+                    .onChange(of: enableMinimalisticUI) { _, newValue in
+                        if newValue {
+                            // Auto-enable simpler animation mode
+                            Defaults[.useModernCloseAnimation] = true
                         }
-                        .settingsHighlight(id: highlightID("Notch display height"))
-                if notchHeightMode == .custom {
-                    Slider(value: $notchHeight, in: 15...45, step: 1) {
-                        Text("Custom notch size - \(notchHeight, specifier: "%.0f")")
                     }
-                    .onChange(of: notchHeight) {
-                        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                    }
-                }
-                Picker("Non-notch display height", selection: $nonNotchHeightMode) {
-                    Text("Match menubar height")
-                        .tag(WindowHeightMode.matchMenuBar)
-                    Text("Match real notch size")
-                        .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("Custom height")
-                        .tag(WindowHeightMode.custom)
-                }
-                .onChange(of: nonNotchHeightMode) {
-                    switch nonNotchHeightMode {
-                    case .matchMenuBar:
-                        nonNotchHeight = 24
-                    case .matchRealNotchSize:
-                        nonNotchHeight = 32
-                    case .custom:
-                        nonNotchHeight = 32
-                    }
-                    NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                }
-                if nonNotchHeightMode == .custom {
-                    Slider(value: $nonNotchHeight, in: 0...40, step: 1) {
-                        Text("Custom notch size - \(nonNotchHeight, specifier: "%.0f")")
-                    }
-                    .onChange(of: nonNotchHeight) {
-                        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                    }
-                }
-            } header: {
-                Text("Notch Height")
+                GeistToggleRow(title: "Show battery percentage inside icon", isOn: geistBinding(.showBatteryPercentInside), divider: false)
+                    .disabled(!enableMinimalisticUI)
             }
 
-            NotchBehaviour()
+            systemFeatures()
+
+            notchHeightSection()
+
+            notchBehaviour()
 
             gestureControls()
         }
@@ -1120,7 +1013,6 @@ struct GeneralSettings: View {
             }
             .controlSize(.extraLarge)
         }
-        .navigationTitle("General")
         .onChange(of: openNotchOnHover) {
             if !openNotchOnHover {
                 enableGestures = true
@@ -1129,121 +1021,145 @@ struct GeneralSettings: View {
     }
 
     @ViewBuilder
-    func gestureControls() -> some View {
-        Section {
-            Defaults.Toggle(key: .enableGestures) {
-                Text("Enable gestures")
+    func systemFeatures() -> some View {
+        GeistSection(title: "System features") {
+            GeistToggleRow(title: "Menubar icon", isOn: geistBinding(.menubarIcon))
+            GeistToggleRow(title: "Launch at login", isOn: Binding(
+                get: { LaunchAtLogin.isEnabled }, set: { LaunchAtLogin.isEnabled = $0 }
+            ))
+            GeistToggleRow(title: "Show on all displays", isOn: $showOnAllDisplays)
+                .onChange(of: showOnAllDisplays) {
+                    NotificationCenter.default.post(name: Notification.Name.showOnAllDisplaysChanged, object: nil)
+                }
+            GeistPickerRow(title: "Show on a specific display", selection: $coordinator.preferredScreen) {
+                ForEach(screens, id: \.self) { Text($0).tag($0) }
             }
-            .disabled(!openNotchOnHover)
-            .settingsHighlight(id: highlightID("Enable gestures"))
-            if enableGestures {
-                Defaults.Toggle(key: .enableHorizontalMusicGestures) {
-                    Text("Media change with horizontal gestures")
-                }
-                .settingsHighlight(id: highlightID("Horizontal media gestures"))
-
-                if enableHorizontalMusicGestures {
-                    Picker("Gesture skip behavior", selection: $musicGestureBehavior) {
-                        ForEach(MusicSkipBehavior.allCases) { behavior in
-                            Text(behavior.displayName)
-                                .tag(behavior)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .settingsHighlight(id: highlightID("Gesture skip behavior"))
-
-                    Text(musicGestureBehavior.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Defaults.Toggle(key: .reverseSwipeGestures) {
-                        Text("Reverse swipe gestures")
-                    }
-                    .settingsHighlight(id: highlightID("Reverse swipe gestures"))
-                }
-
-                Defaults.Toggle(key: .closeGestureEnabled) {
-                    Text("Close gesture")
-                }
-                .settingsHighlight(id: highlightID("Close gesture"))
-                Slider(value: $gestureSensitivity, in: 100...300, step: 100) {
-                    HStack {
-                        Text("Gesture sensitivity")
-                        Spacer()
-                        Text(Defaults[.gestureSensitivity] == 100 ? "High" : Defaults[.gestureSensitivity] == 200 ? "Medium" : "Low")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Defaults.Toggle(key: .reverseScrollGestures) {
-                    Text("Reverse open/close scroll gestures")
-                }
-                .settingsHighlight(id: highlightID("Reverse scroll gestures"))
+            .onChange(of: NSScreen.screens) {
+                screens = NSScreen.screens.compactMap { $0.localizedName }
             }
-        } header: {
-            HStack {
-                Text("Gesture control")
-                customBadge(text: "Beta")
-            }
-        } footer: {
-            Text("Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled")
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(.secondary)
-                .font(.caption)
+            .disabled(showOnAllDisplays)
+            GeistToggleRow(title: "Automatically switch displays", isOn: $automaticallySwitchDisplay)
+                .onChange(of: automaticallySwitchDisplay) {
+                    NotificationCenter.default.post(name: Notification.Name.automaticallySwitchDisplayChanged, object: nil)
+                }
+                .disabled(showOnAllDisplays)
+            GeistToggleRow(title: "Hide Dynamic Island during screenshots & recordings", isOn: geistBinding(.hideDynamicIslandFromScreenCapture), divider: false)
         }
     }
 
     @ViewBuilder
-    func NotchBehaviour() -> some View {
-        Section {
-            Defaults.Toggle(key: .extendHoverArea) {
-                Text("Extend hover area")
+    func notchHeightSection() -> some View {
+        GeistSection(title: "Notch Height") {
+            GeistPickerRow(title: "Notch display height", selection: $notchHeightMode, divider: notchHeightMode == .custom) {
+                Text("Match real notch size").tag(WindowHeightMode.matchRealNotchSize)
+                Text("Match menubar height").tag(WindowHeightMode.matchMenuBar)
+                Text("Custom height").tag(WindowHeightMode.custom)
             }
-            .settingsHighlight(id: highlightID("Extend hover area"))
-            Defaults.Toggle(key: .enableHaptics) {
-                Text("Enable haptics")
+            .onChange(of: notchHeightMode) {
+                switch notchHeightMode {
+                case .matchRealNotchSize: notchHeight = 38
+                case .matchMenuBar: notchHeight = 44
+                case .custom: notchHeight = 38
+                }
+                NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
             }
-            .settingsHighlight(id: highlightID("Enable haptics"))
-            Defaults.Toggle(key: .openNotchOnHover) {
-                Text("Open notch on hover")
+            if notchHeightMode == .custom {
+                GeistSliderRow(
+                    title: "Custom notch size",
+                    valueLabel: String(format: "%.0f", notchHeight),
+                    value: $notchHeight, range: 15...45, step: 1,
+                    onChange: { NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil) }
+                )
             }
-            .settingsHighlight(id: highlightID("Open notch on hover"))
-            Toggle("Remember last tab", isOn: $coordinator.openLastTabByDefault)
-            if openNotchOnHover {
-                Slider(value: $minimumHoverDuration, in: 0...1, step: 0.1) {
-                    HStack {
-                        Text("Minimum hover duration")
-                        Spacer()
-                        Text("\(minimumHoverDuration, specifier: "%.1f")s")
-                            .foregroundStyle(.secondary)
+            GeistPickerRow(title: "Non-notch display height", selection: $nonNotchHeightMode, divider: nonNotchHeightMode == .custom) {
+                Text("Match menubar height").tag(WindowHeightMode.matchMenuBar)
+                Text("Match real notch size").tag(WindowHeightMode.matchRealNotchSize)
+                Text("Custom height").tag(WindowHeightMode.custom)
+            }
+            .onChange(of: nonNotchHeightMode) {
+                switch nonNotchHeightMode {
+                case .matchMenuBar: nonNotchHeight = 24
+                case .matchRealNotchSize: nonNotchHeight = 32
+                case .custom: nonNotchHeight = 32
+                }
+                NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
+            }
+            if nonNotchHeightMode == .custom {
+                GeistSliderRow(
+                    title: "Custom non-notch size",
+                    valueLabel: String(format: "%.0f", nonNotchHeight),
+                    value: $nonNotchHeight, range: 0...40, step: 1, divider: false,
+                    onChange: { NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil) }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    func gestureControls() -> some View {
+        GeistSection(
+            title: "Gesture control",
+            badge: "Beta",
+            footer: "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled."
+        ) {
+            GeistToggleRow(title: "Enable gestures", isOn: $enableGestures, divider: enableGestures)
+                .disabled(!openNotchOnHover)
+            if enableGestures {
+                GeistToggleRow(title: "Media change with horizontal gestures", isOn: $enableHorizontalMusicGestures)
+                if enableHorizontalMusicGestures {
+                    GeistSegmentedRow(title: "Gesture skip behavior", selection: $musicGestureBehavior) {
+                        ForEach(MusicSkipBehavior.allCases) { Text($0.displayName).tag($0) }
                     }
+                    GeistRow {
+                        Text(musicGestureBehavior.description)
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    GeistToggleRow(title: "Reverse swipe gestures", isOn: geistBinding(.reverseSwipeGestures))
                 }
-                .onChange(of: minimumHoverDuration) {
-                    NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                }
+                GeistToggleRow(title: "Close gesture", isOn: geistBinding(.closeGestureEnabled))
+                GeistSliderRow(
+                    title: "Gesture sensitivity",
+                    valueLabel: gestureSensitivityLabel,
+                    value: $gestureSensitivity, range: 100...300, step: 100
+                )
+                GeistToggleRow(title: "Reverse open/close scroll gestures", isOn: $reverseScrollGestures, divider: false)
             }
-            Picker("External display style", selection: $externalDisplayStyle) {
-                ForEach(ExternalDisplayStyle.allCases) { style in
-                    Text(style.localizedName)
-                        .tag(style)
-                }
+        }
+    }
+
+    @ViewBuilder
+    func notchBehaviour() -> some View {
+        GeistSection(
+            title: "Notch behavior",
+            footer: "When \"Hide until hovered\" is enabled, the notch slides up and hides on external (non-notch) displays until you hover over it."
+        ) {
+            GeistToggleRow(title: "Extend hover area", isOn: geistBinding(.extendHoverArea))
+            GeistToggleRow(title: "Enable haptics", isOn: geistBinding(.enableHaptics))
+            GeistToggleRow(title: "Open notch on hover", isOn: geistBinding(.openNotchOnHover))
+            GeistToggleRow(title: "Remember last tab", isOn: $coordinator.openLastTabByDefault)
+            if openNotchOnHover {
+                GeistSliderRow(
+                    title: "Minimum hover duration",
+                    valueLabel: String(format: "%.1fs", minimumHoverDuration),
+                    value: $minimumHoverDuration, range: 0...1, step: 0.1,
+                    onChange: { NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil) }
+                )
+            }
+            GeistPickerRow(title: "External display style", selection: $externalDisplayStyle) {
+                ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
             }
             .onChange(of: externalDisplayStyle) {
                 NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
             }
-            .settingsHighlight(id: highlightID("External display style"))
-            Text(externalDisplayStyle.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Defaults.Toggle(key: .hideNonNotchUntilHover) {
-                Text("Hide until hovered on non-notch displays")
+            GeistRow {
+                Text(externalDisplayStyle.description)
+                    .font(Geist.Typography.caption)
+                    .foregroundStyle(Geist.Colors.body)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .settingsHighlight(id: highlightID("Hide until hovered"))
-            Text("When enabled, the notch slides up and hides on external (non-notch) displays until you hover over it.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } header: {
-            Text("Notch behavior")
+            GeistToggleRow(title: "Hide until hovered on non-notch displays", isOn: $hideNonNotchUntilHover, divider: false)
         }
     }
 }
