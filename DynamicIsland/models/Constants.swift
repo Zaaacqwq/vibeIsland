@@ -802,6 +802,9 @@ extension Defaults.Keys {
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
     static let accentColor = Key<Color>("accentColor", default: Color.blue)
+    /// Debug: tint the notch background instead of black, to inspect the layout regions.
+    static let debugNotchBackgroundEnabled = Key<Bool>("debugNotchBackgroundEnabled", default: false)
+    static let debugNotchBackgroundColor = Key<Color>("debugNotchBackgroundColor", default: .red)
     static let enableShadow = Key<Bool>("enableShadow", default: true)
     static let cornerRadiusScaling = Key<Bool>("cornerRadiusScaling", default: true)
     static let useModernCloseAnimation = Key<Bool>("useModernCloseAnimation", default: true)

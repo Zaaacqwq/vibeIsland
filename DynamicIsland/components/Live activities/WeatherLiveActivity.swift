@@ -37,6 +37,10 @@ struct WeatherLiveActivity: View {
         isExpanded ? max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12)) : 0
     }
 
+    /// Gap between each accessory and the physical notch so the icon/temperature
+    /// aren't clipped by the notch edge.
+    private let notchInset: CGFloat = 6
+
     var body: some View {
         HStack(spacing: 0) {
             Color.clear
@@ -49,6 +53,7 @@ struct WeatherLiveActivity: View {
                     }
                 }
                 .frame(width: accessoryWidth, height: accessoryHeight)
+                .padding(.trailing, isExpanded ? notchInset : 0)
 
             Rectangle()
                 .fill(.black)
@@ -62,6 +67,7 @@ struct WeatherLiveActivity: View {
                     }
                 }
                 .frame(width: accessoryWidth, height: accessoryHeight)
+                .padding(.leading, isExpanded ? notchInset : 0)
         }
         .frame(height: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0))
         .onAppear { withAnimation(.smooth(duration: 0.4)) { isExpanded = true } }

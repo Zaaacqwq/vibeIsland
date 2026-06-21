@@ -56,6 +56,8 @@ struct ContentView: View {
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
     @ObservedObject var notificationMonitor = NotificationMonitorManager.shared
     @ObservedObject var weatherManager = WeatherManager.shared
+    @Default(.debugNotchBackgroundEnabled) var debugNotchBackgroundEnabled
+    @Default(.debugNotchBackgroundColor) var debugNotchBackgroundColor
 
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
@@ -486,7 +488,7 @@ struct ContentView: View {
             .frame(alignment: .top)
             .padding(.horizontal, notchHorizontalPadding)
             .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-            .background(.black)
+            .background(debugNotchBackgroundEnabled ? debugNotchBackgroundColor : .black)
             .clipShape(resolvedClipShape)
             .compositingGroup()
             .shadow(
