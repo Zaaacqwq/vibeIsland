@@ -16,7 +16,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import Defaults
 import SwiftUI
+
+/// Binding to a boolean `Defaults` key, for Geist toggle rows.
+func geistBinding(_ key: Defaults.Key<Bool>) -> Binding<Bool> {
+    Binding(get: { Defaults[key] }, set: { Defaults[key] = $0 })
+}
 
 /// A scrollable Geist settings page: a large title, optional description, and a
 /// stack of sections. Replaces the native grouped `Form` look.
