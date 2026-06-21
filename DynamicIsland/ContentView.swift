@@ -1271,7 +1271,7 @@ struct ContentView: View {
 
             Rectangle()
                 .fill(.black)
-                .frame(width: effectiveCenterWidth, height: notchContentHeight)
+                .frame(width: inlineSneakPeekActive ? effectiveCenterWidth : vm.physicalNotchWidth, height: notchContentHeight)
                 .overlay(
                     HStack(alignment: .top) {
                         if(coordinator.expandingView.show && coordinator.expandingView.type == .music) {

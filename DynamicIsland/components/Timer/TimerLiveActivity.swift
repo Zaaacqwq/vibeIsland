@@ -129,6 +129,14 @@ struct TimerLiveActivity: View {
         return width
     }
 
+    /// Both wings take the larger width so the black notch cover stays centred.
+    private var timerSideWidth: CGFloat {
+        max(leftWingWidth, rightWingWidth)
+    }
+
+    /// Gap between each wing and the black notch cover.
+    private let timerInnerGap: CGFloat = 8
+
     private var titleTextWidth: CGFloat {
         measureTextWidth(timerManager.timerName, font: systemFont(size: 12, weight: .medium))
     }
@@ -174,10 +182,6 @@ struct TimerLiveActivity: View {
     private var activePresetColor: Color? {
         guard let presetId = timerManager.activePresetId else { return nil }
         return timerPresets.first { $0.id == presetId }?.color
-    }
-
-    private var middleSectionWidth: CGFloat {
-        vm.closedNotchSize.width + (isHovering ? 8 : 0)
     }
 
     private var adjustedNotchHeight: CGFloat {
@@ -311,7 +315,9 @@ struct TimerLiveActivity: View {
     private var baseTimerLayout: some View {
         HStack(spacing: 0) {
             leftWingView()
+            Color.clear.frame(width: timerInnerGap, height: notchContentHeight)
             middleSectionView()
+            Color.clear.frame(width: timerInnerGap, height: notchContentHeight)
             rightWingView()
         }
         .frame(height: adjustedNotchHeight, alignment: .center)
@@ -321,16 +327,15 @@ struct TimerLiveActivity: View {
     @ViewBuilder
     private func leftWingView() -> some View {
         Color.clear
-            .frame(width: leftWingWidth, height: notchContentHeight)
-            .background(alignment: .leading) {
+            .frame(width: timerSideWidth, height: notchContentHeight)
+            .background(alignment: .center) {
                 HStack(spacing: showsInfoSection ? 8 : 0) {
                     iconSection
                     if showsInfoSection {
                         infoSection
                     }
                 }
-                .padding(.leading, wingPadding / 2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
     }
 
@@ -344,8 +349,8 @@ struct TimerLiveActivity: View {
     @ViewBuilder
     private func rightWingView() -> some View {
         Color.clear
-            .frame(width: rightWingWidth, height: notchContentHeight)
-            .background(alignment: .trailing) {
+            .frame(width: timerSideWidth, height: notchContentHeight)
+            .background(alignment: .center) {
                 HStack(spacing: ringOnRight && showsCountdown ? 8 : 0) {
                     if ringOnRight {
                         ringSection
@@ -354,8 +359,7 @@ struct TimerLiveActivity: View {
                         countdownSection
                     }
                 }
-                .padding(.trailing, wingPadding / 2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
     }
     
