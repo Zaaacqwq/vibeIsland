@@ -3022,92 +3022,65 @@ struct About: View {
     let updaterController: SPUStandardUpdaterController
     @Environment(\.openWindow) var openWindow
     var body: some View {
-        VStack {
-            Form {
-                Section {
-                    HStack {
-                        Text("Release name")
-                        Spacer()
-                        Text(Defaults[.releaseName])
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("Version")
-                        Spacer()
+        GeistSettingsPage(title: "About") {
+            GeistSection(title: "Version info") {
+                GeistLabeledRow(title: "Release name") {
+                    Text(Defaults[.releaseName])
+                        .font(Geist.Typography.body)
+                        .foregroundStyle(Geist.Colors.body)
+                }
+                GeistLabeledRow(title: "Version", divider: false) {
+                    HStack(spacing: 4) {
                         if showBuildNumber {
                             Text("(\(Bundle.main.buildVersionNumber ?? ""))")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Geist.Colors.mute)
                         }
-                        Text(Bundle.main.releaseVersionNumber ?? "unkown")
-                            .foregroundStyle(.secondary)
+                        Text(Bundle.main.releaseVersionNumber ?? "unknown")
+                            .foregroundStyle(Geist.Colors.body)
                     }
-                    .onTapGesture {
-                        withAnimation {
-                            showBuildNumber.toggle()
-                        }
-                    }
-                } header: {
-                    Text("Version info")
+                    .font(Geist.Typography.body)
+                    .contentShape(Rectangle())
+                    .onTapGesture { withAnimation { showBuildNumber.toggle() } }
                 }
+            }
 
-                UpdaterSettingsView(updater: updaterController.updater)
-
-                HStack(spacing: 30) {
-                    Spacer(minLength: 0)
-                    Button {
-                        NSWorkspace.shared.open(sponsorPage)
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: "cup.and.saucer.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                            Text("Donate")
-                                .foregroundStyle(.white)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        NSWorkspace.shared.open(productPage)
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image("Github")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 18)
-                            Text("GitHub")
-                                .foregroundStyle(.white)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    Spacer(minLength: 0)
+            GeistSection(title: "Updates") {
+                GeistRow(divider: false) {
+                    UpdaterSettingsView(updater: updaterController.updater)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(PlainButtonStyle())
-                Text("Your support funds software development learning for students in 9th–12th grade.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
             }
-            VStack(spacing: 0) {
-                Divider()
-                Text("Made with ❤️ by Ebullioscopic")
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 5)
-                    .padding(.bottom, 7)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 10)
+
+            GeistSection(footer: "Your support funds software development learning for students in 9th–12th grade.") {
+                GeistRow(divider: false) {
+                    HStack(spacing: Geist.Spacing.sm) {
+                        Spacer(minLength: 0)
+                        Button {
+                            NSWorkspace.shared.open(sponsorPage)
+                        } label: {
+                            Label("Donate", systemImage: "cup.and.saucer.fill")
+                        }
+                        .buttonStyle(.geistProminent)
+                        Button {
+                            NSWorkspace.shared.open(productPage)
+                        } label: {
+                            Label("GitHub", image: "Github")
+                        }
+                        .buttonStyle(.geist)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .background(.regularMaterial)
+
+            Text("Made with ❤️ by Ebullioscopic")
+                .font(Geist.Typography.caption)
+                .foregroundStyle(Geist.Colors.mute)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
         .toolbar {
-            //            Button("Welcome window") {
-            //                openWindow(id: "onboarding")
-            //            }
-            //            .controlSize(.extraLarge)
             CheckForUpdatesView(updater: updaterController.updater)
         }
-        .navigationTitle("About")
     }
 }
 
