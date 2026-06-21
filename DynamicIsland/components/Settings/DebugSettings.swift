@@ -32,51 +32,48 @@ struct DebugSettings: View {
     ]
 
     var body: some View {
-        Form {
-            Section {
-                if debugForcedActivities.isEmpty {
-                    Text("Turn an activity on to force it into the closed notch with sample data. Enable two to preview a pair.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        GeistSettingsPage(title: "Debug", subtitle: "Preview activity combinations and inspect the notch layout.") {
+            GeistSection(
+                title: "Preview activities",
+                footer: "Only the two highest-priority activities show at once (see Live Activities → Closed Notch Priority). Reminder and extension activities can't be previewed with sample data."
+            ) {
+                ForEach(Array(previewableActivities.enumerated()), id: \.element) { index, kind in
+                    GeistToggleRow(
+                        title: kind.displayName,
+                        isOn: Binding(
+                            get: { debugForcedActivities.contains(kind) },
+                            set: { isOn in
+                                if isOn { debugForcedActivities.insert(kind) }
+                                else { debugForcedActivities.remove(kind) }
+                            }
+                        ),
+                        divider: index < previewableActivities.count - 1
+                    )
                 }
-                ForEach(previewableActivities) { kind in
-                    Toggle(isOn: Binding(
-                        get: { debugForcedActivities.contains(kind) },
-                        set: { isOn in
-                            if isOn { debugForcedActivities.insert(kind) }
-                            else { debugForcedActivities.remove(kind) }
-                        }
-                    )) {
-                        Label(kind.displayName, systemImage: kind.systemImage)
-                            .labelStyle(.titleAndIcon)
-                    }
-                }
-                if !debugForcedActivities.isEmpty {
-                    Button("Clear preview") { debugForcedActivities = [] }
-                }
-            } header: {
-                Text("Preview activities")
-            } footer: {
-                Text("Only the two highest-priority activities show at once (see Live Activities → Closed Notch Priority). Reminder and extension activities can't be previewed with sample data.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
-            Section {
-                Defaults.Toggle(key: .debugNotchBackgroundEnabled) {
-                    Text("Tint notch background")
-                }
+            if !debugForcedActivities.isEmpty {
+                Button("Clear preview") { debugForcedActivities = [] }
+                    .buttonStyle(.geist)
+            }
+
+            GeistSection(
+                title: "Notch background",
+                footer: "Replaces the notch's black background with a colour so you can see each region's boundaries. The centre notch fill stays black for contrast."
+            ) {
+                GeistToggleRow(
+                    title: "Tint notch background",
+                    isOn: $debugNotchBackgroundEnabled,
+                    divider: debugNotchBackgroundEnabled
+                )
                 if debugNotchBackgroundEnabled {
-                    ColorPicker("Background color", selection: $debugNotchBackgroundColor, supportsOpacity: true)
+                    GeistRow(divider: false) {
+                        ColorPicker("Background color", selection: $debugNotchBackgroundColor, supportsOpacity: true)
+                            .font(Geist.Typography.bodyStrong)
+                            .foregroundStyle(Geist.Colors.ink)
+                    }
                 }
-            } header: {
-                Text("Notch background")
-            } footer: {
-                Text("Replaces the notch's black background with a colour so you can see each region's boundaries. The centre notch fill stays black for contrast.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
-        .navigationTitle("Debug")
     }
 }

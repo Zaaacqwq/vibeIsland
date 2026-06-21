@@ -346,6 +346,7 @@ struct SettingsView: View {
         .toolbar { toolbarSpacingShim }
         .environmentObject(highlightCoordinator)
         .formStyle(.grouped)
+        .tint(Geist.Colors.accent)
         .frame(width: 700)
         .onChange(of: searchText) { _, newValue in
             let matches = tabsMatchingSearch(newValue)
@@ -355,24 +356,8 @@ struct SettingsView: View {
             }
         }
         .background {
-            Group {
-                if #available(macOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .glassEffect(
-                            .clear
-                                .tint(Color.white.opacity(0.1))
-                                .interactive(),
-                            in: .rect(cornerRadius: 18)
-                        )
-                } else {
-                    ZStack {
-                        Color(NSColor.windowBackgroundColor)
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    }
-                }
-            }
-            .ignoresSafeArea()
+            Geist.Colors.canvas
+                .ignoresSafeArea()
         }
     }
 
@@ -447,6 +432,7 @@ struct SettingsView: View {
         HStack(spacing: 10) {
             sidebarIcon(for: tab)
             Text(tab.title)
+                .font(Geist.Typography.bodyStrong)
             if tab == .downloads {
                 Spacer()
                 Text("BETA")
