@@ -1565,8 +1565,8 @@ private struct HUDAndOSDSettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            HStack(spacing: 16) {
+        GeistSettingsPage(title: "Controls") {
+            HStack(spacing: Geist.Spacing.md) {
                 HUDSelectionCard(
                     title: String(localized: "Dynamic Island"),
                     isSelected: selectedTab == .hud,
@@ -1746,204 +1746,126 @@ private struct HUDAndOSDSettingsView: View {
                     .padding()
                 }
             case .vertical:
-                Form {
-                    if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
-                        Section {
-                            SettingsPermissionCallout(
-                                message: "Accessibility permission is needed to intercept system controls for the Vertical HUD.",
-                                requestAction: {
-                                    accessibilityPermission.requestAuthorizationPrompt()
-                                },
-                                openSettingsAction: {
-                                    accessibilityPermission.openSystemSettings()
-                                }
-                            )
-                        } header: {
-                            Text("Accessibility")
-                        }
-                    }
-
-                    if accessibilityPermission.isAuthorized || enableThirdPartyDDCIntegration {
-                        Section {
-                            Toggle("Volume HUD", isOn: $enableVolumeHUD)
-                            Toggle("Brightness HUD", isOn: $enableBrightnessHUD)
-                            Toggle("Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD)
-                                .disabled(enableThirdPartyDDCIntegration)
-                                .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
-                        } header: {
-                            Text("Controls")
-                        } footer: {
-                            Text("Choose which system controls should display HUD notifications.")
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
-                        }
-                    }
-
-                    Section {
-                        Toggle("Show Percentage", isOn: $verticalHUDShowValue)
-                        Toggle("Use Accent Color", isOn: $verticalHUDUseAccentColor)
-                        Toggle("Interactive (Drag to Change)", isOn: $verticalHUDInteractive)
-                        Picker("Material", selection: $verticalHUDMaterial) {
-                            ForEach(availableVerticalMaterials, id: \.self) { material in
-                                Text(material.rawValue).tag(material)
-                            }
-                        }
-
-                        if verticalHUDMaterial == .liquid {
-                            if #available(macOS 26.0, *) {
-                                Picker("Glass mode", selection: $verticalHUDLiquidGlassCustomizationMode) {
-                                    ForEach(GlassCustomizationMode.allCases) { mode in
-                                        Text(mode.rawValue).tag(mode)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-
-                                if verticalHUDLiquidGlassCustomizationMode == .customLiquid {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack {
-                                            Text("Custom liquid variant")
-                                            Spacer()
-                                            Text("v\(verticalHUDLiquidGlassVariant.rawValue)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Slider(value: verticalLiquidVariantBinding, in: liquidVariantRange, step: 1)
-                                    }
-                                }
-                            } else {
-                                Text("Custom Liquid is available on macOS 26 or later.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Defaults.Toggle(key: .useColorCodedVolumeDisplay) {
-                            Text("Color-coded Volume")
-                        }
-                        if Defaults[.useColorCodedVolumeDisplay] {
-                            Defaults.Toggle(key: .useSmoothColorGradient) {
-                                Text("Smooth color transitions")
-                            }
-                        }
-                    } header: {
-                        Text("Behavior & Style")
-                    }
-
-                    Section {
-                        Picker("HUD Position", selection: $verticalHUDPosition) {
-                            Text("Left").tag("left")
-                            Text("Right").tag("right")
-                        }
-                        .pickerStyle(.menu)
-
-                        VStack(alignment: .leading) {
-                            Text("Screen Padding: \(Int(verticalHUDPadding))px")
-                            Slider(value: $verticalHUDPadding, in: 0...100, step: 4)
-                        }
-                    } header: {
-                        Text("Position")
-                    } footer: {
-                        Text("Choose directly on which side of the screen the vertical bar appears.")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
-
-                    Section {
-                        VStack(alignment: .leading) {
-                            Text("Width: \(Int(verticalHUDWidth))px")
-                            Slider(value: $verticalHUDWidth, in: 24...80, step: 2)
-                        }
-                        VStack(alignment: .leading) {
-                            Text("Height: \(Int(verticalHUDHeight))px")
-                            Slider(value: $verticalHUDHeight, in: 100...500, step: 10)
-                        }
-                        Button("Reset to Default") {
-                            verticalHUDWidth = 36
-                            verticalHUDHeight = 160
-                            verticalHUDPadding = 24
-                        }
-                    } header: {
-                        Text("Dimensions")
-                    }
-                }
+                verticalSections
 
             case .circular:
-                Form {
-                    if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
-                        Section {
-                            SettingsPermissionCallout(
-                                message: "Accessibility permission is needed to intercept system controls for the Circular HUD.",
-                                requestAction: {
-                                    accessibilityPermission.requestAuthorizationPrompt()
-                                },
-                                openSettingsAction: {
-                                    accessibilityPermission.openSystemSettings()
-                                }
-                            )
-                        } header: {
-                            Text("Accessibility")
-                        }
-                    }
-
-                    if accessibilityPermission.isAuthorized || enableThirdPartyDDCIntegration {
-                        Section {
-                            Toggle("Volume HUD", isOn: $enableVolumeHUD)
-                            Toggle("Brightness HUD", isOn: $enableBrightnessHUD)
-                            Toggle("Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD)
-                                .disabled(enableThirdPartyDDCIntegration)
-                                .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
-                        } header: {
-                            Text("Controls")
-                        } footer: {
-                            Text("Choose which system controls should display HUD notifications.")
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
-                        }
-                    }
-
-                    Section {
-                        Toggle("Show Percentage", isOn: $circularHUDShowValue)
-                        Toggle("Use Accent Color", isOn: $circularHUDUseAccentColor)
-                        Defaults.Toggle(key: .useColorCodedVolumeDisplay) {
-                            Text("Color-coded Volume")
-                        }
-                        if Defaults[.useColorCodedVolumeDisplay] {
-                            Defaults.Toggle(key: .useSmoothColorGradient) {
-                                Text("Smooth color transitions")
-                            }
-                        }
-                    } header: {
-                        Text("Style")
-                    }
-
-                    Section {
-                        VStack(alignment: .leading) {
-                            Text("Size: \(Int(circularHUDSize))px")
-                            Slider(value: $circularHUDSize, in: 40...200, step: 5)
-                        }
-                        VStack(alignment: .leading) {
-                            Text("Line Width: \(Int(circularHUDStrokeWidth))px")
-                            Slider(value: $circularHUDStrokeWidth, in: 2...16, step: 1)
-                        }
-                        Button("Reset to Default") {
-                            circularHUDSize = 65
-                            circularHUDStrokeWidth = 4
-                        }
-                    } header: {
-                        Text("Dimensions")
-                    }
-                }
+                circularSections
             }
 
             // Third-party display integrations (shared across all HUD variants)
             ExternalDisplayIntegrationsSection()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(paneBackgroundColor)
-        .navigationTitle("Controls")
         .onAppear {
             if #unavailable(macOS 26.0), verticalHUDMaterial == .liquid {
                 verticalHUDMaterial = .frosted
                 verticalHUDLiquidGlassCustomizationMode = .standard
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var hudControlsSection: some View {
+        if accessibilityPermission.isAuthorized || enableThirdPartyDDCIntegration {
+            GeistSection(title: "Controls", footer: "Choose which system controls should display HUD notifications.") {
+                GeistToggleRow(title: "Volume HUD", isOn: $enableVolumeHUD)
+                GeistToggleRow(title: "Brightness HUD", isOn: $enableBrightnessHUD)
+                GeistToggleRow(title: "Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD, divider: false)
+                    .disabled(enableThirdPartyDDCIntegration)
+                    .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var verticalSections: some View {
+        if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
+            SettingsPermissionCallout(
+                message: "Accessibility permission is needed to intercept system controls for the Vertical HUD.",
+                requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
+                openSettingsAction: { accessibilityPermission.openSystemSettings() }
+            )
+        }
+        hudControlsSection
+
+        GeistSection(title: "Behavior & Style") {
+            GeistToggleRow(title: "Show Percentage", isOn: $verticalHUDShowValue)
+            GeistToggleRow(title: "Use Accent Color", isOn: $verticalHUDUseAccentColor)
+            GeistToggleRow(title: "Interactive (Drag to Change)", isOn: $verticalHUDInteractive)
+            GeistPickerRow(title: "Material", selection: $verticalHUDMaterial) {
+                ForEach(availableVerticalMaterials, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            if verticalHUDMaterial == .liquid {
+                if #available(macOS 26.0, *) {
+                    GeistSegmentedRow(title: "Glass mode", selection: $verticalHUDLiquidGlassCustomizationMode) {
+                        ForEach(GlassCustomizationMode.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    if verticalHUDLiquidGlassCustomizationMode == .customLiquid {
+                        GeistSliderRow(title: "Custom liquid variant", valueLabel: "v\(verticalHUDLiquidGlassVariant.rawValue)", value: verticalLiquidVariantBinding, range: liquidVariantRange, step: 1)
+                    }
+                } else {
+                    GeistRow {
+                        Text("Custom Liquid is available on macOS 26 or later.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                    }
+                }
+            }
+            GeistToggleRow(title: "Color-coded Volume", isOn: geistBinding(.useColorCodedVolumeDisplay), divider: Defaults[.useColorCodedVolumeDisplay])
+            if Defaults[.useColorCodedVolumeDisplay] {
+                GeistToggleRow(title: "Smooth color transitions", isOn: geistBinding(.useSmoothColorGradient), divider: false)
+            }
+        }
+
+        GeistSection(title: "Position", footer: "Choose directly on which side of the screen the vertical bar appears.") {
+            GeistPickerRow(title: "HUD Position", selection: $verticalHUDPosition) {
+                Text("Left").tag("left")
+                Text("Right").tag("right")
+            }
+            GeistSliderRow(title: "Screen Padding", valueLabel: "\(Int(verticalHUDPadding))px", value: $verticalHUDPadding, range: 0...100, step: 4, divider: false)
+        }
+
+        GeistSection(title: "Dimensions") {
+            GeistSliderRow(title: "Width", valueLabel: "\(Int(verticalHUDWidth))px", value: $verticalHUDWidth, range: 24...80, step: 2)
+            GeistSliderRow(title: "Height", valueLabel: "\(Int(verticalHUDHeight))px", value: $verticalHUDHeight, range: 100...500, step: 10)
+            GeistRow(divider: false) {
+                Button("Reset to Default") {
+                    verticalHUDWidth = 36
+                    verticalHUDHeight = 160
+                    verticalHUDPadding = 24
+                }
+                .buttonStyle(.geist)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var circularSections: some View {
+        if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
+            SettingsPermissionCallout(
+                message: "Accessibility permission is needed to intercept system controls for the Circular HUD.",
+                requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
+                openSettingsAction: { accessibilityPermission.openSystemSettings() }
+            )
+        }
+        hudControlsSection
+
+        GeistSection(title: "Style") {
+            GeistToggleRow(title: "Show Percentage", isOn: $circularHUDShowValue)
+            GeistToggleRow(title: "Use Accent Color", isOn: $circularHUDUseAccentColor)
+            GeistToggleRow(title: "Color-coded Volume", isOn: geistBinding(.useColorCodedVolumeDisplay), divider: Defaults[.useColorCodedVolumeDisplay])
+            if Defaults[.useColorCodedVolumeDisplay] {
+                GeistToggleRow(title: "Smooth color transitions", isOn: geistBinding(.useSmoothColorGradient), divider: false)
+            }
+        }
+
+        GeistSection(title: "Dimensions") {
+            GeistSliderRow(title: "Size", valueLabel: "\(Int(circularHUDSize))px", value: $circularHUDSize, range: 40...200, step: 5)
+            GeistSliderRow(title: "Line Width", valueLabel: "\(Int(circularHUDStrokeWidth))px", value: $circularHUDStrokeWidth, range: 2...16, step: 1)
+            GeistRow(divider: false) {
+                Button("Reset to Default") {
+                    circularHUDSize = 65
+                    circularHUDStrokeWidth = 4
+                }
+                .buttonStyle(.geist)
             }
         }
     }
@@ -1962,8 +1884,14 @@ private struct ExternalDisplayIntegrationsSection: View {
     @ObservedObject private var betterDisplayManager = BetterDisplayManager.shared
     @ObservedObject private var lunarManager = LunarManager.shared
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.hudAndOSD.highlightID(for: title)
+    private var ddcFooter: String? {
+        enableThirdPartyDDCIntegration ? "VibeIsland always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled." : nil
+    }
+
+    private var volumeListenerNote: String {
+        enableExternalVolumeControlListener
+        ? "VibeIsland's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
+        : "VibeIsland keeps native volume key interception. External provider volume payloads are ignored while this is off."
     }
 
     private var providerStatusText: String {
@@ -2028,81 +1956,34 @@ private struct ExternalDisplayIntegrationsSection: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                Stepper(value: $volumeStepPercent, in: 1...25) {
-                    HStack {
-                        Text("Volume step")
-                        Spacer()
-                        Text("\(volumeStepPercent)%")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .settingsHighlight(id: highlightID("Volume step"))
-                .disabled(enableExternalVolumeControlListener)
-
-                Stepper(value: $volumeFineStepPercent, in: 1...25) {
-                    HStack {
-                        Text("Volume fine step")
-                        Spacer()
-                        Text("\(volumeFineStepPercent)%")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .settingsHighlight(id: highlightID("Volume fine step"))
-                .disabled(enableExternalVolumeControlListener)
-
+        Group {
+            GeistSection(title: "Step size", footer: "Percent change per key press. Fine step applies when holding Shift+Option.") {
+                GeistStepperRow(title: "Volume step", value: $volumeStepPercent, range: 1...25, valueLabel: "\(volumeStepPercent)%")
+                    .disabled(enableExternalVolumeControlListener)
+                GeistStepperRow(title: "Volume fine step", value: $volumeFineStepPercent, range: 1...25, valueLabel: "\(volumeFineStepPercent)%")
+                    .disabled(enableExternalVolumeControlListener)
                 if enableExternalVolumeControlListener {
-                    Text("Disabled while external display volume integration is active.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Stepper(value: $brightnessStepPercent, in: 1...25) {
-                    HStack {
-                        Text("Brightness step")
-                        Spacer()
-                        Text("\(brightnessStepPercent)%")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                    GeistRow {
+                        Text("Disabled while external display volume integration is active.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
                     }
                 }
-                .settingsHighlight(id: highlightID("Brightness step"))
-                .disabled(enableThirdPartyDDCIntegration)
-
-                Stepper(value: $brightnessFineStepPercent, in: 1...25) {
-                    HStack {
-                        Text("Brightness fine step")
-                        Spacer()
-                        Text("\(brightnessFineStepPercent)%")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .settingsHighlight(id: highlightID("Brightness fine step"))
-                .disabled(enableThirdPartyDDCIntegration)
-
+                GeistStepperRow(title: "Brightness step", value: $brightnessStepPercent, range: 1...25, valueLabel: "\(brightnessStepPercent)%")
+                    .disabled(enableThirdPartyDDCIntegration)
+                GeistStepperRow(title: "Brightness fine step", value: $brightnessFineStepPercent, range: 1...25, divider: enableThirdPartyDDCIntegration, valueLabel: "\(brightnessFineStepPercent)%")
+                    .disabled(enableThirdPartyDDCIntegration)
                 if enableThirdPartyDDCIntegration {
-                    Text("Disabled while external display brightness integration is active.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    GeistRow(divider: false) {
+                        Text("Disabled while external display brightness integration is active.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                    }
                 }
-            } header: {
-                Text("Step size")
-            } footer: {
-                Text("Percent change per key press. Fine step applies when holding Shift+Option.")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
             }
 
-            Section {
-                Toggle("Enable third-party DDC app integration", isOn: $enableThirdPartyDDCIntegration)
-                    .settingsHighlight(id: highlightID("Third-party DDC app integration"))
-
+            GeistSection(footer: ddcFooter) {
+                GeistToggleRow(title: "Enable third-party DDC app integration", isOn: $enableThirdPartyDDCIntegration, divider: enableThirdPartyDDCIntegration)
                 if enableThirdPartyDDCIntegration {
-                    Picker("Provider", selection: $thirdPartyDDCProvider) {
+                    GeistPickerRow(title: "Provider", selection: $thirdPartyDDCProvider) {
                         ForEach(ThirdPartyDDCProvider.allCases) { provider in
                             HStack {
                                 AppIconImage(
@@ -2115,48 +1996,34 @@ private struct ExternalDisplayIntegrationsSection: View {
                             .tag(provider)
                         }
                     }
-                    .settingsHighlight(id: highlightID("Third-party DDC provider"))
-
-                    Toggle("Enable external volume control listener", isOn: $enableExternalVolumeControlListener)
-                        .settingsHighlight(id: highlightID("Enable external volume control listener"))
-
-                    Text(
-                        enableExternalVolumeControlListener
-                        ? "VibeIsland's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
-                        : "VibeIsland keeps native volume key interception. External provider volume payloads are ignored while this is off."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                    HStack {
-                        Text("Status")
-                        Spacer()
+                    GeistToggleRow(title: "Enable external volume control listener", isOn: $enableExternalVolumeControlListener)
+                    GeistRow {
+                        Text(volumeListenerNote)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    GeistLabeledRow(title: "Status") {
                         Text(providerStatusText)
-                            .font(.caption)
-                            .foregroundStyle(providerStatusColor)
+                            .font(Geist.Typography.caption).foregroundStyle(providerStatusColor)
                     }
-
-                    Text(providerStatusDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Button {
-                        refreshDetectionStatus()
-                    } label: {
-                        Label("Refresh detection", systemImage: "arrow.clockwise")
-                            .font(.caption)
+                    GeistRow {
+                        Text(providerStatusDescription)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .buttonStyle(.link)
+                    GeistRow(divider: false) {
+                        Button {
+                            refreshDetectionStatus()
+                        } label: {
+                            Label("Refresh detection", systemImage: "arrow.clockwise").font(Geist.Typography.caption)
+                        }
+                        .buttonStyle(.link)
+                    }
                 } else {
-                    Text("Enable to route BetterDisplay or Lunar display adjustments through VibeIsland's active HUD style.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } footer: {
-                if enableThirdPartyDDCIntegration {
-                    Text("VibeIsland always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
+                    GeistRow(divider: false) {
+                        Text("Enable to route BetterDisplay or Lunar display adjustments through VibeIsland's active HUD style.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                    }
                 }
             }
         }
@@ -2284,10 +2151,6 @@ struct HUD: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var accessibilityPermission = AccessibilityPermissionStore.shared
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.hudAndOSD.highlightID(for: title)
-    }
-
     private var hasAccessibilityPermission: Bool {
         accessibilityPermission.isAuthorized
     }
@@ -2296,96 +2159,55 @@ struct HUD: View {
         progressBarStyle == .segmented
     }
 
+    private var progressBarsFooter: String {
+        if colorCodingDisabled {
+            return "Color-coded fills and smooth gradients are unavailable in Segmented mode. Switch to Hierarchical or Gradient to adjust these options."
+        } else if Defaults[.useSmoothColorGradient] {
+            return "Smooth transitions blend Green (0–60%), Yellow (60–85%), and Red (85–100%) through the entire fill."
+        } else {
+            return "Discrete transitions snap between Green (0–60%), Yellow (60–85%), and Red (85–100%)."
+        }
+    }
+
     var body: some View {
-        Form {
+        Group {
             if !hasAccessibilityPermission && !enableThirdPartyDDCIntegration {
-                Section {
-                    SettingsPermissionCallout(
-                        message: "Accessibility permission lets Dynamic Island replace the native volume, brightness, and keyboard HUDs.",
-                        requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
-                        openSettingsAction: { accessibilityPermission.openSystemSettings() }
-                    )
-                } header: {
-                    Text("Accessibility")
-                }
+                SettingsPermissionCallout(
+                    message: "Accessibility permission lets Dynamic Island replace the native volume, brightness, and keyboard HUDs.",
+                    requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
+                    openSettingsAction: { accessibilityPermission.openSystemSettings() }
+                )
             }
-
-
 
             if enableSystemHUD && !Defaults[.enableCustomOSD] && (hasAccessibilityPermission || enableThirdPartyDDCIntegration) {
-                Section {
-                    Toggle("Volume HUD", isOn: $enableVolumeHUD)
-                    Toggle("Brightness HUD", isOn: $enableBrightnessHUD)
-                    Toggle("Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD)
+                GeistSection(title: "Controls", footer: "Choose which system controls should display HUD notifications.") {
+                    GeistToggleRow(title: "Volume HUD", isOn: $enableVolumeHUD)
+                    GeistToggleRow(title: "Brightness HUD", isOn: $enableBrightnessHUD)
+                    GeistToggleRow(title: "Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD, divider: false)
                         .disabled(enableThirdPartyDDCIntegration)
-                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active \u{2014} brightness keys are handled by the external app." : "")
-                } header: {
-                    Text("Controls")
-                } footer: {
-                    Text("Choose which system controls should display HUD notifications.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
+                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
                 }
             }
 
-            Section {
-                Defaults.Toggle(key: .playVolumeChangeFeedback) {
-                    Text("Play feedback when volume is changed")
-                }
-                .settingsHighlight(id: highlightID("Play feedback when volume is changed"))
-                .help("Plays the supplied feedback clip whenever you press the hardware volume keys.")
-            } header: {
-                Text("Audio feedback")
-            } footer: {
-                Text("Requires Accessibility permission so Dynamic Island can intercept the hardware volume keys.")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+            GeistSection(title: "Audio feedback", footer: "Requires Accessibility permission so Dynamic Island can intercept the hardware volume keys.") {
+                GeistToggleRow(title: "Play feedback when volume is changed", isOn: geistBinding(.playVolumeChangeFeedback), divider: false)
+                    .help("Plays the supplied feedback clip whenever you press the hardware volume keys.")
             }
 
-            Section {
-                Defaults.Toggle(key: .useColorCodedVolumeDisplay) {
-                    Text("Color-coded volume display")
-                }
-                .disabled(colorCodingDisabled)
-                .settingsHighlight(id: highlightID("Color-coded volume display"))
-
+            GeistSection(title: "Dynamic Island Progress Bars", footer: progressBarsFooter) {
+                GeistToggleRow(title: "Color-coded volume display", isOn: geistBinding(.useColorCodedVolumeDisplay))
+                    .disabled(colorCodingDisabled)
                 if !colorCodingDisabled && (Defaults[.useColorCodedBatteryDisplay] || Defaults[.useColorCodedVolumeDisplay]) {
-                    Defaults.Toggle(key: .useSmoothColorGradient) {
-                        Text("Smooth color transitions")
-                    }
-                    .settingsHighlight(id: highlightID("Smooth color transitions"))
+                    GeistToggleRow(title: "Smooth color transitions", isOn: geistBinding(.useSmoothColorGradient))
                 }
-
-                Defaults.Toggle(key: .showProgressPercentages) {
-                    Text("Show percentages beside progress bars")
-                }
-                .settingsHighlight(id: highlightID("Show percentages beside progress bars"))
-            } header: {
-                Text("Dynamic Island Progress Bars")
-            } footer: {
-                if colorCodingDisabled {
-                    Text("Color-coded fills and smooth gradients are unavailable in Segmented mode. Switch to Hierarchical or Gradient to adjust these options.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                } else if Defaults[.useSmoothColorGradient] {
-                    Text("Smooth transitions blend Green (0–60%), Yellow (60–85%), and Red (85–100%) through the entire fill.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                } else {
-                    Text("Discrete transitions snap between Green (0–60%), Yellow (60–85%), and Red (85–100%).")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
+                GeistToggleRow(title: "Show percentages beside progress bars", isOn: geistBinding(.showProgressPercentages), divider: false)
             }
 
-            Section {
-                Picker("HUD style", selection: $inlineHUD) {
-                    Text("Default")
-                        .tag(false)
-                    Text("Inline")
-                        .tag(true)
+            GeistSection(title: "Appearance") {
+                GeistPickerRow(title: "HUD style", selection: $inlineHUD) {
+                    Text("Default").tag(false)
+                    Text("Inline").tag(true)
                 }
-                .settingsHighlight(id: highlightID("HUD style"))
                 .onChange(of: Defaults[.inlineHUD]) {
                     if Defaults[.inlineHUD] {
                         withAnimation {
@@ -2394,30 +2216,15 @@ struct HUD: View {
                         }
                     }
                 }
-                Picker("Progressbar style", selection: $progressBarStyle) {
-                    Text("Hierarchical")
-                        .tag(ProgressBarStyle.hierarchical)
-                    Text("Gradient")
-                        .tag(ProgressBarStyle.gradient)
-                    Text("Segmented")
-                        .tag(ProgressBarStyle.segmented)
+                GeistPickerRow(title: "Progressbar style", selection: $progressBarStyle) {
+                    Text("Hierarchical").tag(ProgressBarStyle.hierarchical)
+                    Text("Gradient").tag(ProgressBarStyle.gradient)
+                    Text("Segmented").tag(ProgressBarStyle.segmented)
                 }
-                .settingsHighlight(id: highlightID("Progressbar style"))
-                Defaults.Toggle(key: .systemEventIndicatorShadow) {
-                    Text("Enable glowing effect")
-                }
-                .settingsHighlight(id: highlightID("Enable glowing effect"))
-                Defaults.Toggle(key: .systemEventIndicatorUseAccent) {
-                    Text("Use accent color")
-                }
-                .settingsHighlight(id: highlightID("Use accent color"))
-            } header: {
-                HStack {
-                    Text("Appearance")
-                }
+                GeistToggleRow(title: "Enable glowing effect", isOn: geistBinding(.systemEventIndicatorShadow))
+                GeistToggleRow(title: "Use accent color", isOn: geistBinding(.systemEventIndicatorUseAccent), divider: false)
             }
         }
-        .navigationTitle("Controls")
         .onAppear {
             accessibilityPermission.refreshStatus()
         }
@@ -4776,10 +4583,6 @@ struct CustomOSDSettings: View {
     @State private var previewValue: CGFloat = 0.65
     @State private var previewType: SneakContentType = .volume
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.hudAndOSD.highlightID(for: title)
-    }
-
     private var hasAccessibilityPermission: Bool {
         accessibilityPermission.isAuthorized
     }
@@ -4805,150 +4608,93 @@ struct CustomOSDSettings: View {
         )
     }
 
+    private let materialFooter = """
+    Material Options:
+    • Frosted Glass: Translucent blur effect
+    • Liquid Glass: Modern glass effect (macOS 26+)
+    • Solid Dark/Light/Auto: Opaque backgrounds
+
+    Color options control the icon and progress bar appearance. Auto adapts to system theme.
+    """
+
     var body: some View {
-        Form {
+        Group {
             if !hasAccessibilityPermission && !enableThirdPartyDDCIntegration {
-                Section {
-                    SettingsPermissionCallout(
-                        message: "Accessibility permission is needed to intercept system controls for the Custom OSD.",
-                        requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
-                        openSettingsAction: { accessibilityPermission.openSystemSettings() }
-                    )
-                } header: {
-                    Text("Accessibility")
-                }
+                SettingsPermissionCallout(
+                    message: "Accessibility permission is needed to intercept system controls for the Custom OSD.",
+                    requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
+                    openSettingsAction: { accessibilityPermission.openSystemSettings() }
+                )
             }
 
             if hasAccessibilityPermission || enableThirdPartyDDCIntegration {
-                Section {
-                    Toggle("Volume OSD", isOn: $enableOSDVolume)
-                        .settingsHighlight(id: highlightID("Volume OSD"))
-                    Toggle("Brightness OSD", isOn: $enableOSDBrightness)
-                        .settingsHighlight(id: highlightID("Brightness OSD"))
-                    Toggle("Keyboard Backlight OSD", isOn: $enableOSDKeyboardBacklight)
-                        .settingsHighlight(id: highlightID("Keyboard Backlight OSD"))
+                GeistSection(title: "Controls", footer: "Choose which system controls should display custom OSD windows.") {
+                    GeistToggleRow(title: "Volume OSD", isOn: $enableOSDVolume)
+                    GeistToggleRow(title: "Brightness OSD", isOn: $enableOSDBrightness)
+                    GeistToggleRow(title: "Keyboard Backlight OSD", isOn: $enableOSDKeyboardBacklight, divider: false)
                         .disabled(enableThirdPartyDDCIntegration)
-                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active \u{2014} brightness keys are handled by the external app." : "")
-                } header: {
-                    Text("Controls")
-                } footer: {
-                    Text("Choose which system controls should display custom OSD windows.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
+                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
                 }
 
-                Section {
-                    Picker("Material", selection: $osdMaterial) {
-                        ForEach(availableOSDMaterials, id: \.self) { material in
-                            Text(material.rawValue).tag(material)
-                        }
+                GeistSection(title: "Appearance", footer: materialFooter) {
+                    GeistPickerRow(title: "Material", selection: $osdMaterial) {
+                        ForEach(availableOSDMaterials, id: \.self) { Text($0.rawValue).tag($0) }
                     }
-                    .settingsHighlight(id: highlightID("Material"))
                     .onChange(of: osdMaterial) { _, _ in
                         previewValue = previewValue == 0.65 ? 0.651 : 0.65
                     }
-
                     if osdMaterial == .liquid {
                         if #available(macOS 26.0, *) {
-                            Picker("Glass mode", selection: $osdLiquidGlassCustomizationMode) {
-                                ForEach(GlassCustomizationMode.allCases) { mode in
-                                    Text(mode.rawValue).tag(mode)
-                                }
+                            GeistSegmentedRow(title: "Glass mode", selection: $osdLiquidGlassCustomizationMode) {
+                                ForEach(GlassCustomizationMode.allCases) { Text($0.rawValue).tag($0) }
                             }
-                            .pickerStyle(.segmented)
-
                             if osdLiquidGlassCustomizationMode == .customLiquid {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text("Custom liquid variant")
-                                        Spacer()
-                                        Text("v\(osdLiquidGlassVariant.rawValue)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Slider(value: osdLiquidVariantBinding, in: liquidVariantRange, step: 1)
-                                }
+                                GeistSliderRow(title: "Custom liquid variant", valueLabel: "v\(osdLiquidGlassVariant.rawValue)", value: osdLiquidVariantBinding, range: liquidVariantRange, step: 1)
                             }
                         } else {
-                            Text("Custom Liquid is available on macOS 26 or later.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            GeistRow {
+                                Text("Custom Liquid is available on macOS 26 or later.")
+                                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                            }
                         }
                     }
-
-                    Picker("Icon & Progress Color", selection: $osdIconColorStyle) {
-                        ForEach(OSDIconColorStyle.allCases, id: \.self) { style in
-                            Text(style.rawValue).tag(style)
-                        }
+                    GeistPickerRow(title: "Icon & Progress Color", selection: $osdIconColorStyle, divider: false) {
+                        ForEach(OSDIconColorStyle.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
-                    .settingsHighlight(id: highlightID("Icon & Progress Color"))
                     .onChange(of: osdIconColorStyle) { _, _ in
                         previewValue = previewValue == 0.65 ? 0.651 : 0.65
                     }
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Material Options:")
-                        Text("• Frosted Glass: Translucent blur effect")
-                        Text("• Liquid Glass: Modern glass effect (macOS 26+)")
-                        Text("• Solid Dark/Light/Auto: Opaque backgrounds")
-                        Text("")
-                        Text("Color options control the icon and progress bar appearance. Auto adapts to system theme.")
-                    }
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
                 }
 
-                Section {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 16) {
-                            Text("Live Preview")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            CustomOSDView(
-                                type: .constant(previewType),
-                                value: .constant(previewValue),
-                                icon: .constant("")
-                            )
-                            .frame(width: 200, height: 200)
-
-                            HStack(spacing: 8) {
-                                Button("Volume") {
-                                    previewType = .volume
+                GeistSection(title: "Preview", footer: "Adjust settings above to see changes in real-time. The actual OSD appears at the bottom center of your screen.") {
+                    GeistRow(divider: false) {
+                        HStack {
+                            Spacer()
+                            VStack(spacing: Geist.Spacing.md) {
+                                Text("Live Preview")
+                                    .font(Geist.Typography.caption)
+                                    .foregroundStyle(Geist.Colors.mute)
+                                CustomOSDView(
+                                    type: .constant(previewType),
+                                    value: .constant(previewValue),
+                                    icon: .constant("")
+                                )
+                                .frame(width: 200, height: 200)
+                                HStack(spacing: Geist.Spacing.xs) {
+                                    Button("Volume") { previewType = .volume }.buttonStyle(.geist)
+                                    Button("Brightness") { previewType = .brightness }.buttonStyle(.geist)
+                                    Button("Backlight") { previewType = .backlight }.buttonStyle(.geist)
                                 }
-                                .buttonStyle(.bordered)
-
-                                Button("Brightness") {
-                                    previewType = .brightness
-                                }
-                                .buttonStyle(.bordered)
-                                
-                                Button("Backlight") {
-                                    previewType = .backlight
-                                }
-                                .buttonStyle(.bordered)
+                                Slider(value: $previewValue, in: 0...1)
+                                    .frame(width: 160)
                             }
-                            .controlSize(.small)
-                            
-                            Slider(value: $previewValue, in: 0...1)
-                                .frame(width: 160)
+                            .padding(.vertical, Geist.Spacing.sm)
+                            Spacer()
                         }
-                        .padding(.vertical, 12)
-                        Spacer()
                     }
-                } header: {
-                    Text("Preview")
-                } footer: {
-                    Text("Adjust settings above to see changes in real-time. The actual OSD appears at the bottom center of your screen.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
                 }
             }
         }
-        .navigationTitle("Custom OSD")
         .onAppear {
             accessibilityPermission.refreshStatus()
             if #unavailable(macOS 26.0), osdMaterial == .liquid {
