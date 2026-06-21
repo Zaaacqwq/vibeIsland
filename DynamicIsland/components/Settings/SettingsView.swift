@@ -1178,10 +1178,6 @@ struct Charge: View {
     @Default(.lowBatteryHUDStyle) private var lowBatteryHUDStyle
     @Default(.fullBatteryHUDStyle) private var fullBatteryHUDStyle
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.battery.highlightID(for: title)
-    }
-
     private var chargingDurationBinding: Binding<Double> {
         Binding(
             get: { Double(chargingBatteryHUDDuration) },
@@ -1221,200 +1217,109 @@ struct Charge: View {
         isEnabled ? 1 : 0.5
     }
 
+    private var chargingEnabled: Bool { showPowerStatusNotifications && showChargingBatteryHUD }
+    private var lowEnabled: Bool { showPowerStatusNotifications && showLowBatteryHUD }
+    private var fullEnabled: Bool { showPowerStatusNotifications && showFullBatteryHUD }
+
     var body: some View {
-        Form {
+        GeistSettingsPage(title: "Battery") {
             if BatteryActivityManager.shared.hasBattery() {
-                Section {
-                    Defaults.Toggle(key: .showBatteryIndicator) {
-                        Text("Show battery indicator")
-                    }
-                    .settingsHighlight(id: highlightID("Show battery indicator"))
-                    Defaults.Toggle(key: .showPowerStatusNotifications) {
-                        Text("Show power status notifications")
-                    }
-                    .settingsHighlight(id: highlightID("Show power status notifications"))
-                    Defaults.Toggle(key: .playLowBatteryAlertSound) {
-                        Text("Play low battery alert sound")
-                    }
-                    .settingsHighlight(id: highlightID("Play low battery alert sound"))
-                } header: {
-                    Text("General")
+                GeistSection(title: "General") {
+                    GeistToggleRow(title: "Show battery indicator", isOn: geistBinding(.showBatteryIndicator))
+                    GeistToggleRow(title: "Show power status notifications", isOn: $showPowerStatusNotifications)
+                    GeistToggleRow(title: "Play low battery alert sound", isOn: geistBinding(.playLowBatteryAlertSound), divider: false)
                 }
-                Section {
-                    Defaults.Toggle(key: .showBatteryPercentage) {
-                        Text("Show battery percentage")
-                    }
-                    .settingsHighlight(id: highlightID("Show battery percentage"))
-                    Defaults.Toggle(key: .showPowerStatusIcons) {
-                        Text("Show power status icons")
-                    }
-                    .settingsHighlight(id: highlightID("Show power status icons"))
-                } header: {
-                    Text("Battery Information")
-                }
-                Section {
-                    Defaults.Toggle(key: .showChargingBatteryHUD) {
-                        Text("Charging HUD")
-                    }
-                    .settingsHighlight(id: highlightID("Charging HUD"))
 
-                    Defaults.Toggle(key: .showLowBatteryHUD) {
-                        Text("Low battery HUD")
-                    }
-                    .settingsHighlight(id: highlightID("Low battery HUD"))
-
-                    Defaults.Toggle(key: .showFullBatteryHUD) {
-                        Text("Fully charged HUD")
-                    }
-                    .settingsHighlight(id: highlightID("Fully charged HUD"))
-                } header: {
-                    Text("Battery HUDs")
-                } footer: {
-                    Text("These temporary HUDs recreate the charging, low-battery, and full-battery notch alerts.")
+                GeistSection(title: "Battery Information") {
+                    GeistToggleRow(title: "Show battery percentage", isOn: geistBinding(.showBatteryPercentage))
+                    GeistToggleRow(title: "Show power status icons", isOn: geistBinding(.showPowerStatusIcons), divider: false)
                 }
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Charging duration")
-                            Spacer()
-                            Text("\(chargingBatteryHUDDuration)s")
-                                .foregroundStyle(.secondary)
+
+                GeistSection(
+                    title: "Battery HUDs",
+                    footer: "These temporary HUDs recreate the charging, low-battery, and full-battery notch alerts."
+                ) {
+                    GeistToggleRow(title: "Charging HUD", isOn: $showChargingBatteryHUD)
+                    GeistToggleRow(title: "Low battery HUD", isOn: $showLowBatteryHUD)
+                    GeistToggleRow(title: "Fully charged HUD", isOn: $showFullBatteryHUD, divider: false)
+                }
+
+                GeistSection(title: "HUD Duration") {
+                    GeistSliderRow(title: "Charging duration", valueLabel: "\(chargingBatteryHUDDuration)s", value: chargingDurationBinding, range: 1...10, step: 1)
+                        .disabled(!chargingEnabled).opacity(sectionOpacity(chargingEnabled))
+                    GeistSliderRow(title: "Low battery duration", valueLabel: "\(lowBatteryHUDDuration)s", value: lowBatteryDurationBinding, range: 1...10, step: 1)
+                        .disabled(!lowEnabled).opacity(sectionOpacity(lowEnabled))
+                    GeistSliderRow(title: "Full battery duration", valueLabel: "\(fullBatteryHUDDuration)s", value: fullBatteryDurationBinding, range: 1...10, step: 1, divider: false)
+                        .disabled(!fullEnabled).opacity(sectionOpacity(fullEnabled))
+                }
+
+                GeistSection(
+                    title: "HUD Tests",
+                    footer: "Runs the real notch animation on the current target display. If an external screen is using Dynamic Island mode, the battery HUD is sent there first."
+                ) {
+                    GeistRow {
+                        Button { batteryStatusViewModel.triggerTestHUD(kind: .charging) } label: {
+                            Label("Test charging HUD", systemImage: "bolt.fill")
                         }
-                        Slider(value: chargingDurationBinding, in: 1...10, step: 1)
+                        .buttonStyle(.geist).disabled(!chargingEnabled)
                     }
-                    .settingsHighlight(id: highlightID("Charging duration"))
-                    .disabled(!showPowerStatusNotifications || !showChargingBatteryHUD)
-                    .opacity(sectionOpacity(showPowerStatusNotifications && showChargingBatteryHUD))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Low battery duration")
-                            Spacer()
-                            Text("\(lowBatteryHUDDuration)s")
-                                .foregroundStyle(.secondary)
+                    GeistRow {
+                        Button { batteryStatusViewModel.triggerTestHUD(kind: .lowBattery) } label: {
+                            Label("Test low battery HUD", systemImage: "battery.25")
                         }
-                        Slider(value: lowBatteryDurationBinding, in: 1...10, step: 1)
+                        .buttonStyle(.geist).disabled(!lowEnabled)
                     }
-                    .settingsHighlight(id: highlightID("Low battery duration"))
-                    .disabled(!showPowerStatusNotifications || !showLowBatteryHUD)
-                    .opacity(sectionOpacity(showPowerStatusNotifications && showLowBatteryHUD))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Full battery duration")
-                            Spacer()
-                            Text("\(fullBatteryHUDDuration)s")
-                                .foregroundStyle(.secondary)
+                    GeistRow(divider: false) {
+                        Button { batteryStatusViewModel.triggerTestHUD(kind: .fullBattery) } label: {
+                            Label("Test full battery HUD", systemImage: "battery.100")
                         }
-                        Slider(value: fullBatteryDurationBinding, in: 1...10, step: 1)
+                        .buttonStyle(.geist).disabled(!fullEnabled)
                     }
-                    .settingsHighlight(id: highlightID("Full battery duration"))
-                    .disabled(!showPowerStatusNotifications || !showFullBatteryHUD)
-                    .opacity(sectionOpacity(showPowerStatusNotifications && showFullBatteryHUD))
-                } header: {
-                    Text("HUD Duration")
                 }
-                Section {
-                    Button {
-                        batteryStatusViewModel.triggerTestHUD(kind: .charging)
-                    } label: {
-                        Label("Test charging HUD", systemImage: "bolt.fill")
-                    }
-                    .disabled(!showPowerStatusNotifications || !showChargingBatteryHUD)
 
-                    Button {
-                        batteryStatusViewModel.triggerTestHUD(kind: .lowBattery)
-                    } label: {
-                        Label("Test low battery HUD", systemImage: "battery.25")
+                GeistSection(title: "Low Battery") {
+                    GeistSegmentedRow(title: "Low battery style", selection: $lowBatteryHUDStyle) {
+                        ForEach(BatteryNotificationStyle.allCases) { Text($0.title).tag($0) }
                     }
-                    .disabled(!showPowerStatusNotifications || !showLowBatteryHUD)
-
-                    Button {
-                        batteryStatusViewModel.triggerTestHUD(kind: .fullBattery)
-                    } label: {
-                        Label("Test full battery HUD", systemImage: "battery.100")
-                    }
-                    .disabled(!showPowerStatusNotifications || !showFullBatteryHUD)
-                } header: {
-                    Text("HUD Tests")
-                } footer: {
-                    Text("Runs the real notch animation on the current target display. If an external screen is using Dynamic Island mode, the battery HUD is sent there first.")
-                }
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Picker("Low battery style", selection: $lowBatteryHUDStyle) {
-                            ForEach(BatteryNotificationStyle.allCases) { style in
-                                Text(style.title)
-                                    .tag(style)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                    GeistRow {
                         Text("Compact matches the charging HUD. Standard uses the expanded DynamicNotch-style card.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .settingsHighlight(id: highlightID("Low battery style"))
-
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Low battery threshold")
-                            Spacer()
-                            Text("\(lowBatteryHUDThreshold)%")
-                                .foregroundStyle(.secondary)
-                        }
-                        Slider(value: lowBatteryThresholdBinding, in: 5...30, step: 1)
-                    }
-                    .settingsHighlight(id: highlightID("Low battery threshold"))
-                } header: {
-                    Text("Low Battery")
+                    GeistSliderRow(title: "Low battery threshold", valueLabel: "\(lowBatteryHUDThreshold)%", value: lowBatteryThresholdBinding, range: 5...30, step: 1, divider: false)
                 }
-                .disabled(!showPowerStatusNotifications || !showLowBatteryHUD)
-                .opacity(sectionOpacity(showPowerStatusNotifications && showLowBatteryHUD))
+                .disabled(!lowEnabled).opacity(sectionOpacity(lowEnabled))
 
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Picker("Full battery style", selection: $fullBatteryHUDStyle) {
-                            ForEach(BatteryNotificationStyle.allCases) { style in
-                                Text(style.title)
-                                    .tag(style)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                GeistSection(title: "Full Battery") {
+                    GeistSegmentedRow(title: "Full battery style", selection: $fullBatteryHUDStyle) {
+                        ForEach(BatteryNotificationStyle.allCases) { Text($0.title).tag($0) }
+                    }
+                    GeistRow {
                         Text("Compact keeps the alert inline. Standard uses the taller full-charge HUD with the charging animation.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .settingsHighlight(id: highlightID("Full battery style"))
-
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Full charge threshold")
-                            Spacer()
-                            Text("\(fullBatteryHUDThreshold)%")
-                                .foregroundStyle(.secondary)
-                        }
-                        Slider(value: fullBatteryThresholdBinding, in: 80...100, step: 1)
-                    }
-                    .settingsHighlight(id: highlightID("Full charge threshold"))
-                } header: {
-                    Text("Full Battery")
+                    GeistSliderRow(title: "Full charge threshold", valueLabel: "\(fullBatteryHUDThreshold)%", value: fullBatteryThresholdBinding, range: 80...100, step: 1, divider: false)
                 }
-                .disabled(!showPowerStatusNotifications || !showFullBatteryHUD)
-                .opacity(sectionOpacity(showPowerStatusNotifications && showFullBatteryHUD))
+                .disabled(!fullEnabled).opacity(sectionOpacity(fullEnabled))
             } else {
-                ContentUnavailableView {
-                    VStack(spacing: 16) {
-                        Image("battery.100percent.slash")
-                            .font(.title)
-                        Text("Battery settings and informations are only available on MacBooks")
-                            .font(.title3)
+                GeistSection {
+                    GeistRow(divider: false) {
+                        VStack(spacing: Geist.Spacing.sm) {
+                            Image("battery.100percent.slash")
+                                .font(.title)
+                                .foregroundStyle(Geist.Colors.mute)
+                            Text("Battery settings and information are only available on MacBooks")
+                                .font(Geist.Typography.body)
+                                .foregroundStyle(Geist.Colors.body)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Geist.Spacing.lg)
                     }
                 }
             }
         }
-        .navigationTitle("Battery")
     }
 }
 
@@ -1422,48 +1327,38 @@ struct Downloads: View {
     @Default(.selectedDownloadIndicatorStyle) var selectedDownloadIndicatorStyle
     @Default(.selectedDownloadIconStyle) var selectedDownloadIconStyle
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.downloads.highlightID(for: title)
-    }
-
     var body: some View {
-        SwiftUI.Form {
-            Section {
-                Defaults.Toggle(key: .enableDownloadListener) {
-                    Text("Enable download detection")
-                }
-                .settingsHighlight(id: highlightID("Enable download detection"))
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Download indicator style")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-
-                    HStack(spacing: 16) {
-                        DownloadStyleButton(
-                            style: .progress,
-                            isSelected: selectedDownloadIndicatorStyle == .progress,
-                            disabled: !Defaults[.enableDownloadListener]
-                        ) {
-                            selectedDownloadIndicatorStyle = .progress
-                        }
-
-                        DownloadStyleButton(
-                            style: .circle,
-                            isSelected: selectedDownloadIndicatorStyle == .circle,
-                            disabled: !Defaults[.enableDownloadListener]
-                        ) {
-                            selectedDownloadIndicatorStyle = .circle
+        GeistSettingsPage(title: "Downloads") {
+            GeistSection(
+                title: "Download Detection",
+                footer: "Monitor your Downloads folder for Chromium-style downloads (.crdownload files) and show a live activity in the Dynamic Island while downloads are in progress."
+            ) {
+                GeistToggleRow(title: "Enable download detection", isOn: geistBinding(.enableDownloadListener))
+                GeistRow(divider: false) {
+                    VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
+                        Text("Download indicator style")
+                            .font(Geist.Typography.bodyStrong)
+                            .foregroundStyle(Geist.Colors.ink)
+                        HStack(spacing: Geist.Spacing.md) {
+                            DownloadStyleButton(
+                                style: .progress,
+                                isSelected: selectedDownloadIndicatorStyle == .progress,
+                                disabled: !Defaults[.enableDownloadListener]
+                            ) {
+                                selectedDownloadIndicatorStyle = .progress
+                            }
+                            DownloadStyleButton(
+                                style: .circle,
+                                isSelected: selectedDownloadIndicatorStyle == .circle,
+                                disabled: !Defaults[.enableDownloadListener]
+                            ) {
+                                selectedDownloadIndicatorStyle = .circle
+                            }
                         }
                     }
                 }
-                .settingsHighlight(id: highlightID("Download indicator style"))
-            } header: {
-                Text("Download Detection")
-            } footer: {
-                Text("Monitor your Downloads folder for Chromium-style downloads (.crdownload files) and show a live activity in the Dynamic Island while downloads are in progress.")
             }
         }
-        .navigationTitle("Downloads")
     }
 
     struct DownloadStyleButton: View {
