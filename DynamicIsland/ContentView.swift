@@ -1508,11 +1508,11 @@ struct ContentView: View {
         case .recording:
             return recordingRightWingWidth(baseWidth: baseWidth)
         case .download:
-            return max(baseWidth, 60)
+            return baseWidth
         case .localSend:
-            return max(baseWidth, 60)
+            return baseWidth
         case .privacy:
-            return max(baseWidth, 56)
+            return baseWidth
         case .extensionPayload(let payload):
             let maxWidth = baseWidth + centerBaseWidth * 0.6
             return ExtensionLayoutMetrics.trailingWidth(for: payload, baseWidth: baseWidth, maxWidth: maxWidth)
@@ -1521,7 +1521,7 @@ struct ContentView: View {
         case .agent:
             return baseWidth
         case .weather:
-            return max(baseWidth, 56)
+            return baseWidth
         }
     }
 
