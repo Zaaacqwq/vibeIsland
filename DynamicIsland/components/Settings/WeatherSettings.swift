@@ -28,103 +28,75 @@ struct WeatherSettings: View {
     @Default(.weatherProviderSource) var weatherProviderSource
 
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableWeather) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable weather")
-                        Text("Adds a Weather tab and a live activity to the notch. Uses your location.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("Weather data comes from Open-Meteo (free, no account) with a wttr.in fallback.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        GeistSettingsPage(title: "Weather", subtitle: "Local conditions in the notch, from Open-Meteo (free) with a wttr.in fallback.") {
+            GeistSection {
+                GeistToggleRow(
+                    title: "Enable weather",
+                    description: "Adds a Weather tab and a live activity to the notch. Uses your location.",
+                    isOn: $enableWeather,
+                    divider: false
+                )
             }
 
             if enableWeather {
-                Section {
-                    Picker("Units", selection: Binding(
-                        get: { Defaults[.weatherTemperatureUnit] },
-                        set: { Defaults[.weatherTemperatureUnit] = $0 }
+                GeistSection(
+                    title: "Display",
+                    footer: weatherProviderSource.supportsAirQuality ? nil : "Air quality requires the Open-Meteo data source."
+                ) {
+                    GeistPickerRow(title: "Units", selection: Binding(
+                        get: { Defaults[.weatherTemperatureUnit] }, set: { Defaults[.weatherTemperatureUnit] = $0 }
                     )) {
-                        ForEach(WeatherTemperatureUnit.allCases) { unit in
-                            Text(unit.symbol).tag(unit)
-                        }
+                        ForEach(WeatherTemperatureUnit.allCases) { Text($0.symbol).tag($0) }
                     }
-
-                    Picker("Data source", selection: Binding(
-                        get: { Defaults[.weatherProviderSource] },
-                        set: { Defaults[.weatherProviderSource] = $0 }
+                    GeistPickerRow(title: "Data source", selection: Binding(
+                        get: { Defaults[.weatherProviderSource] }, set: { Defaults[.weatherProviderSource] = $0 }
                     )) {
-                        ForEach(WeatherProviderSource.allCases) { source in
-                            Text(source.displayName).tag(source)
-                        }
+                        ForEach(WeatherProviderSource.allCases) { Text($0.displayName).tag($0) }
                     }
-
-                    Defaults.Toggle(key: .weatherShowsAQI) {
-                        Text("Show air quality")
-                    }
-                    .disabled(!weatherProviderSource.supportsAirQuality)
-
+                    GeistToggleRow(
+                        title: "Show air quality",
+                        isOn: $weatherShowsAQI,
+                        divider: weatherShowsAQI && weatherProviderSource.supportsAirQuality
+                    )
                     if weatherShowsAQI && weatherProviderSource.supportsAirQuality {
-                        Picker("AQI scale", selection: Binding(
-                            get: { Defaults[.weatherAQIScale] },
-                            set: { Defaults[.weatherAQIScale] = $0 }
-                        )) {
-                            ForEach(WeatherAirQualityScale.allCases) { scale in
-                                Text(scale.displayName).tag(scale)
-                            }
+                        GeistPickerRow(title: "AQI scale", selection: Binding(
+                            get: { Defaults[.weatherAQIScale] }, set: { Defaults[.weatherAQIScale] = $0 }
+                        ), divider: false) {
+                            ForEach(WeatherAirQualityScale.allCases) { Text($0.displayName).tag($0) }
                         }
-                    }
-                } header: {
-                    Text("Display")
-                } footer: {
-                    if !weatherProviderSource.supportsAirQuality {
-                        Text("Air quality requires the Open-Meteo data source.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
 
-                Section {
-                    HStack {
-                        Text("Location")
-                        Spacer()
+                GeistSection(
+                    title: "Location",
+                    footer: "VibeIsland uses your approximate location to fetch local weather. Without it, a fallback location is used."
+                ) {
+                    GeistLabeledRow(title: "Location") {
                         if weather.locationDenied {
                             Label("Denied", systemImage: "xmark.circle")
-                                .foregroundStyle(.orange)
-                                .labelStyle(.titleAndIcon)
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.warning).labelStyle(.titleAndIcon)
                         } else {
                             Label("OK", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .labelStyle(.titleAndIcon)
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.success).labelStyle(.titleAndIcon)
                         }
                     }
-                    if weather.locationDenied {
-                        Button("Open Location Settings…") { weather.openLocationSettings() }
-                    }
-                    Button("Refresh now") {
-                        Task { await weather.refresh(force: true) }
+                    GeistRow(divider: weather.lastError != nil) {
+                        HStack(spacing: Geist.Spacing.xs) {
+                            if weather.locationDenied {
+                                Button("Open Location Settings…") { weather.openLocationSettings() }
+                                    .buttonStyle(.geist)
+                            }
+                            Button("Refresh now") { Task { await weather.refresh(force: true) } }
+                                .buttonStyle(.geist)
+                        }
                     }
                     if let error = weather.lastError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                        GeistRow(divider: false) {
+                            Text(error).font(Geist.Typography.caption).foregroundStyle(Geist.Colors.error)
+                        }
                     }
-                } header: {
-                    Text("Location")
-                } footer: {
-                    Text("VibeIsland uses your approximate location to fetch local weather. Without it, a fallback location is used.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .navigationTitle("Weather")
     }
 }

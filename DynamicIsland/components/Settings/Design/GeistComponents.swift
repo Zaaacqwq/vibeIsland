@@ -143,6 +143,49 @@ struct GeistToggleRow: View {
     }
 }
 
+/// A row with a leading label and a trailing menu picker.
+struct GeistPickerRow<T: Hashable, Options: View>: View {
+    let title: String
+    @Binding var selection: T
+    var divider: Bool = true
+    @ViewBuilder var options: Options
+
+    var body: some View {
+        GeistRow(divider: divider) {
+            HStack(spacing: Geist.Spacing.sm) {
+                Text(title)
+                    .font(Geist.Typography.bodyStrong)
+                    .foregroundStyle(Geist.Colors.ink)
+                Spacer(minLength: 0)
+                Picker("", selection: $selection) { options }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                    .font(Geist.Typography.body)
+            }
+        }
+    }
+}
+
+/// A row with a leading label and arbitrary trailing content.
+struct GeistLabeledRow<Trailing: View>: View {
+    let title: String
+    var divider: Bool = true
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        GeistRow(divider: divider) {
+            HStack(spacing: Geist.Spacing.sm) {
+                Text(title)
+                    .font(Geist.Typography.bodyStrong)
+                    .foregroundStyle(Geist.Colors.ink)
+                Spacer(minLength: 0)
+                trailing
+            }
+        }
+    }
+}
+
 /// A pill-shaped Geist button.
 struct GeistButtonStyle: ButtonStyle {
     var prominent: Bool = false
