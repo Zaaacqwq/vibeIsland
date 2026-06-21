@@ -26,10 +26,6 @@ struct ExtensionsSettingsView: View {
     @State private var selectedEntry: ExtensionAuthorizationEntry?
     @State private var showingRemoveConfirmation = false
     
-    private func highlightID(_ title: String) -> String {
-        "extensions-\(title)"
-    }
-    
     private var filteredEntries: [ExtensionAuthorizationEntry] {
         guard !searchText.isEmpty else { return authManager.entries }
         let query = searchText.lowercased()
@@ -38,16 +34,26 @@ struct ExtensionsSettingsView: View {
             $0.appName.lowercased().contains(query)
         }
     }
-    
+
+    private var globalFooter: String {
+        Defaults[.enableThirdPartyExtensions]
+        ? "Third-party apps using AtollExtensionKit can display live activities and dedicated notch experiences. Toggle features above or manage individual app permissions below."
+        : "Enable extensions to allow third-party apps to display live activities and notch experiences in VibeIsland."
+    }
+
+    private var permissionsHeader: String {
+        authManager.entries.isEmpty
+        ? "App Permissions"
+        : "App Permissions (\(authManager.entries.count) \(authManager.entries.count == 1 ? "app" : "apps"))"
+    }
+
     var body: some View {
-        Form {
+        GeistSettingsPage(title: "Extensions") {
             globalTogglesSection
-            
             if authManager.isExtensionsFeatureEnabled {
                 authorizedAppsSection
             }
         }
-        .navigationTitle("Extensions")
         .alert("Remove Extension", isPresented: $showingRemoveConfirmation, presenting: selectedEntry) { entry in
             Button("Cancel", role: .cancel) { }
             Button("Remove", role: .destructive) {
@@ -58,110 +64,79 @@ struct ExtensionsSettingsView: View {
             Text("Remove \(entry.appName) from the authorized extensions list? This will dismiss all active live activities and notch experiences from this app.")
         }
     }
-    
+
     private var globalTogglesSection: some View {
-        Section {
-            Defaults.Toggle(String(localized:"Enable third-party extensions"), key: .enableThirdPartyExtensions)
-                .settingsHighlight(id: highlightID("Enable third-party extensions"))
-            
+        GeistSection(title: "Global Settings", footer: globalFooter) {
+            GeistToggleRow(title: String(localized: "Enable third-party extensions"), isOn: geistBinding(.enableThirdPartyExtensions), divider: Defaults[.enableThirdPartyExtensions])
             if Defaults[.enableThirdPartyExtensions] {
-                Defaults.Toggle(String(localized:"Allow extension live activities"), key: .enableExtensionLiveActivities)
-                    .settingsHighlight(id: highlightID("Allow extension live activities"))
-
-                Defaults.Toggle(String(localized:"Allow extension notch experiences"), key: .enableExtensionNotchExperiences)
-                    .settingsHighlight(id: highlightID("Allow extension notch experiences"))
-
+                GeistToggleRow(title: String(localized: "Allow extension live activities"), isOn: geistBinding(.enableExtensionLiveActivities))
+                GeistToggleRow(title: String(localized: "Allow extension notch experiences"), isOn: geistBinding(.enableExtensionNotchExperiences))
                 if Defaults[.enableExtensionNotchExperiences] {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Defaults.Toggle(String(localized:"Show extension tabs"), key: .enableExtensionNotchTabs)
-                            .tint(.accentColor)
-                        Defaults.Toggle(String(localized:"Allow minimalistic overrides"), key: .enableExtensionNotchMinimalisticOverrides)
-                            .tint(.accentColor)
-                        Defaults.Toggle(String(localized:"Allow interactive web content"), key: .enableExtensionNotchInteractiveWebViews)
-                            .tint(.accentColor)
-                    }
-                    .padding(.leading, 4)
+                    GeistToggleRow(title: String(localized: "Show extension tabs"), isOn: geistBinding(.enableExtensionNotchTabs))
+                    GeistToggleRow(title: String(localized: "Allow minimalistic overrides"), isOn: geistBinding(.enableExtensionNotchMinimalisticOverrides))
+                    GeistToggleRow(title: String(localized: "Allow interactive web content"), isOn: geistBinding(.enableExtensionNotchInteractiveWebViews))
                 }
-                
-                Defaults.Toggle(String(localized:"Enable extension diagnostics logging"), key: .extensionDiagnosticsLoggingEnabled)
-                    .settingsHighlight(id: highlightID("Enable extension diagnostics logging"))
-            }
-        } header: {
-            Text("Global Settings")
-        } footer: {
-            if Defaults[.enableThirdPartyExtensions] {
-                Text("Third-party apps using AtollExtensionKit can display live activities and dedicated notch experiences. Toggle features above or manage individual app permissions below.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("Enable extensions to allow third-party apps to display live activities and notch experiences in VibeIsland.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                GeistToggleRow(title: String(localized: "Enable extension diagnostics logging"), isOn: geistBinding(.extensionDiagnosticsLoggingEnabled), divider: false)
             }
         }
     }
-    
+
+    @ViewBuilder
     private var authorizedAppsSection: some View {
-        Section {
+        GeistSection(title: permissionsHeader) {
             if authManager.entries.isEmpty {
-                VStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "puzzlepiece.extension")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary.opacity(0.5))
-                    
-                    Text("No extensions yet")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                    
-                    Text("Apps using AtollExtensionKit will appear here once they request permission")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                GeistRow(divider: false) {
+                    VStack(alignment: .center, spacing: Geist.Spacing.sm) {
+                        Image(systemName: "puzzlepiece.extension")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Geist.Colors.mute.opacity(0.6))
+                        Text("No extensions yet")
+                            .font(Geist.Typography.bodyStrong)
+                            .foregroundStyle(Geist.Colors.body)
+                        Text("Apps using AtollExtensionKit will appear here once they request permission")
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Geist.Spacing.lg)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
             } else {
                 if authManager.entries.count > 3 {
-                    TextField("Search extensions...", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
-                }
-                
-                ForEach(filteredEntries) { entry in
-                    ExtensionEntryRow(entry: entry, onRemove: {
-                        selectedEntry = entry
-                        showingRemoveConfirmation = true
-                    })
-                }
-            }
-        } header: {
-            HStack {
-                Text("App Permissions")
-                Spacer()
-                if !authManager.entries.isEmpty {
-                    Text("\(authManager.entries.count) \(authManager.entries.count == 1 ? "app" : "apps")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .settingsHighlight(id: highlightID("App permissions list"))
-        } footer: {
-            if !authManager.entries.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Permission States:")
-                        .font(.caption.weight(.semibold))
-                    
-                    HStack(spacing: 16) {
-                        Label("Authorized", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Label("Pending", systemImage: "clock.fill")
-                            .foregroundStyle(.orange)
-                        Label("Denied/Revoked", systemImage: "xmark.circle.fill")
-                            .foregroundStyle(.red)
+                    GeistRow {
+                        TextField("Search extensions...", text: $searchText)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .font(.caption2)
                 }
-                .foregroundStyle(.secondary)
+                let entries = filteredEntries
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    GeistRow(divider: index < entries.count - 1) {
+                        ExtensionEntryRow(entry: entry, onRemove: {
+                            selectedEntry = entry
+                            showingRemoveConfirmation = true
+                        })
+                    }
+                }
             }
+        }
+
+        if !authManager.entries.isEmpty {
+            VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
+                Text("Permission States:")
+                    .font(Geist.Typography.captionStrong)
+                    .foregroundStyle(Geist.Colors.mute)
+                HStack(spacing: Geist.Spacing.md) {
+                    Label("Authorized", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Geist.Colors.success)
+                    Label("Pending", systemImage: "clock.fill")
+                        .foregroundStyle(.orange)
+                    Label("Denied/Revoked", systemImage: "xmark.circle.fill")
+                        .foregroundStyle(Geist.Colors.error)
+                }
+                .font(Geist.Typography.caption)
+            }
+            .padding(.leading, Geist.Spacing.xxs)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
