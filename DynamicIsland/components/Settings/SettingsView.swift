@@ -4364,136 +4364,99 @@ struct Shortcuts: View {
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.enableShortcuts) var enableShortcuts
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.shortcuts.highlightID(for: title)
-    }
-
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableShortcuts) {
-                    Text("Enable global keyboard shortcuts")
-                }
-                .settingsHighlight(id: highlightID("Enable global keyboard shortcuts"))
-            } header: {
-                Text("General")
-            } footer: {
-                Text("When disabled, all keyboard shortcuts will be inactive. You can still use the UI controls.")
-                    .multilineTextAlignment(.trailing)
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+        GeistSettingsPage(title: "Shortcuts") {
+            GeistSection(
+                title: "General",
+                footer: "When disabled, all keyboard shortcuts will be inactive. You can still use the UI controls."
+            ) {
+                GeistToggleRow(title: "Enable global keyboard shortcuts", isOn: $enableShortcuts, divider: false)
             }
 
             if enableShortcuts {
-                Section {
-                    KeyboardShortcuts.Recorder("Toggle Sneak Peek:", name: .toggleSneakPeek)
-                        .disabled(!enableShortcuts)
-                } header: {
-                    Text("Media")
-                } footer: {
-                    Text("Sneak Peek shows the media title and artist under the notch for a few seconds.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    KeyboardShortcuts.Recorder("Toggle Notch Open:", name: .toggleNotchOpen)
-                        .disabled(!enableShortcuts)
-                } header: {
-                    Text("Navigation")
-                } footer: {
-                    Text("Toggle the Dynamic Island open or closed from anywhere.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            KeyboardShortcuts.Recorder("Start Demo Timer:", name: .startDemoTimer)
-                                .disabled(!enableShortcuts || !enableTimerFeature)
-                            if !enableTimerFeature {
-                                Text("Timer feature is disabled")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        Spacer()
+                GeistSection(
+                    title: "Media",
+                    footer: "Sneak Peek shows the media title and artist under the notch for a few seconds."
+                ) {
+                    GeistLabeledRow(title: "Toggle Sneak Peek", divider: false) {
+                        KeyboardShortcuts.Recorder("", name: .toggleSneakPeek)
                     }
-                } header: {
-                    Text("Timer")
-                } footer: {
-                    Text("Starts a 5-minute demo timer to test the timer live activity feature. Only works when timer feature is enabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
                 }
 
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            KeyboardShortcuts.Recorder("Screen Assistant:", name: .screenAssistantPanel)
-                                .disabled(!enableShortcuts || !Defaults[.enableScreenAssistant])
-                            if !Defaults[.enableScreenAssistant] {
-                                Text("Screen Assistant feature is disabled")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        Spacer()
+                GeistSection(
+                    title: "Navigation",
+                    footer: "Toggle the Dynamic Island open or closed from anywhere."
+                ) {
+                    GeistLabeledRow(title: "Toggle Notch Open", divider: false) {
+                        KeyboardShortcuts.Recorder("", name: .toggleNotchOpen)
                     }
-                } header: {
-                    Text("AI Assistant")
-                } footer: {
-                    Text("Opens the AI assistant panel for file analysis and conversation. Default is Cmd+Shift+A. Only works when screen assistant feature is enabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
                 }
 
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            KeyboardShortcuts.Recorder("Toggle Terminal Tab:", name: .toggleTerminalTab)
-                                .disabled(!enableShortcuts || !Defaults[.enableTerminalFeature])
-                            if !Defaults[.enableTerminalFeature] {
-                                Text("Terminal feature is disabled")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        Spacer()
-                    }
-                } header: {
-                    Text("Terminal")
-                } footer: {
-                    Text("Opens the terminal tab in the notch. Default is Ctrl+`. Only works when terminal feature is enabled.")
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
+                shortcutSection(
+                    title: "Timer",
+                    label: "Start Demo Timer",
+                    name: .startDemoTimer,
+                    enabled: enableTimerFeature,
+                    disabledNote: "Timer feature is disabled",
+                    footer: "Starts a 5-minute demo timer to test the timer live activity feature. Only works when timer feature is enabled."
+                )
 
+                shortcutSection(
+                    title: "AI Assistant",
+                    label: "Screen Assistant",
+                    name: .screenAssistantPanel,
+                    enabled: Defaults[.enableScreenAssistant],
+                    disabledNote: "Screen Assistant feature is disabled",
+                    footer: "Opens the AI assistant panel for file analysis and conversation. Default is Cmd+Shift+A. Only works when screen assistant feature is enabled."
+                )
+
+                shortcutSection(
+                    title: "Terminal",
+                    label: "Toggle Terminal Tab",
+                    name: .toggleTerminalTab,
+                    enabled: Defaults[.enableTerminalFeature],
+                    disabledNote: "Terminal feature is disabled",
+                    footer: "Opens the terminal tab in the notch. Default is Ctrl+`. Only works when terminal feature is enabled."
+                )
             } else {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Keyboard shortcuts are disabled")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-
-                        Text("Enable global keyboard shortcuts above to customize your shortcuts.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                GeistSection {
+                    GeistRow(divider: false) {
+                        VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                            Text("Keyboard shortcuts are disabled")
+                                .font(Geist.Typography.bodyStrong)
+                                .foregroundStyle(Geist.Colors.ink)
+                            Text("Enable global keyboard shortcuts above to customize your shortcuts.")
+                                .font(Geist.Typography.caption)
+                                .foregroundStyle(Geist.Colors.body)
+                        }
                     }
-                    .padding(.vertical, 8)
                 }
             }
         }
-        .navigationTitle("Shortcuts")
+    }
+
+    @ViewBuilder
+    private func shortcutSection(
+        title: String,
+        label: String,
+        name: KeyboardShortcuts.Name,
+        enabled: Bool,
+        disabledNote: String,
+        footer: String
+    ) -> some View {
+        GeistSection(title: title, footer: footer) {
+            GeistLabeledRow(title: label, divider: !enabled) {
+                KeyboardShortcuts.Recorder("", name: name)
+                    .disabled(!enableShortcuts || !enabled)
+            }
+            if !enabled {
+                GeistRow(divider: false) {
+                    Text(disabledNote)
+                        .font(Geist.Typography.caption)
+                        .foregroundStyle(Geist.Colors.mute)
+                }
+            }
+        }
     }
 }
 
