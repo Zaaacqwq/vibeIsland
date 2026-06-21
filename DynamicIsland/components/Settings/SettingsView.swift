@@ -2487,123 +2487,106 @@ struct Media: View {
         musicManager.bundleIdentifier == "com.apple.Music"
     }
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.media.highlightID(for: title)
-    }
-
     private var standardControlsSuppressed: Bool {
         !showStandardMediaControls && !enableMinimalisticUI
     }
 
+    private var visibilityNote: String? {
+        if enableMinimalisticUI {
+            return "Disable Minimalistic UI to configure the standard notch media controls."
+        }
+        if standardControlsSuppressed {
+            return "Standard notch media controls are hidden. Re-enable the toggle above to restore them."
+        }
+        if !autoHideInactiveNotchMediaPlayer {
+            return "When disabled, the notch music player stays visible with placeholder metadata even when playback is inactive."
+        }
+        return nil
+    }
+
     var body: some View {
-        Form {
-            Section {
-                Picker("Music Source", selection: $mediaController) {
-                    ForEach(availableMediaControllers) { controller in
-                        Text(controller.rawValue).tag(controller)
-                    }
+        GeistSettingsPage(title: "Media") {
+            GeistSection(title: "Media Source") {
+                GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false) {
+                    ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
                 }
                 .onChange(of: mediaController) { _, _ in
-                    NotificationCenter.default.post(
-                        name: Notification.Name.mediaControllerChanged,
-                        object: nil
-                    )
-                }
-                .settingsHighlight(id: highlightID("Music Source"))
-            } header: {
-                Text("Media Source")
-            } footer: {
-                if MusicManager.shared.isNowPlayingDeprecated {
-                    HStack {
-                        Text("YouTube Music requires this third-party app to be installed: ")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                        Link("https://github.com/th-ch/youtube-music", destination: URL(string: "https://github.com/th-ch/youtube-music")!)
-                            .font(.caption)
-                            .foregroundColor(.blue) // Ensures it's visibly a link
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "'Now Playing' was the only option on previous versions and works with all media apps."))
-                        Text(String(localized: "Uses macOS Now Playing when the Amazon Music app is the active media source. Playback controls follow the system Now Playing target. Scrubbing the timeline may not work if the Amazon Music app does not support remote seek."))
-                    }
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+                    NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
                 }
             }
+            mediaSourceFooter()
 
             if mediaController == .spotify {
                 SpotifyAuthSettingsSection()
             }
 
-            Section {
-                Defaults.Toggle(key: .showStandardMediaControls) {
-                    Text("Show media controls in Dynamic Island")
+            GeistSection(title: "Dynamic Island Visibility") {
+                GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
+                    .disabled(enableMinimalisticUI)
+                GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer, divider: visibilityNote != nil)
+                    .disabled(enableMinimalisticUI || !showStandardMediaControls)
+                if let visibilityNote {
+                    GeistRow(divider: false) {
+                        Text(visibilityNote)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .disabled(enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Show media controls in Dynamic Island"))
-
-                Defaults.Toggle(key: .autoHideInactiveNotchMediaPlayer) {
-                    Text("Auto-hide inactive notch media player")
-                }
-                .disabled(enableMinimalisticUI || !showStandardMediaControls)
-                .settingsHighlight(id: highlightID("Auto-hide inactive notch media player"))
-
-                if enableMinimalisticUI {
-                    Text("Disable Minimalistic UI to configure the standard notch media controls.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if standardControlsSuppressed {
-                    Text("Standard notch media controls are hidden. Re-enable the toggle above to restore them.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if !autoHideInactiveNotchMediaPlayer {
-                    Text("When disabled, the notch music player stays visible with placeholder metadata even when playback is inactive.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } header: {
-                Text("Dynamic Island Visibility")
             }
-            Section {
-                Defaults.Toggle(key: .showShuffleAndRepeat) {
-                    HStack {
-                        Text("Enable customizable controls")
-                        customBadge(text: "Beta")
-                    }
-                }
+
+            GeistSection(title: "Media controls", badge: "Beta") {
+                GeistToggleRow(title: "Enable customizable controls", isOn: $showShuffleAndRepeat, divider: showShuffleAndRepeat)
                 if showShuffleAndRepeat {
-                    Defaults.Toggle(key: .showMediaOutputControl) {
-                        Text("Show \"Change Media Output\" control")
+                    GeistToggleRow(title: "Show \"Change Media Output\" control", isOn: geistBinding(.showMediaOutputControl))
+                        .help("Adds the AirPlay/route picker button back to the customizable controls palette.")
+                    GeistRow(divider: false) {
+                        MusicSlotConfigurationView()
                     }
-                    .settingsHighlight(id: highlightID("Show Change Media Output control"))
-                    .help("Adds the AirPlay/route picker button back to the customizable controls palette.")
-                    MusicSlotConfigurationView()
                 } else {
-                    Text("Turn on customizable controls to rearrange media buttons.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
+                    GeistRow(divider: false) {
+                        Text("Turn on customizable controls to rearrange media buttons.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                    }
                 }
-            } header: {
-                Text("Media controls")
-            }            .disabled(!showStandardMediaControls)
+            }
+            .disabled(!showStandardMediaControls)
             .opacity(showStandardMediaControls ? 1 : 0.5)
 
-            Picker(selection: $hideNotchOption, label:
-                    HStack {
-                Text("Hide DynamicIsland Options")
-                customBadge(text: "Beta")
-            }) {
-                Text("Always hide in fullscreen").tag(HideNotchOption.always)
-                Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
-                Text("Never hide").tag(HideNotchOption.never)
-            }
-            .onChange(of: hideNotchOption) {
-                Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
+            GeistSection(title: "Fullscreen", badge: "Beta") {
+                GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
+                    Text("Always hide in fullscreen").tag(HideNotchOption.always)
+                    Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
+                    Text("Never hide").tag(HideNotchOption.never)
+                }
+                .onChange(of: hideNotchOption) {
+                    Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
+                }
             }
         }
-        .navigationTitle("Media")
+    }
+
+    @ViewBuilder
+    private func mediaSourceFooter() -> some View {
+        if MusicManager.shared.isNowPlayingDeprecated {
+            HStack(spacing: 0) {
+                Text("YouTube Music requires this third-party app to be installed: ")
+                    .foregroundStyle(Geist.Colors.mute)
+                Link("github.com/th-ch/youtube-music", destination: URL(string: "https://github.com/th-ch/youtube-music")!)
+                    .foregroundStyle(Geist.Colors.accent)
+            }
+            .font(Geist.Typography.caption)
+            .padding(.leading, Geist.Spacing.xxs)
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
+                Text(String(localized: "'Now Playing' was the only option on previous versions and works with all media apps."))
+                Text(String(localized: "Uses macOS Now Playing when the Amazon Music app is the active media source. Playback controls follow the system Now Playing target. Scrubbing the timeline may not work if the Amazon Music app does not support remote seek."))
+            }
+            .font(Geist.Typography.caption)
+            .foregroundStyle(Geist.Colors.mute)
+            .padding(.leading, Geist.Spacing.xxs)
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // Only show controller options that are available on this macOS version
