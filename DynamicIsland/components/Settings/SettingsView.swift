@@ -4299,51 +4299,36 @@ struct TimerSettings: View {
     }
 
     var body: some View {
-        Form {
+        GeistSettingsPage(title: "Timer") {
             timerFeatureSection
-
             if enableTimerFeature {
                 timerConfigurationSections
             }
         }
-        .navigationTitle("Timer")
         .onAppear { syncCustomDuration() }
         .onChange(of: customTimerDuration) { _, newValue in syncCustomDuration(newValue) }
     }
 
     @ViewBuilder
     private var timerFeatureSection: some View {
-        Section {
-            Defaults.Toggle(key: .enableTimerFeature) {
-                Text("Enable timer feature")
-            }
-            .settingsHighlight(id: highlightID("Enable timer feature"))
-
+        GeistSection(
+            title: "Timer Feature",
+            footer: "Control timer availability, live activity behaviour, and whether the app mirrors timers started from the macOS Clock app."
+        ) {
+            GeistToggleRow(title: "Enable timer feature", isOn: $enableTimerFeature, divider: enableTimerFeature)
             if enableTimerFeature {
-                Toggle("Enable timer live activity", isOn: $coordinator.timerLiveActivityEnabled)
+                GeistToggleRow(title: "Enable timer live activity", isOn: $coordinator.timerLiveActivityEnabled)
                     .animation(.easeInOut, value: coordinator.timerLiveActivityEnabled)
-                Defaults.Toggle(key: .mirrorSystemTimer) {
-                    HStack(spacing: 8) {
-                        Text("Mirror macOS Clock timers")
-                        alphaBadge()
-                    }
+                GeistToggleRow(
+                    title: "Mirror macOS Clock timers",
+                    description: "Shows the system Clock timer in the notch when available. Requires Accessibility permission to read the status item.",
+                    isOn: $mirrorSystemTimer
+                )
+                GeistSegmentedRow(title: "Timer controls appear as", selection: $timerDisplayMode, divider: false) {
+                    ForEach(TimerDisplayMode.allCases) { Text($0.displayName).tag($0) }
                 }
-                .help("Shows the system Clock timer in the notch when available. Requires Accessibility permission to read the status item.")
-                .settingsHighlight(id: highlightID("Mirror macOS Clock timers"))
-
-                Picker("Timer controls appear as", selection: $timerDisplayMode) {
-                    ForEach(TimerDisplayMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
                 .help(timerDisplayMode.description)
-                .settingsHighlight(id: highlightID("Timer controls appear as"))
             }
-        } header: {
-            Text("Timer Feature")
-        } footer: {
-            Text("Control timer availability, live activity behaviour, and whether the app mirrors timers started from the macOS Clock app.")
         }
     }
 
@@ -4369,157 +4354,125 @@ struct TimerSettings: View {
 
     @ViewBuilder
     private var customTimerSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Default Custom Timer")
-                    .font(.headline)
-
-                TimerDurationStepperRow(title: String(localized: "Hours"), value: $customHours, range: 0...23)
-                TimerDurationStepperRow(title: String(localized: "Minutes"), value: $customMinutes, range: 0...59)
-                TimerDurationStepperRow(title: String(localized: "Seconds"), value: $customSeconds, range: 0...59)
-
-                HStack {
-                    Text("Current default:")
-                        .foregroundStyle(.secondary)
-                    Text(customDurationDisplay)
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.medium)
-                    Spacer()
-                }
+        GeistSection(
+            title: "Custom Timer",
+            footer: "This duration powers the \"Custom\" option inside the timer popover for quick access."
+        ) {
+            GeistStepperRow(title: String(localized: "Hours"), value: $customHours, range: 0...23, valueLabel: "\(customHours)", onChange: updateCustomDuration)
+            GeistStepperRow(title: String(localized: "Minutes"), value: $customMinutes, range: 0...59, valueLabel: "\(customMinutes)", onChange: updateCustomDuration)
+            GeistStepperRow(title: String(localized: "Seconds"), value: $customSeconds, range: 0...59, valueLabel: "\(customSeconds)", onChange: updateCustomDuration)
+            GeistLabeledRow(title: "Current default", divider: false) {
+                Text(customDurationDisplay)
+                    .font(Geist.Typography.mono)
+                    .foregroundStyle(Geist.Colors.ink)
             }
-            .padding(.vertical, 4)
-            .onChange(of: customHours) { _, _ in updateCustomDuration() }
-            .onChange(of: customMinutes) { _, _ in updateCustomDuration() }
-            .onChange(of: customSeconds) { _, _ in updateCustomDuration() }
-        } header: {
-            Text("Custom Timer")
-        } footer: {
-            Text("This duration powers the \"Custom\" option inside the timer popover for quick access.")
         }
     }
 
     @ViewBuilder
     private var appearanceSection: some View {
-        Section {
-            Picker("Timer tint", selection: $colorMode) {
-                ForEach(TimerIconColorMode.allCases) { mode in
-                    Text(mode.displayName).tag(mode)
-                }
+        GeistSection(
+            title: "Appearance",
+            footer: "Configure how the timer looks inside the closed notch. Progress can render as a ring around the icon or as horizontal bars."
+        ) {
+            GeistSegmentedRow(title: "Timer tint", selection: $colorMode) {
+                ForEach(TimerIconColorMode.allCases) { Text($0.displayName).tag($0) }
             }
-            .pickerStyle(.segmented)
-            .settingsHighlight(id: highlightID("Timer tint"))
-
             if colorMode == .solid {
-                ColorPicker("Solid colour", selection: $solidColor, supportsOpacity: false)
-                    .settingsHighlight(id: highlightID("Solid colour"))
-            }
-
-            Picker("Custom timer style", selection: $timerInputStyle) {
-                ForEach(TimerInputStyle.allCases) { style in
-                    Text(style.displayName).tag(style)
+                GeistLabeledRow(title: "Solid colour") {
+                    ColorPicker("", selection: $solidColor, supportsOpacity: false).labelsHidden()
                 }
             }
-            .pickerStyle(.segmented)
-            .settingsHighlight(id: highlightID("Custom timer style"))
-
-            Toggle("Show timer name", isOn: $showsLabel)
-            Toggle("Show countdown", isOn: $showsCountdown)
-            Toggle("Show progress", isOn: $showsProgress)
-            Toggle("Show preset list in timer tab", isOn: $showTimerPresetsInNotchTab)
-                .settingsHighlight(id: highlightID("Show preset list in timer tab"))
-
-            Toggle("Show floating pause/stop controls", isOn: $controlWindowEnabled)
-                .disabled(showsLabel)
-                .help("These controls sit beside the notch while a timer runs. They require the timer name to stay hidden for spacing.")
-
-            Picker("Progress style", selection: $progressStyle) {
-                ForEach(TimerProgressStyle.allCases) { style in
-                    Text(style.rawValue).tag(style)
-                }
+            GeistSegmentedRow(title: "Custom timer style", selection: $timerInputStyle) {
+                ForEach(TimerInputStyle.allCases) { Text($0.displayName).tag($0) }
             }
-            .pickerStyle(.segmented)
+            GeistToggleRow(title: "Show timer name", isOn: $showsLabel)
+            GeistToggleRow(title: "Show countdown", isOn: $showsCountdown)
+            GeistToggleRow(title: "Show progress", isOn: $showsProgress)
+            GeistToggleRow(title: "Show preset list in timer tab", isOn: $showTimerPresetsInNotchTab)
+            GeistToggleRow(
+                title: "Show floating pause/stop controls",
+                description: "These controls sit beside the notch while a timer runs. They require the timer name to stay hidden for spacing.",
+                isOn: $controlWindowEnabled
+            )
+            .disabled(showsLabel)
+            GeistSegmentedRow(title: "Progress style", selection: $progressStyle, divider: false) {
+                ForEach(TimerProgressStyle.allCases) { Text($0.rawValue).tag($0) }
+            }
             .disabled(!showsProgress)
-            .settingsHighlight(id: highlightID("Progress style"))
-        } header: {
-            Text("Appearance")
-        } footer: {
-            Text("Configure how the timer looks inside the closed notch. Progress can render as a ring around the icon or as horizontal bars.")
         }
     }
 
     @ViewBuilder
     private var timerPresetsSection: some View {
-        Section {
+        GeistSection(
+            title: "Timer Presets",
+            footer: "Presets show up inside the timer popover with the configured name, duration, and accent colour. Reorder them to change the display order."
+        ) {
             if timerPresets.isEmpty {
-                Text("No presets configured. Add a preset to make it appear in the timer popover.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 4)
+                GeistRow {
+                    Text("No presets configured. Add a preset to make it appear in the timer popover.")
+                        .font(Geist.Typography.caption)
+                        .foregroundStyle(Geist.Colors.body)
+                }
             } else {
-                TimerPresetListView(
-                    presets: $timerPresets,
-                    highlightProvider: highlightID,
-                    moveUp: movePresetUp,
-                    moveDown: movePresetDown,
-                    remove: removePreset
-                )
-            }
-
-            HStack {
-                Button(action: addPreset) {
-                    Label("Add Preset", systemImage: "plus")
-                }
-                .buttonStyle(.bordered)
-
-                Spacer()
-
-                Button(role: .destructive, action: { showingResetConfirmation = true }) {
-                    Label("Restore Defaults", systemImage: "arrow.counterclockwise")
-                }
-                .buttonStyle(.bordered)
-                .confirmationDialog("Restore default timer presets?", isPresented: $showingResetConfirmation, titleVisibility: .visible) {
-                    Button("Restore", role: .destructive, action: resetPresets)
+                GeistRow {
+                    VStack(spacing: Geist.Spacing.sm) {
+                        TimerPresetListView(
+                            presets: $timerPresets,
+                            highlightProvider: highlightID,
+                            moveUp: movePresetUp,
+                            moveDown: movePresetDown,
+                            remove: removePreset
+                        )
+                    }
                 }
             }
-        } header: {
-            Text("Timer Presets")
-        } footer: {
-            Text("Presets show up inside the timer popover with the configured name, duration, and accent colour. Reorder them to change the display order.")
+
+            GeistRow(divider: false) {
+                HStack {
+                    Button(action: addPreset) {
+                        Label("Add Preset", systemImage: "plus")
+                    }
+                    .buttonStyle(.geist)
+                    Spacer()
+                    Button(role: .destructive, action: { showingResetConfirmation = true }) {
+                        Label("Restore Defaults", systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.geist)
+                    .confirmationDialog("Restore default timer presets?", isPresented: $showingResetConfirmation, titleVisibility: .visible) {
+                        Button("Restore", role: .destructive, action: resetPresets)
+                    }
+                }
+            }
         }
     }
 
     @ViewBuilder
     private var timerSoundSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Timer Sound")
-                        .font(.system(size: 16, weight: .medium))
-                    Spacer()
-                    Button("Choose File", action: selectCustomTimerSound)
-                        .buttonStyle(.bordered)
-                }
-
+        GeistSection(
+            title: "Timer Sound",
+            footer: "Select a custom sound to play when a timer ends. Supported formats include MP3, M4A, WAV, and AIFF."
+        ) {
+            GeistLabeledRow(title: "Timer Sound") {
+                Button("Choose File", action: selectCustomTimerSound).buttonStyle(.geist)
+            }
+            GeistRow {
                 if let customTimerSoundPath = UserDefaults.standard.string(forKey: "customTimerSoundPath") {
                     Text("Custom: \(URL(fileURLWithPath: customTimerSoundPath).lastPathComponent)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
                 } else {
                     Text("Default: dynamic.m4a")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
                 }
-
+            }
+            GeistRow(divider: false) {
                 Button("Reset to Default") {
                     UserDefaults.standard.removeObject(forKey: "customTimerSoundPath")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.geist)
                 .disabled(UserDefaults.standard.string(forKey: "customTimerSoundPath") == nil)
             }
-        } header: {
-            Text("Timer Sound")
-        } footer: {
-            Text("Select a custom sound to play when a timer ends. Supported formats include MP3, M4A, WAV, and AIFF.")
         }
     }
 
