@@ -3867,6 +3867,8 @@ struct Appearance: View {
     @Default(.openNotchWidth) var openNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
+    @Default(.debugNotchBackgroundEnabled) private var debugNotchBackgroundEnabled
+    @Default(.debugNotchBackgroundColor) private var debugNotchBackgroundColor
     @State private var selectedListVisualizer: CustomVisualizer? = nil
 
     @State private var isIconImporterPresented = false
@@ -3899,6 +3901,19 @@ struct Appearance: View {
 
     var body: some View {
         Form {
+            Section {
+                Defaults.Toggle(key: .debugNotchBackgroundEnabled) {
+                    Text("Tint notch background (debug)")
+                }
+                if debugNotchBackgroundEnabled {
+                    ColorPicker("Background color", selection: $debugNotchBackgroundColor, supportsOpacity: true)
+                }
+            } header: {
+                Text("Debug")
+            } footer: {
+                Text("Replaces the notch's black background with a colour so you can see each region's boundaries. The centre notch fill stays black for contrast.")
+            }
+
             Section {
                 Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)
                 Defaults.Toggle(key: .settingsIconInNotch) {
