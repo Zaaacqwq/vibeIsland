@@ -805,6 +805,8 @@ extension Defaults.Keys {
     /// Debug: tint the notch background instead of black, to inspect the layout regions.
     static let debugNotchBackgroundEnabled = Key<Bool>("debugNotchBackgroundEnabled", default: false)
     static let debugNotchBackgroundColor = Key<Color>("debugNotchBackgroundColor", default: .red)
+    /// Debug: force-show these closed-pill activities (with sample data) to preview combinations.
+    static let debugForcedActivities = Key<Set<ClosedNotchActivityKind>>("debugForcedActivities", default: [])
     static let enableShadow = Key<Bool>("enableShadow", default: true)
     static let cornerRadiusScaling = Key<Bool>("cornerRadiusScaling", default: true)
     static let useModernCloseAnimation = Key<Bool>("useModernCloseAnimation", default: true)

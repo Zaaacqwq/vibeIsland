@@ -59,6 +59,10 @@ struct ContentView: View {
     @Default(.debugNotchBackgroundEnabled) var debugNotchBackgroundEnabled
     @Default(.debugNotchBackgroundColor) var debugNotchBackgroundColor
 
+    /// Gap between an activity wing and the black notch cover so content never
+    /// touches the physical notch.
+    private let closedNotchActivityInnerGap: CGFloat = 8
+
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
@@ -1152,10 +1156,16 @@ struct ContentView: View {
     private func ClosedNotchDualActivity(left: ClosedNotchActivityCandidate, right: ClosedNotchActivityCandidate) -> some View {
         let notchContentHeight = max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12))
         let wingBaseWidth = max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12) + gestureProgress / 2)
-        let centerWidth = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
-        let leftWidth = compactWingWidth(for: left, baseWidth: wingBaseWidth, centerBaseWidth: centerWidth, notchHeight: notchContentHeight)
-        let rightWidth = compactWingWidth(for: right, baseWidth: wingBaseWidth, centerBaseWidth: centerWidth, notchHeight: notchContentHeight)
-        let notchWidth = leftWidth + centerWidth + rightWidth
+        let centerBaseWidth = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
+        let leftWidth = compactWingWidth(for: left, baseWidth: wingBaseWidth, centerBaseWidth: centerBaseWidth, notchHeight: notchContentHeight)
+        let rightWidth = compactWingWidth(for: right, baseWidth: wingBaseWidth, centerBaseWidth: centerBaseWidth, notchHeight: notchContentHeight)
+        // Symmetric wings (the larger of the two) keep the black notch cover
+        // centred; content is centred within each wing. A fixed gap on each
+        // side of the black keeps content from touching the physical notch.
+        let sideWidth = max(leftWidth, rightWidth)
+        let blackWidth = vm.physicalNotchWidth
+        let innerGap = closedNotchActivityInnerGap
+        let notchWidth = sideWidth * 2 + blackWidth + innerGap * 2
         let musicPresent = left.kind == .music || right.kind == .music
         let bandPresent = musicPresent
             && vm.notchState == .closed
@@ -1166,15 +1176,19 @@ struct ContentView: View {
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                compactActivityWing(left, side: .left, notchHeight: notchContentHeight, width: leftWidth)
-                    .frame(width: leftWidth, height: notchContentHeight, alignment: .center)
+                compactActivityWing(left, side: .left, notchHeight: notchContentHeight, width: sideWidth)
+                    .frame(width: sideWidth, height: notchContentHeight, alignment: .center)
+
+                Color.clear.frame(width: innerGap, height: notchContentHeight)
 
                 Rectangle()
                     .fill(.black)
-                    .frame(width: centerWidth, height: notchContentHeight)
+                    .frame(width: blackWidth, height: notchContentHeight)
 
-                compactActivityWing(right, side: .right, notchHeight: notchContentHeight, width: rightWidth)
-                    .frame(width: rightWidth, height: notchContentHeight, alignment: .center)
+                Color.clear.frame(width: innerGap, height: notchContentHeight)
+
+                compactActivityWing(right, side: .right, notchHeight: notchContentHeight, width: sideWidth)
+                    .frame(width: sideWidth, height: notchContentHeight, alignment: .center)
             }
             .frame(width: notchWidth, height: notchContentHeight)
             .frame(height: vm.effectiveClosedNotchHeight + (isHovering ? 8 : 0), alignment: .center)
@@ -1415,9 +1429,45 @@ struct ContentView: View {
             candidates.append(.weather(snapshot))
         }
 
+        // Debug preview override: when activities are forced, show exactly those
+        // (with sample data) so any combination can be previewed.
+        let forced = Defaults[.debugForcedActivities]
+        if !forced.isEmpty {
+            return forced.compactMap(debugForcedCandidate(for:))
+        }
+
         // Per-activity live-activity toggle (single source of truth, edited in
         // Settings → Live Activities → Closed Notch Priority).
         return candidates.filter { isClosedNotchActivityEnabled($0.kind) }
+    }
+
+    /// Builds a sample candidate for the debug activity-preview tool.
+    private func debugForcedCandidate(for kind: ClosedNotchActivityKind) -> ClosedNotchActivityCandidate? {
+        switch kind {
+        case .music: return .music
+        case .agent: return .agent(.executing)
+        case .timer: return .timer
+        case .recording: return .recording
+        case .download: return .download
+        case .localSend: return .localSend
+        case .privacy: return .privacy
+        case .shelf: return .shelf(count: 2)
+        case .focus: return .focus(.work)
+        case .weather:
+            return .weather(WeatherSnapshot(
+                temperatureText: "20°",
+                symbolName: "cloud.sun.fill",
+                description: "Partly Cloudy",
+                locationName: "Preview",
+                airQuality: nil,
+                temperatureInfo: .init(current: 20, minimum: 16, maximum: 24, unitSymbol: "°C"),
+                sunCycle: nil,
+                daily: []
+            ))
+        case .reminder, .extensionActivity:
+            // Need live payloads; not previewable with sample data.
+            return nil
+        }
     }
 
     private func isClosedNotchActivityEnabled(_ kind: ClosedNotchActivityKind) -> Bool {
@@ -1494,7 +1544,7 @@ struct ContentView: View {
     }
 
     private func timerCountdownWingWidth(baseWidth: CGFloat) -> CGFloat {
-        let padding: CGFloat = 18
+        let padding: CGFloat = 8
         let ringWidth: CGFloat = (timerShowsProgress && timerProgressStyle == .ring) ? 30 : 0
         let spacing: CGFloat = (ringWidth > 0) ? 8 : 0
         let countdownText = timerManager.formattedRemainingTime()
@@ -1539,7 +1589,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private func compactActivityWing(_ activity: ClosedNotchActivityCandidate, side: ClosedNotchActivitySide, notchHeight: CGFloat, width: CGFloat) -> some View {
-        let alignment = side == .left ? Alignment.leading : Alignment.trailing
+        // Centre content within the (symmetric) wing so it sits between the
+        // outer edge and the notch with even margins.
+        let alignment = Alignment.center
         Group {
             switch activity {
             case .music:
@@ -2901,24 +2953,23 @@ private struct MusicTimerSupplementView: View {
                 timerNameView
             }
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private var countdownStack: some View {
-        VStack(alignment: .trailing, spacing: showsBarProgress ? 4 : 0) {
+        VStack(alignment: .center, spacing: showsBarProgress ? 4 : 0) {
             Text(countdownText)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundColor(timerManager.isOvertime ? .red : .white)
                 .contentTransition(.numericText())
                 .animation(.smooth(duration: 0.25), value: timerManager.remainingTime)
-                .frame(width: countdownFrameWidth, alignment: .trailing)
+                .frame(width: countdownFrameWidth, alignment: .center)
 
             if showsBarProgress {
                 barView(width: countdownTextWidth)
             }
         }
-        .padding(.trailing, 8)
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private var ringView: some View {
@@ -3068,7 +3119,10 @@ private enum TimerSupplementMetrics {
     }
 
     static func countdownFrameWidth(for text: String) -> CGFloat {
-        max(countdownTextWidth(for: text) + 16, 72)
+        // Reserve only the current format's width (MM:SS or H:MM:SS) so the
+        // wing fits the content tightly but doesn't jitter as digits change.
+        let template = text.filter { $0 == ":" }.count >= 2 ? "0:00:00" : "00:00"
+        return max(countdownTextWidth(for: text), countdownTextWidth(for: template)) + 10
     }
 
     static func timerNameFrameWidth(for text: String) -> CGFloat {
