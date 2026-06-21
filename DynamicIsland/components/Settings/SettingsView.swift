@@ -4796,156 +4796,136 @@ struct ScreenAssistantSettings: View {
     @State private var apiKeyText = ""
     @State private var showingApiKey = false
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.screenAssistant.highlightID(for: title)
+    private var displayModeFooter: String {
+        switch screenAssistantDisplayMode {
+        case .popover:
+            return "Popover mode shows the assistant as a dropdown attached to the AI button. Panel mode shows the assistant in a floating window near the notch."
+        case .panel:
+            return "Panel mode shows the assistant in a floating window near the notch. Popover mode shows the assistant as a dropdown attached to the AI button."
+        }
     }
 
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableScreenAssistant) {
-                    Text("Enable Screen Assistant")
-                }
-                .settingsHighlight(id: highlightID("Enable Screen Assistant"))
-            } header: {
-                Text("AI Assistant")
-            } footer: {
-                Text("AI-powered assistant that can analyze files, images, and provide conversational help. Use Cmd+Shift+A to quickly access the assistant.")
+        GeistSettingsPage(title: "Screen Assistant") {
+            GeistSection(
+                title: "AI Assistant",
+                footer: "AI-powered assistant that can analyze files, images, and provide conversational help. Use Cmd+Shift+A to quickly access the assistant."
+            ) {
+                GeistToggleRow(title: "Enable Screen Assistant", isOn: $enableScreenAssistant, divider: false)
             }
 
             if enableScreenAssistant {
-                Section {
-                    HStack {
-                        Text("Gemini API Key")
-                        Spacer()
-                        if geminiApiKey.isEmpty {
-                            Text("Not Set")
-                                .foregroundColor(.red)
-                        } else {
-                            Text("••••••••")
-                                .foregroundColor(.green)
-                        }
-
-                        Button(showingApiKey ? "Hide" : (geminiApiKey.isEmpty ? "Set" : "Change")) {
-                            if showingApiKey {
-                                showingApiKey = false
-                                if !apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                    Defaults[.geminiApiKey] = apiKeyText
-                                }
-                                apiKeyText = ""
+                GeistSection(title: "Configuration", footer: displayModeFooter) {
+                    GeistLabeledRow(title: "Gemini API Key", divider: showingApiKey) {
+                        HStack(spacing: Geist.Spacing.xs) {
+                            if geminiApiKey.isEmpty {
+                                Text("Not Set").font(Geist.Typography.body).foregroundStyle(Geist.Colors.error)
                             } else {
-                                showingApiKey = true
-                                apiKeyText = geminiApiKey
+                                Text("••••••••").font(Geist.Typography.body).foregroundStyle(Geist.Colors.success)
                             }
+                            Button(showingApiKey ? "Hide" : (geminiApiKey.isEmpty ? "Set" : "Change")) {
+                                if showingApiKey {
+                                    showingApiKey = false
+                                    if !apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        Defaults[.geminiApiKey] = apiKeyText
+                                    }
+                                    apiKeyText = ""
+                                } else {
+                                    showingApiKey = true
+                                    apiKeyText = geminiApiKey
+                                }
+                            }
+                            .buttonStyle(.geist)
                         }
                     }
 
                     if showingApiKey {
-                        VStack(alignment: .leading, spacing: 8) {
-                            SecureField("Enter your Gemini API Key", text: $apiKeyText)
-                                .textFieldStyle(.roundedBorder)
-
-                            Text("Get your free API key from Google AI Studio")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            HStack {
-                                Button("Open Google AI Studio") {
-                                    NSWorkspace.shared.open(URL(string: "https://aistudio.google.com/app/apikey")!)
+                        GeistRow {
+                            VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                                SecureField("Enter your Gemini API Key", text: $apiKeyText)
+                                    .textFieldStyle(.roundedBorder)
+                                Text("Get your free API key from Google AI Studio")
+                                    .font(Geist.Typography.caption)
+                                    .foregroundStyle(Geist.Colors.mute)
+                                HStack {
+                                    Button("Open Google AI Studio") {
+                                        NSWorkspace.shared.open(URL(string: "https://aistudio.google.com/app/apikey")!)
+                                    }
+                                    .buttonStyle(.link)
+                                    Spacer()
+                                    Button("Save") {
+                                        Defaults[.geminiApiKey] = apiKeyText
+                                        showingApiKey = false
+                                        apiKeyText = ""
+                                    }
+                                    .buttonStyle(.geistProminent)
+                                    .disabled(apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                 }
-                                .buttonStyle(.link)
-
-                                Spacer()
-
-                                Button("Save") {
-                                    Defaults[.geminiApiKey] = apiKeyText
-                                    showingApiKey = false
-                                    apiKeyText = ""
-                                }
-                                .disabled(apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
                         }
                     }
 
-                    HStack {
-                        Text("Display Mode")
-                        Spacer()
-                        Picker("", selection: $screenAssistantDisplayMode) {
-                            ForEach(ScreenAssistantDisplayMode.allCases, id: \.self) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(minWidth: 100)
+                    GeistPickerRow(title: "Display Mode", selection: $screenAssistantDisplayMode) {
+                        ForEach(ScreenAssistantDisplayMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
-                    .settingsHighlight(id: highlightID("Display Mode"))
-
-                    HStack {
-                        Text("Attached Files")
-                        Spacer()
+                    GeistLabeledRow(title: "Attached Files") {
                         Text("\(screenAssistantManager.attachedFiles.count)")
-                            .foregroundColor(.secondary)
+                            .font(Geist.Typography.body).foregroundStyle(Geist.Colors.body)
                     }
-
-                    HStack {
-                        Text("Recording Status")
-                        Spacer()
+                    GeistLabeledRow(title: "Recording Status", divider: false) {
                         Text(screenAssistantManager.isRecording ? "Recording" : "Ready")
-                            .foregroundColor(screenAssistantManager.isRecording ? .red : .secondary)
-                    }
-                } header: {
-                    Text("Configuration")
-                } footer: {
-                    switch screenAssistantDisplayMode {
-                    case .popover:
-                        Text("Popover mode shows the assistant as a dropdown attached to the AI button. Panel mode shows the assistant in a floating window near the notch.")
-                    case .panel:
-                        Text("Panel mode shows the assistant in a floating window near the notch. Popover mode shows the assistant as a dropdown attached to the AI button.")
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(screenAssistantManager.isRecording ? Geist.Colors.error : Geist.Colors.mute)
                     }
                 }
 
-                Section {
-                    Button("Clear All Files") {
-                        screenAssistantManager.clearAllFiles()
+                GeistSection(
+                    title: "Actions",
+                    footer: "Clear all files removes all attached files and audio recordings. This action is permanent."
+                ) {
+                    GeistRow(divider: false) {
+                        Button {
+                            screenAssistantManager.clearAllFiles()
+                        } label: {
+                            Text("Clear All Files")
+                                .font(Geist.Typography.bodyStrong)
+                                .foregroundStyle(Geist.Colors.error)
+                                .padding(.horizontal, Geist.Spacing.md)
+                                .padding(.vertical, Geist.Spacing.xs)
+                                .overlay(Capsule().strokeBorder(Geist.Colors.error.opacity(0.4), lineWidth: Geist.hairlineWidth))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(screenAssistantManager.attachedFiles.isEmpty)
                     }
-                    .foregroundColor(.red)
-                    .disabled(screenAssistantManager.attachedFiles.isEmpty)
-                } header: {
-                    Text("Actions")
-                } footer: {
-                    Text("Clear all files removes all attached files and audio recordings. This action is permanent.")
                 }
 
                 if !screenAssistantManager.attachedFiles.isEmpty {
-                    Section {
-                        ForEach(screenAssistantManager.attachedFiles) { file in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Image(systemName: file.type.iconName)
-                                        .foregroundColor(.blue)
-                                        .frame(width: 16)
-                                    Text(file.type.displayName)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text(timeAgoString(from: file.timestamp))
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                    GeistSection(title: "Attached Files") {
+                        let files = screenAssistantManager.attachedFiles
+                        ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
+                            GeistRow(divider: index < files.count - 1) {
+                                VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
+                                    HStack {
+                                        Image(systemName: file.type.iconName)
+                                            .foregroundStyle(Geist.Colors.accent)
+                                            .frame(width: 16)
+                                        Text(file.type.displayName)
+                                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                                        Spacer()
+                                        Text(timeAgoString(from: file.timestamp))
+                                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                                    }
+                                    Text(file.name)
+                                        .font(Geist.Typography.mono)
+                                        .foregroundStyle(Geist.Colors.ink)
+                                        .lineLimit(2)
                                 }
-                                Text(file.name)
-                                    .font(.system(.body, design: .monospaced))
-                                    .lineLimit(2)
                             }
-                            .padding(.vertical, 2)
                         }
-                    } header: {
-                        Text("Attached Files")
                     }
                 }
             }
         }
-        .formStyle(.grouped)
-        .navigationTitle("Screen Assistant")
     }
 
     private func timeAgoString(from date: Date) -> String {
