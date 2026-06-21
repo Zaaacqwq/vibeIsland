@@ -2635,10 +2635,6 @@ struct CalendarSettings: View {
     @Default(.selectedCalendarApp) private var selectedCalendarApp
     @Default(.fantasticalDefaultView) private var fantasticalDefaultView
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.calendar.highlightID(for: title)
-    }
-
     private enum CalendarLookaheadOption: String, CaseIterable, Identifiable {
         case mins15 = "15m"
         case mins30 = "30m"
@@ -2666,128 +2662,93 @@ struct CalendarSettings: View {
     }
 
     var body: some View {
-        Form {
+        GeistSettingsPage(title: "Calendar") {
             if !calendarManager.hasCalendarAccess || !calendarManager.hasReminderAccess {
-                Text("Calendar or Reminder access is denied. Please enable it in System Settings.")
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding()
-
-                HStack {
-                    Button("Request Access") {
-                        Task {
-                            await calendarManager.checkCalendarAuthorization()
-                            await calendarManager.checkReminderAuthorization()
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button("Open System Settings") {
-                        if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                            NSWorkspace.shared.open(settingsURL)
+                GeistSection {
+                    GeistRow(divider: false) {
+                        VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
+                            Text("Calendar or Reminder access is denied. Please enable it in System Settings.")
+                                .font(Geist.Typography.body)
+                                .foregroundStyle(Geist.Colors.error)
+                                .fixedSize(horizontal: false, vertical: true)
+                            HStack(spacing: Geist.Spacing.xs) {
+                                Button("Request Access") {
+                                    Task {
+                                        await calendarManager.checkCalendarAuthorization()
+                                        await calendarManager.checkReminderAuthorization()
+                                    }
+                                }
+                                .buttonStyle(.geistProminent)
+                                Button("Open System Settings") {
+                                    if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                                        NSWorkspace.shared.open(settingsURL)
+                                    }
+                                }
+                                .buttonStyle(.geist)
+                            }
                         }
                     }
                 }
             } else {
-                // Permissions status
-                Section(header: Text("Permissions")) {
-                    HStack {
-                        Text("Calendars")
-                        Spacer()
+                GeistSection(title: "Permissions") {
+                    GeistLabeledRow(title: "Calendars") {
                         Text(statusText(for: calendarManager.calendarAuthorizationStatus))
-                            .foregroundColor(color(for: calendarManager.calendarAuthorizationStatus))
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(color(for: calendarManager.calendarAuthorizationStatus))
                     }
-                    HStack {
-                        Text("Reminders")
-                        Spacer()
+                    GeistLabeledRow(title: "Reminders", divider: false) {
                         Text(statusText(for: calendarManager.reminderAuthorizationStatus))
-                            .foregroundColor(color(for: calendarManager.reminderAuthorizationStatus))
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(color(for: calendarManager.reminderAuthorizationStatus))
                     }
                 }
 
-                Defaults.Toggle(key: .showCalendar) {
-                    Text("Show calendar")
-                }
-                .settingsHighlight(id: highlightID("Show calendar"))
-
-                Section(header: Text("Event List")) {
-                    Toggle("Hide completed reminders", isOn: $hideCompletedReminders)
-                        .settingsHighlight(id: highlightID("Hide completed reminders"))
-                    Toggle("Show full event titles", isOn: $showFullEventTitles)
-                        .settingsHighlight(id: highlightID("Show full event titles"))
-                    Toggle("Auto-scroll to next event", isOn: $autoScrollToNextEvent)
-                        .settingsHighlight(id: highlightID("Auto-scroll to next event"))
+                GeistSection {
+                    GeistToggleRow(title: "Show calendar", isOn: geistBinding(.showCalendar), divider: false)
                 }
 
-                Section(header: Text("All-Day Events")) {
-                    Toggle("Hide all-day events", isOn: $hideAllDayEvents)
-                        .settingsHighlight(id: highlightID("Hide all-day events"))
+                GeistSection(title: "Event List") {
+                    GeistToggleRow(title: "Hide completed reminders", isOn: $hideCompletedReminders)
+                    GeistToggleRow(title: "Show full event titles", isOn: $showFullEventTitles)
+                    GeistToggleRow(title: "Auto-scroll to next event", isOn: $autoScrollToNextEvent, divider: false)
+                }
+
+                GeistSection(
+                    title: "All-Day Events",
+                    footer: "Turn this off to include all-day entries in the notch calendar and reminder live activity."
+                ) {
+                    GeistToggleRow(title: "Hide all-day events", isOn: $hideAllDayEvents, divider: false)
                         .disabled(!showCalendar)
-
-                    Text("Turn this off to include all-day entries in the notch calendar and reminder live activity.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Section(header: Text("Reminder Live Activity")) {
-                    Defaults.Toggle(key: .enableReminderLiveActivity) {
-                        Text("Enable reminder live activity")
+                GeistSection(title: "Reminder Live Activity") {
+                    GeistToggleRow(title: "Enable reminder live activity", isOn: $enableReminderLiveActivity)
+                    GeistSegmentedRow(title: "Countdown style", selection: $reminderPresentationStyle) {
+                        ForEach(ReminderPresentationStyle.allCases) { Text($0.displayName).tag($0) }
                     }
-                    .settingsHighlight(id: highlightID("Enable reminder live activity"))
-
-                    Picker("Countdown style", selection: $reminderPresentationStyle) {
-                        ForEach(ReminderPresentationStyle.allCases) { style in
-                            Text(style.displayName).tag(style)
-                        }
-                    }
-                    .pickerStyle(.segmented)
                     .disabled(!enableReminderLiveActivity)
-                    .settingsHighlight(id: highlightID("Countdown style"))
-
-                    HStack {
-                        Text("Notify before")
-                        Slider(
-                            value: Binding(
-                                get: { Double(reminderLeadTime) },
-                                set: { reminderLeadTime = Int($0) }
-                            ),
-                            in: 1...60,
-                            step: 1
-                        )
-                        .disabled(!enableReminderLiveActivity)
-                        Text("\(reminderLeadTime) min")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 60, alignment: .trailing)
-                    }
-
-                    HStack {
-                        Text("Sneak peek duration")
-                        Slider(
-                            value: $reminderSneakPeekDuration,
-                            in: 3...20,
-                            step: 1
-                        )
-                        .disabled(!enableReminderLiveActivity)
-                        Text("\(Int(reminderSneakPeekDuration)) s")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 60, alignment: .trailing)
-                    }
+                    GeistSliderRow(
+                        title: "Notify before",
+                        valueLabel: "\(reminderLeadTime) min",
+                        value: Binding(get: { Double(reminderLeadTime) }, set: { reminderLeadTime = Int($0) }),
+                        range: 1...60, step: 1
+                    )
+                    .disabled(!enableReminderLiveActivity)
+                    GeistSliderRow(
+                        title: "Sneak peek duration",
+                        valueLabel: "\(Int(reminderSneakPeekDuration)) s",
+                        value: $reminderSneakPeekDuration, range: 3...20, step: 1, divider: false
+                    )
+                    .disabled(!enableReminderLiveActivity)
                 }
-                // MARK: - Third-party Calendar Integration
-                Section {
-                    Defaults.Toggle(key: .enableThirdPartyCalendarApp) {
-                        HStack {
-                            Image(systemName: "ellipsis.calendar")
-                                .foregroundStyle(.secondary)
-                                .frame(width: 20, height: 20)
-                            Text("Enable third-party calendar app launch")
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Enable third-party calendar app launch"))
-                    
+
+                GeistSection(
+                    title: "Third-party Calendar Integration",
+                    footer: "When enabled, clicking on calendar events will open the selected third-party calendar app instead of Apple Calendar."
+                ) {
+                    GeistToggleRow(title: "Enable third-party calendar app launch", isOn: $enableThirdPartyCalendarApp, divider: enableThirdPartyCalendarApp)
                     if enableThirdPartyCalendarApp {
-                        Picker("Calendar App", selection: $selectedCalendarApp) {
+                        GeistPickerRow(title: "Calendar App", selection: $selectedCalendarApp, divider: selectedCalendarApp == .fantastical) {
                             ForEach(ThirdPartyCalendarApp.allCases) { app in
                                 HStack {
                                     AppIconImage(
@@ -2800,68 +2761,15 @@ struct CalendarSettings: View {
                                 .tag(app)
                             }
                         }
-                        .settingsHighlight(id: highlightID("Calendar App"))
-                        
                         if selectedCalendarApp == .fantastical {
-                            Picker("Default View", selection: $fantasticalDefaultView) {
-                                ForEach(FantasticalViewStyle.allCases, id: \.self) { style in
-                                    Text(style.displayName).tag(style)
-                                }
-                            }
-                            .settingsHighlight(id: highlightID("Fantastical Default View"))
-                        }
-                    }
-                } header: {
-                    Text("Third-party Calendar Integration")
-                } footer: {
-                    Text("When enabled, clicking on calendar events will open the selected third-party calendar app instead of Apple Calendar.")
-                }
-
-                Section(header: Text("Select Calendars")) {
-                    let grouped = Dictionary(grouping: calendarManager.allCalendars, by: \.accountName)
-                    let sortedAccounts = grouped.keys.sorted()
-
-                    ForEach(sortedAccounts, id: \.self) { account in
-                        let accountCalendars = grouped[account] ?? []
-                        let allAccountSelected = accountCalendars.allSatisfy { calendarManager.getCalendarSelected($0) }
-
-                        Section(header: HStack {
-                            Text(account)
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { allAccountSelected },
-                                set: { isSelected in
-                                    Task {
-                                        await calendarManager.setCalendarsSelected(accountCalendars, isSelected: isSelected)
-                                    }
-                                }
-                            ))
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .controlSize(.mini)
-                            .disabled(!showCalendar)
-                        }) {
-                            ForEach(accountCalendars, id: \.id) { calendar in
-                                Toggle(isOn: Binding(
-                                    get: { calendarManager.getCalendarSelected(calendar) },
-                                    set: { isSelected in
-                                        Task {
-                                            await calendarManager.setCalendarSelected(calendar, isSelected: isSelected)
-                                        }
-                                    }
-                                )) {
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(Color(calendar.color))
-                                            .frame(width: 8, height: 8)
-                                        Text(calendar.title)
-                                    }
-                                }
-                                .disabled(!showCalendar)
+                            GeistPickerRow(title: "Default View", selection: $fantasticalDefaultView, divider: false) {
+                                ForEach(FantasticalViewStyle.allCases, id: \.self) { Text($0.displayName).tag($0) }
                             }
                         }
                     }
                 }
+
+                calendarSelectionSections()
             }
         }
         .onAppear {
@@ -2870,7 +2778,58 @@ struct CalendarSettings: View {
                 await calendarManager.checkReminderAuthorization()
             }
         }
-        .navigationTitle("Calendar")
+    }
+
+    @ViewBuilder
+    private func calendarSelectionSections() -> some View {
+        let grouped = Dictionary(grouping: calendarManager.allCalendars, by: \.accountName)
+        let sortedAccounts = grouped.keys.sorted()
+
+        Text("Select Calendars".uppercased())
+            .font(Geist.Typography.captionStrong)
+            .foregroundStyle(Geist.Colors.mute)
+            .tracking(0.6)
+            .padding(.leading, Geist.Spacing.xxs)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+        ForEach(sortedAccounts, id: \.self) { account in
+            let accountCalendars = grouped[account] ?? []
+            let allAccountSelected = accountCalendars.allSatisfy { calendarManager.getCalendarSelected($0) }
+
+            GeistSection(title: account) {
+                GeistToggleRow(title: "Select all", isOn: Binding(
+                    get: { allAccountSelected },
+                    set: { isSelected in
+                        Task { await calendarManager.setCalendarsSelected(accountCalendars, isSelected: isSelected) }
+                    }
+                ), divider: !accountCalendars.isEmpty)
+                .disabled(!showCalendar)
+
+                ForEach(Array(accountCalendars.enumerated()), id: \.element.id) { index, calendar in
+                    GeistRow(divider: index < accountCalendars.count - 1) {
+                        HStack(spacing: Geist.Spacing.md) {
+                            Circle()
+                                .fill(Color(calendar.color))
+                                .frame(width: 8, height: 8)
+                            Text(calendar.title)
+                                .font(Geist.Typography.bodyStrong)
+                                .foregroundStyle(Geist.Colors.ink)
+                            Spacer(minLength: Geist.Spacing.sm)
+                            Toggle("", isOn: Binding(
+                                get: { calendarManager.getCalendarSelected(calendar) },
+                                set: { isSelected in
+                                    Task { await calendarManager.setCalendarSelected(calendar, isSelected: isSelected) }
+                                }
+                            ))
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .controlSize(.small)
+                            .disabled(!showCalendar)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func statusText(for status: EKAuthorizationStatus) -> String {
