@@ -33,7 +33,7 @@ struct GeistSettingsPage<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Geist.Spacing.lg) {
+            VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
                     Text(title)
                         .font(Geist.Typography.displayMd)
@@ -46,7 +46,7 @@ struct GeistSettingsPage<Content: View>: View {
                 }
                 content
             }
-            .padding(Geist.Spacing.xl)
+            .padding(Geist.Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollContentBackground(.hidden)
@@ -119,8 +119,8 @@ struct GeistRow<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             content
-                .padding(.horizontal, Geist.Spacing.md)
-                .padding(.vertical, Geist.Spacing.sm)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if divider {
                 Rectangle()

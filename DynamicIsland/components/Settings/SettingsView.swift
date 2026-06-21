@@ -1566,7 +1566,8 @@ private struct HUDAndOSDSettingsView: View {
 
     var body: some View {
         GeistSettingsPage(title: "Controls") {
-            HStack(spacing: Geist.Spacing.md) {
+            ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Geist.Spacing.sm) {
                 HUDSelectionCard(
                     title: String(localized: "Dynamic Island"),
                     isSelected: selectedTab == .hud,
@@ -1721,6 +1722,7 @@ private struct HUDAndOSDSettingsView: View {
                 }
             }
             .padding(.top, 8)
+            }
 
             switch selectedTab {
             case .hud:
@@ -2055,11 +2057,11 @@ private struct HUDSelectionCard<Preview: View>: View {
 
                     preview
                 }
-                .frame(width: 110, height: 80)
+                .frame(width: 92, height: 62)
 
                 VStack(spacing: 4) {
                     Text(title)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(Geist.Typography.bodyStrong)
                         .foregroundStyle(isSelected ? .primary : .secondary)
 
                     if isSelected {
