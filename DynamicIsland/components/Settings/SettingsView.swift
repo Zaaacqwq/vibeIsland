@@ -3224,117 +3224,63 @@ struct Appearance: View {
         currentRecommendedMinimumNotchWidth()
     }
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.appearance.highlightID(for: title)
-    }
-
     var body: some View {
-        Form {
-
-            Section {
-                Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)
-                Defaults.Toggle(key: .settingsIconInNotch) {
-                    Text("Settings icon in notch")
-                }
-                .settingsHighlight(id: highlightID("Settings icon in notch"))
-                Defaults.Toggle(key: .enableShadow) {
-                    Text("Enable window shadow")
-                }
-                .settingsHighlight(id: highlightID("Enable window shadow"))
-                Defaults.Toggle(key: .cornerRadiusScaling) {
-                    Text("Corner radius scaling")
-                }
-                .settingsHighlight(id: highlightID("Corner radius scaling"))
-                Defaults.Toggle(key: .useModernCloseAnimation) {
-                    Text("Use simpler close animation")
-                }
-                .settingsHighlight(id: highlightID("Use simpler close animation"))
-            } header: {
-                Text("General")
+        GeistSettingsPage(title: "Appearance") {
+            GeistSection(title: "General") {
+                GeistToggleRow(title: "Always show tabs", isOn: $coordinator.alwaysShowTabs)
+                GeistToggleRow(title: "Settings icon in notch", isOn: geistBinding(.settingsIconInNotch))
+                GeistToggleRow(title: "Enable window shadow", isOn: geistBinding(.enableShadow))
+                GeistToggleRow(title: "Corner radius scaling", isOn: geistBinding(.cornerRadiusScaling))
+                GeistToggleRow(title: "Use simpler close animation", isOn: geistBinding(.useModernCloseAnimation), divider: false)
             }
 
             // Show display style picker only on non-notch Macs (main screen has no physical notch)
             if !mainScreenHasPhysicalNotch {
-                Section {
-                    Picker("Main screen style", selection: $externalDisplayStyle) {
-                        ForEach(ExternalDisplayStyle.allCases) { style in
-                            Text(style.localizedName)
-                                .tag(style)
-                        }
+                GeistSection(title: "Display Style") {
+                    GeistPickerRow(title: "Main screen style", selection: $externalDisplayStyle) {
+                        ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
                     }
                     .onChange(of: externalDisplayStyle) {
                         NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
                     }
-                    .settingsHighlight(id: highlightID("Main screen style"))
-                    Text(externalDisplayStyle.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Display Style")
+                    GeistRow(divider: false) {
+                        Text(externalDisplayStyle.description)
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
             notchWidthControls()
 
-            Section {
-                Defaults.Toggle(key: .coloredSpectrogram) {
-                    Text("Enable colored spectrograms")
+            GeistSection(title: "Media") {
+                GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
+                GeistToggleRow(title: "Enable colored spectograms", isOn: geistBinding(.playerColorTinting))
+                GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
+                GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
+                    ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
-                .settingsHighlight(id: highlightID("Enable colored spectrograms"))
-                Defaults.Toggle(key: .playerColorTinting) {
-                    Text("Enable colored spectograms")
-                }
-                Defaults.Toggle(key: .lightingEffect) {
-                    Text("Enable blur effect behind album art")
-                }
-                .settingsHighlight(id: highlightID("Enable blur effect behind album art"))
-                Picker("Slider color", selection: $sliderColor) {
-                    ForEach(SliderColorEnum.allCases, id: \.self) { option in
-                        Text(option.rawValue)
-                    }
-                }
-                .settingsHighlight(id: highlightID("Slider color"))
-            } header: {
-                Text("Media")
             }
 
-            Section {
-                Toggle(
-                    "Use music visualizer spectrogram",
-                    isOn: $useMusicVisualizer.animation()
-                )
-                .disabled(true)
+            GeistSection(title: "Custom music live activity animation", badge: "Coming soon") {
+                GeistToggleRow(title: "Use music visualizer spectrogram", isOn: $useMusicVisualizer.animation(), divider: !useMusicVisualizer)
+                    .disabled(true)
                 if !useMusicVisualizer {
                     if customVisualizers.count > 0 {
-                        Picker(
-                            "Selected animation",
-                            selection: $selectedVisualizer
-                        ) {
-                            ForEach(
-                                customVisualizers,
-                                id: \.self
-                            ) { visualizer in
-                                Text(visualizer.name)
-                                    .tag(visualizer)
-                            }
+                        GeistPickerRow(title: "Selected animation", selection: $selectedVisualizer, divider: false) {
+                            ForEach(customVisualizers, id: \.self) { Text($0.name).tag($0) }
                         }
                     } else {
-                        HStack {
-                            Text("Selected animation")
-                            Spacer()
+                        GeistLabeledRow(title: "Selected animation", divider: false) {
                             Text("No custom animation available")
-                                .foregroundStyle(.secondary)
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.mute)
                         }
                     }
                 }
-            } header: {
-                HStack {
-                    Text("Custom music live activity animation")
-                    customBadge(text: "Coming soon")
-                }
             }
 
-            Section {
+            GeistSection(title: customVisualizers.isEmpty ? "Custom visualizers (Lottie)" : "Custom visualizers (Lottie) – \(customVisualizers.count)") {
+              GeistRow(divider: false) {
                 List {
                     ForEach(customVisualizers, id: \.self) { visualizer in
                         HStack {
@@ -3456,35 +3402,20 @@ struct Appearance: View {
                     .controlSize(.extraLarge)
                     .padding()
                 }
-            } header: {
-                HStack(spacing: 0) {
-                    Text("Custom vizualizers (Lottie)")
-                    if !Defaults[.customVisualizers].isEmpty {
-                        Text(" – \(Defaults[.customVisualizers].count)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
+              }
             }
 
-            Section {
-                Defaults.Toggle(key: .showMirror) {
-                    Text("Enable Dynamic mirror")
+            GeistSection(title: "Additional features") {
+                GeistToggleRow(title: "Enable Dynamic mirror", isOn: geistBinding(.showMirror))
+                    .disabled(!checkVideoInput())
+                GeistPickerRow(title: "Mirror shape", selection: $mirrorShape, divider: webcamManager.cameraAvailable) {
+                    Text("Circle").tag(MirrorShapeEnum.circle)
+                    Text("Square").tag(MirrorShapeEnum.rectangle)
                 }
-                .disabled(!checkVideoInput())
-                .settingsHighlight(id: highlightID("Enable Dynamic mirror"))
-                Picker("Mirror shape", selection: $mirrorShape) {
-                    Text("Circle")
-                        .tag(MirrorShapeEnum.circle)
-                    Text("Square")
-                        .tag(MirrorShapeEnum.rectangle)
-                }
-                .settingsHighlight(id: highlightID("Mirror shape"))
-                
                 if webcamManager.cameraAvailable {
-                    Picker("Mirror Camera", selection: $selectedCameraID) {
+                    GeistPickerRow(title: "Mirror Camera", selection: $selectedCameraID) {
                         ForEach(webcamManager.availableCameras, id: \.uniqueID) { device in
-                            Text(device.localizedName)
-                                .tag(device.uniqueID)
+                            Text(device.localizedName).tag(device.uniqueID)
                         }
                     }
                     .onChange(of: selectedCameraID) { _, _ in
@@ -3493,94 +3424,73 @@ struct Appearance: View {
                             webcamManager.startSession()
                         }
                     }
-                    .settingsHighlight(id: highlightID("Mirror Camera"))
                 }
-                Defaults.Toggle(key: .showNotHumanFace) {
-                    Text("Idle Animation")
-                }
-                .settingsHighlight(id: highlightID("Idle Animation"))
-            } header: {
-                HStack {
-                    Text("Additional features")
-                }
+                GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), divider: false)
             }
 
             // MARK: - Custom Idle Animations Section
             IdleAnimationsSettingsSection()
 
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    let columns = [GridItem(.adaptive(minimum: 90), spacing: 12)]
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        appIconCard(
-                            title: "Default",
-                            image: defaultAppIconImage(),
-                            isSelected: selectedAppIconID == nil
-                        ) {
-                            selectedAppIconID = nil
-                            applySelectedAppIcon()
-                        }
-
-                        ForEach(customAppIcons) { icon in
+            GeistSection(title: "App icon") {
+                GeistRow(divider: false) {
+                    VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
+                        let columns = [GridItem(.adaptive(minimum: 90), spacing: 12)]
+                        LazyVGrid(columns: columns, spacing: 12) {
                             appIconCard(
-                                title: icon.name,
-                                image: customIconImage(for: icon),
-                                isSelected: selectedAppIconID == icon.id.uuidString
+                                title: "Default",
+                                image: defaultAppIconImage(),
+                                isSelected: selectedAppIconID == nil
                             ) {
-                                selectedAppIconID = icon.id.uuidString
+                                selectedAppIconID = nil
                                 applySelectedAppIcon()
                             }
-                            .contextMenu {
-                                Button("Remove") {
-                                    removeCustomIcon(icon)
+                            ForEach(customAppIcons) { icon in
+                                appIconCard(
+                                    title: icon.name,
+                                    image: customIconImage(for: icon),
+                                    isSelected: selectedAppIconID == icon.id.uuidString
+                                ) {
+                                    selectedAppIconID = icon.id.uuidString
+                                    applySelectedAppIcon()
+                                }
+                                .contextMenu {
+                                    Button("Remove") { removeCustomIcon(icon) }
                                 }
                             }
                         }
-                    }
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.secondary.opacity(isIconDropTarget ? 0.18 : 0.1))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.accentColor.opacity(isIconDropTarget ? 0.8 : 0), lineWidth: 2)
-                    )
-                    .onDrop(of: [UTType.fileURL], isTargeted: $isIconDropTarget) { providers in
-                        handleIconDrop(providers)
-                    }
-
-                    HStack(spacing: 8) {
-                        Button("Add icon") {
-                            iconImportError = nil
-                            isIconImporterPresented = true
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.secondary.opacity(isIconDropTarget ? 0.18 : 0.1))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.accentColor.opacity(isIconDropTarget ? 0.8 : 0), lineWidth: 2)
+                        )
+                        .onDrop(of: [UTType.fileURL], isTargeted: $isIconDropTarget) { providers in
+                            handleIconDrop(providers)
                         }
-                        .buttonStyle(.borderedProminent)
 
-                        Button("Remove selected") {
-                            if let id = selectedAppIconID,
-                               let icon = customAppIcons.first(where: { $0.id.uuidString == id }) {
-                                removeCustomIcon(icon)
+                        HStack(spacing: Geist.Spacing.xs) {
+                            Button("Add icon") {
+                                iconImportError = nil
+                                isIconImporterPresented = true
                             }
+                            .buttonStyle(.geistProminent)
+                            Button("Remove selected") {
+                                if let id = selectedAppIconID,
+                                   let icon = customAppIcons.first(where: { $0.id.uuidString == id }) {
+                                    removeCustomIcon(icon)
+                                }
+                            }
+                            .buttonStyle(.geist)
+                            .disabled(selectedAppIconID == nil)
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(selectedAppIconID == nil)
-                    }
 
-                    if let iconImportError {
-                        Text(iconImportError)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Drop a PNG, JPEG, TIFF, or ICNS file to add it to your icon library.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(iconImportError ?? "Drop a PNG, JPEG, TIFF, or ICNS file to add it to your icon library.")
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.mute)
                     }
-                }
-                .settingsHighlight(id: highlightID("App icon"))
-            } header: {
-                HStack {
-                    Text("App icon")
                 }
             }
         }
@@ -3595,7 +3505,6 @@ struct Appearance: View {
                 iconImportError = "Icon import was canceled or failed."
             }
         }
-        .navigationTitle("Appearance")
     }
 
     private func defaultAppIconImage() -> NSImage? {
@@ -3715,66 +3624,44 @@ struct Appearance: View {
 
     @ViewBuilder
     private func notchWidthControls() -> some View {
-        Section {
-            let recommendedMin = currentRecommendedMinimumNotchWidth()
-            let tabCount = enabledStandardTabCount()
-            let dynamicRange = Double(recommendedMin)...900
-
-            let widthBinding = Binding<Double>(
-                get: { Double(openNotchWidth) },
-                set: { newValue in
-                    let clamped = min(max(newValue, dynamicRange.lowerBound), dynamicRange.upperBound)
-                    let value = CGFloat(clamped)
-                    if openNotchWidth != value {
-                        openNotchWidth = value
-                    }
+        let recommendedMin = currentRecommendedMinimumNotchWidth()
+        let tabCount = enabledStandardTabCount()
+        let dynamicRange = Double(recommendedMin)...900
+        let widthBinding = Binding<Double>(
+            get: { Double(openNotchWidth) },
+            set: { newValue in
+                let clamped = min(max(newValue, dynamicRange.lowerBound), dynamicRange.upperBound)
+                let value = CGFloat(clamped)
+                if openNotchWidth != value {
+                    openNotchWidth = value
                 }
-            )
+            }
+        )
+        let description = enableMinimalisticUI
+        ? String(localized: "Width adjustments apply only to the standard notch layout. Disable Minimalistic UI to edit this value.")
+        : String(localized: "Recommended minimum width adjusts automatically based on the number of enabled tabs.")
 
-            VStack(alignment: .leading, spacing: 10) {
-                Slider(
-                    value: widthBinding,
-                    in: dynamicRange,
-                    step: 10
-                ) {
-                    HStack {
-                        Text("Expanded notch width")
-                        Spacer()
-                        Text("\(Int(openNotchWidth)) px")
-                            .foregroundStyle(.secondary)
-                    }
-                }
+        GeistSection(title: "Notch Width", badge: "Beta") {
+            GeistSliderRow(title: "Expanded notch width", valueLabel: "\(Int(openNotchWidth)) px", value: widthBinding, range: dynamicRange, step: 10)
                 .disabled(enableMinimalisticUI)
-                .settingsHighlight(id: highlightID("Expanded notch width"))
-
+            GeistRow {
                 HStack {
                     Text("\(tabCount) tab\(tabCount == 1 ? "" : "s") enabled · min \(Int(recommendedMin)) px")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
                     Spacer()
-                    Button("Reset Width") {
-                        openNotchWidth = recommendedMin
-                    }
-                    .disabled(abs(openNotchWidth - recommendedMin) < 0.5)
-                    .buttonStyle(.bordered)
+                    Button("Reset Width") { openNotchWidth = recommendedMin }
+                        .buttonStyle(.geist)
+                        .disabled(abs(openNotchWidth - recommendedMin) < 0.5)
                 }
-
-                let description = enableMinimalisticUI
-                ? String(localized: "Width adjustments apply only to the standard notch layout. Disable Minimalistic UI to edit this value.")
-                : String(localized: "Recommended minimum width adjusts automatically based on the number of enabled tabs.")
-
+            }
+            GeistRow(divider: false) {
                 Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .onAppear {
-                enforceMinimumNotchWidth()
-            }
-        } header: {
-            HStack {
-                Text("Notch Width")
-                customBadge(text: "Beta")
-            }
+        }
+        .onAppear {
+            enforceMinimumNotchWidth()
         }
     }
 
