@@ -2220,89 +2220,54 @@ private struct DevicesSettingsView: View {
     @Default(.progressBarStyle) var progressBarStyle
     @Default(.useBluetoothHUD3DIcon) private var useBluetoothHUD3DIcon
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.devices.highlightID(for: title)
-    }
-
     private var colorCodingDisabled: Bool {
         progressBarStyle == .segmented
     }
 
-    var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .showBluetoothDeviceConnections) {
-                    Text("Show Bluetooth device connections")
-                }
-                .settingsHighlight(id: highlightID("Show Bluetooth device connections"))
-                Defaults.Toggle(key: .useCircularBluetoothBatteryIndicator) {
-                    Text("Use circular battery indicator")
-                }
-                .settingsHighlight(id: highlightID("Use circular battery indicator"))
-                Defaults.Toggle(key: .showBluetoothBatteryPercentageText) {
-                    Text("Show battery percentage text in HUD")
-                }
-                .settingsHighlight(id: highlightID("Show battery percentage text in HUD"))
-                Defaults.Toggle(key: .showBluetoothDeviceNameMarquee) {
-                    Text("Scroll device name in HUD")
-                }
-                .settingsHighlight(id: highlightID("Scroll device name in HUD"))
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("HUD icon style")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
+    private var batteryFooter: String {
+        if progressBarStyle == .segmented {
+            return "Color-coded fills are unavailable in Segmented mode. Switch to Hierarchical or Gradient inside Controls › Dynamic Island to adjust advanced options."
+        } else if Defaults[.useSmoothColorGradient] {
+            return "Smooth transitions blend Green (0–60%), Yellow (60–85%), and Red (85–100%) through the entire fill. Adjust gradient behavior from Controls › Dynamic Island."
+        } else {
+            return "Discrete transitions snap between Green (0–60%), Yellow (60–85%), and Red (85–100%)."
+        }
+    }
 
-                    HStack(spacing: 16) {
-                        Spacer(minLength: 0)
-                        BluetoothHUDIconStyleCard(
-                            style: .symbol,
-                            isSelected: !useBluetoothHUD3DIcon
-                        ) {
-                            useBluetoothHUD3DIcon = false
+    var body: some View {
+        GeistSettingsPage(title: "Devices") {
+            GeistSection(
+                title: "Bluetooth Audio Devices",
+                footer: "Displays a HUD notification when Bluetooth audio devices (headphones, AirPods, speakers) connect, showing device name and battery level."
+            ) {
+                GeistToggleRow(title: "Show Bluetooth device connections", isOn: geistBinding(.showBluetoothDeviceConnections))
+                GeistToggleRow(title: "Use circular battery indicator", isOn: geistBinding(.useCircularBluetoothBatteryIndicator))
+                GeistToggleRow(title: "Show battery percentage text in HUD", isOn: geistBinding(.showBluetoothBatteryPercentageText))
+                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee))
+                GeistRow(divider: false) {
+                    VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
+                        Text("HUD icon style")
+                            .font(Geist.Typography.bodyStrong)
+                            .foregroundStyle(Geist.Colors.ink)
+                        HStack(spacing: Geist.Spacing.md) {
+                            Spacer(minLength: 0)
+                            BluetoothHUDIconStyleCard(style: .symbol, isSelected: !useBluetoothHUD3DIcon) {
+                                useBluetoothHUD3DIcon = false
+                            }
+                            BluetoothHUDIconStyleCard(style: .threeD, isSelected: useBluetoothHUD3DIcon) {
+                                useBluetoothHUD3DIcon = true
+                            }
+                            Spacer(minLength: 0)
                         }
-                        BluetoothHUDIconStyleCard(
-                            style: .threeD,
-                            isSelected: useBluetoothHUD3DIcon
-                        ) {
-                            useBluetoothHUD3DIcon = true
-                        }
-                        Spacer(minLength: 0)
                     }
                 }
-                .settingsHighlight(id: highlightID("Use 3D Bluetooth HUD icon"))
-            } header: {
-                Text("Bluetooth Audio Devices")
-            } footer: {
-                Text("Displays a HUD notification when Bluetooth audio devices (headphones, AirPods, speakers) connect, showing device name and battery level.")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
             }
 
-            Section {
-                Defaults.Toggle(key: .useColorCodedBatteryDisplay) {
-                    Text("Color-coded battery display")
-                }
-                .disabled(colorCodingDisabled)
-                .settingsHighlight(id: highlightID("Color-coded battery display"))
-            } header: {
-                Text("Battery Indicator Styling")
-            } footer: {
-                if progressBarStyle == .segmented {
-                    Text("Color-coded fills are unavailable in Segmented mode. Switch to Hierarchical or Gradient inside Controls › Dynamic Island to adjust advanced options.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                } else if Defaults[.useSmoothColorGradient] {
-                    Text("Smooth transitions blend Green (0–60%), Yellow (60–85%), and Red (85–100%) through the entire fill. Adjust gradient behavior from Controls › Dynamic Island.")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                } else {
-                    Text("Discrete transitions snap between Green (0–60%), Yellow (60–85%), and Red (85–100%).")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
+            GeistSection(title: "Battery Indicator Styling", footer: batteryFooter) {
+                GeistToggleRow(title: "Color-coded battery display", isOn: geistBinding(.useColorCodedBatteryDisplay), divider: false)
+                    .disabled(colorCodingDisabled)
             }
         }
-        .navigationTitle("Devices")
     }
 }
 
