@@ -60,7 +60,7 @@ struct AgentLiveActivity: View {
             // Centre — black notch fill
             Rectangle()
                 .fill(.black)
-                .frame(width: vm.closedNotchSize.width + (isHovering ? 8 : 0))
+                .frame(width: vm.physicalNotchWidth)
 
             // Trailing — status indicator
             Color.clear

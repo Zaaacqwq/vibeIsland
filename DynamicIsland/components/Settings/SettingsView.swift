@@ -64,6 +64,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case agents
     case notifications
     case weather
+    case debug
     case about
 
     var id: String { rawValue }
@@ -77,7 +78,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .timer, .calendar:                                      return .productivity
         case .screenAssistant, .shelf,
              .downloads, .shortcuts:                                         return .utilities
-        case .terminal, .agents:                                     return .developer
+        case .terminal, .agents, .debug:                             return .developer
         case .extensions:                                                    return .integrations
         case .about:                                                         return .info
         }
@@ -103,6 +104,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return String(localized: "Agents")
         case .notifications: return String(localized: "Notifications")
         case .weather: return String(localized: "Weather")
+        case .debug: return String(localized: "Debug")
         case .about: return String(localized: "About")
         }
     }
@@ -127,6 +129,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return "sparkles"
         case .notifications: return "bell.fill"
         case .weather: return "cloud.sun.fill"
+        case .debug: return "ladybug"
         case .about: return "info.circle"
         }
     }
@@ -151,6 +154,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .notifications: return .red
         case .weather: return .cyan
+        case .debug: return .gray
         case .about: return .secondary
         }
     }
@@ -497,6 +501,7 @@ struct SettingsView: View {
             // Developer
             .terminal,
             .agents,
+            .debug,
             // Integrations
             .extensions,
             // Info
@@ -944,6 +949,10 @@ struct SettingsView: View {
         case .weather:
             SettingsForm(tab: .weather) {
                 WeatherSettings()
+            }
+        case .debug:
+            SettingsForm(tab: .debug) {
+                DebugSettings()
             }
         case .about:
             if let controller = updaterController {
@@ -3867,8 +3876,6 @@ struct Appearance: View {
     @Default(.openNotchWidth) var openNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
-    @Default(.debugNotchBackgroundEnabled) private var debugNotchBackgroundEnabled
-    @Default(.debugNotchBackgroundColor) private var debugNotchBackgroundColor
     @State private var selectedListVisualizer: CustomVisualizer? = nil
 
     @State private var isIconImporterPresented = false
@@ -3901,18 +3908,6 @@ struct Appearance: View {
 
     var body: some View {
         Form {
-            Section {
-                Defaults.Toggle(key: .debugNotchBackgroundEnabled) {
-                    Text("Tint notch background (debug)")
-                }
-                if debugNotchBackgroundEnabled {
-                    ColorPicker("Background color", selection: $debugNotchBackgroundColor, supportsOpacity: true)
-                }
-            } header: {
-                Text("Debug")
-            } footer: {
-                Text("Replaces the notch's black background with a colour so you can see each region's boundaries. The centre notch fill stays black for contrast.")
-            }
 
             Section {
                 Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)

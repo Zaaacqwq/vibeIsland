@@ -338,7 +338,7 @@ struct TimerLiveActivity: View {
     private func middleSectionView() -> some View {
         Rectangle()
             .fill(.black)
-            .frame(width: middleSectionWidth, height: notchContentHeight)
+            .frame(width: vm.physicalNotchWidth, height: notchContentHeight)
     }
 
     @ViewBuilder

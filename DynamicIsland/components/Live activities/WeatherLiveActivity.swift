@@ -57,7 +57,7 @@ struct WeatherLiveActivity: View {
 
             Rectangle()
                 .fill(.black)
-                .frame(width: vm.closedNotchSize.width + (isHovering ? 8 : 0))
+                .frame(width: vm.physicalNotchWidth)
 
             Color.clear
                 .background {

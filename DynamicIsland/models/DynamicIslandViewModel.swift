@@ -98,6 +98,23 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var notchSize: CGSize = getClosedNotchSize()
     @Published var closedNotchSize: CGSize = getClosedNotchSize()
 
+    /// The exact width of the physical notch cutout (no coverage margin), used
+    /// to size the black notch cover so it never overhangs the real notch.
+    /// `closedNotchSize.width` carries an extra +4 coverage margin; on displays
+    /// without a notch this falls back to that simulated width.
+    var physicalNotchWidth: CGFloat {
+        let screenName = screen ?? DynamicIslandViewCoordinator.shared.selectedScreen
+        guard
+            let nsScreen = NSScreen.screens.first(where: { $0.localizedName == screenName }) ?? NSScreen.main,
+            nsScreen.safeAreaInsets.top > 0,
+            let left = nsScreen.auxiliaryTopLeftArea?.width,
+            let right = nsScreen.auxiliaryTopRightArea?.width
+        else {
+            return closedNotchSize.width
+        }
+        return nsScreen.frame.width - left - right
+    }
+
     /// True while the cursor is near the closed notch. The lyrics dropdown
     /// retracts while this is true so it doesn't obscure / block what's behind
     /// it, and re-expands when the cursor leaves. Driven by an AppKit tracking area.
