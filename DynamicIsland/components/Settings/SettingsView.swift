@@ -5237,10 +5237,6 @@ struct TerminalSettings: View {
     @Default(.terminalForegroundColor) var terminalForegroundColor
     @Default(.terminalCursorColor) var terminalCursorColor
 
-    private func highlightID(_ title: String) -> String {
-        SettingsTab.terminal.highlightID(for: title)
-    }
-
     private var formattedMaxHeight: String {
         "\(Int(terminalMaxHeightFraction * 100))% of screen"
     }
@@ -5268,231 +5264,124 @@ struct TerminalSettings: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                Defaults.Toggle(key: .enableTerminalFeature) {
-                    Text("Enable terminal")
-                }
-                .settingsHighlight(id: highlightID("Enable terminal"))
-
+        GeistSettingsPage(title: "Terminal") {
+            GeistSection(
+                title: "General",
+                footer: "Adds a Guake-style dropdown terminal tab. The terminal session persists across notch open/close cycles."
+            ) {
+                GeistToggleRow(title: "Enable terminal", isOn: $enableTerminalFeature, divider: enableTerminalFeature)
                 if enableTerminalFeature {
-                    Defaults.Toggle(key: .terminalStickyMode) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Keep terminal open until clicked outside")
-                            Text("Prevents the terminal from closing when the cursor accidentally leaves the notch area.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .settingsHighlight(id: highlightID("Keep terminal open"))
+                    GeistToggleRow(
+                        title: "Keep terminal open until clicked outside",
+                        description: "Prevents the terminal from closing when the cursor accidentally leaves the notch area.",
+                        isOn: geistBinding(.terminalStickyMode),
+                        divider: false
+                    )
                 }
-            } header: {
-                Text("General")
-            } footer: {
-                Text("Adds a Guake-style dropdown terminal tab. The terminal session persists across notch open/close cycles.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             if enableTerminalFeature {
-                // MARK: Shell
-                Section {
-                    HStack {
-                        Text("Shell path")
-                        Spacer()
+                GeistSection(title: "Shell") {
+                    GeistLabeledRow(title: "Shell path", divider: false) {
                         TextField("", text: $terminalShellPath)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 200)
                             .multilineTextAlignment(.trailing)
                     }
-                    .settingsHighlight(id: highlightID("Shell path"))
-                } header: {
-                    Text("Shell")
                 }
 
-                // MARK: Appearance
-                Section {
-                    Picker("Font family", selection: $terminalFontFamily) {
+                GeistSection(
+                    title: "Appearance",
+                    footer: "Terminal opacity only affects the terminal backdrop; text stays fully opaque. Blur uses the system material behind the window."
+                ) {
+                    GeistPickerRow(title: "Font family", selection: $terminalFontFamily) {
                         Text("System Monospaced").tag("")
                         Divider()
                         ForEach(monospacedFontFamilies, id: \.self) { family in
-                            Text(family)
-                                .font(.custom(family, size: 13))
-                                .tag(family)
+                            Text(family).font(.custom(family, size: 13)).tag(family)
                         }
                     }
                     .onChange(of: terminalFontFamily) { _, newValue in
                         terminalManager.applyFontFamily(newValue)
                     }
-                    .settingsHighlight(id: highlightID("Font family"))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Font size")
-                            Spacer()
-                            Text("\(Int(terminalFontSize)) pt")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        Slider(value: $terminalFontSize, in: 8...24, step: 1)
-                            .onChange(of: terminalFontSize) { _, newValue in
-                                terminalManager.applyFontSize(newValue)
-                            }
-                    }
-                    .settingsHighlight(id: highlightID("Font size"))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Terminal opacity")
-                            Spacer()
-                            Text("\(Int(terminalOpacity * 100))%")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        Slider(value: $terminalOpacity, in: 0.3...1.0, step: 0.05)
-                            .onChange(of: terminalOpacity) { _, newValue in
-                                terminalManager.applyOpacity(newValue)
-                            }
-                    }
-                    .settingsHighlight(id: highlightID("Terminal opacity"))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Maximum height")
-                            Spacer()
-                            Text(formattedMaxHeight)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        Slider(value: $terminalMaxHeightFraction, in: 0.2...0.5, step: 0.05)
-                    }
-                    .settingsHighlight(id: highlightID("Maximum height"))
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    Text("Terminal opacity only affects the terminal backdrop; text stays fully opaque. Blur uses the system material behind the window.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    GeistSliderRow(title: "Font size", valueLabel: "\(Int(terminalFontSize)) pt", value: $terminalFontSize, range: 8...24, step: 1, onChange: {
+                        terminalManager.applyFontSize(terminalFontSize)
+                    })
+                    GeistSliderRow(title: "Terminal opacity", valueLabel: "\(Int(terminalOpacity * 100))%", value: $terminalOpacity, range: 0.3...1.0, step: 0.05, onChange: {
+                        terminalManager.applyOpacity(terminalOpacity)
+                    })
+                    GeistSliderRow(title: "Maximum height", valueLabel: formattedMaxHeight, value: $terminalMaxHeightFraction, range: 0.2...0.5, step: 0.05, divider: false)
                 }
 
-                // MARK: Colors
-                Section {
-                    ColorPicker("Background", selection: $terminalBackgroundColor, supportsOpacity: false)
-                        .onChange(of: terminalBackgroundColor) { _, newValue in
-                            terminalManager.applyBackgroundColor(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Background color"))
-
-                    ColorPicker("Foreground", selection: $terminalForegroundColor, supportsOpacity: false)
-                        .onChange(of: terminalForegroundColor) { _, newValue in
-                            terminalManager.applyForegroundColor(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Foreground color"))
-
-                    ColorPicker("Cursor", selection: $terminalCursorColor, supportsOpacity: false)
-                        .onChange(of: terminalCursorColor) { _, newValue in
-                            terminalManager.applyCursorColor(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Cursor color"))
-
-                    Toggle("Bold text as bright colors", isOn: $terminalBoldAsBright)
-                        .onChange(of: terminalBoldAsBright) { _, newValue in
-                            terminalManager.applyBoldAsBright(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Bold as bright"))
-                } header: {
-                    Text("Colors")
-                } footer: {
-                    Text("When bold-as-bright is off, bold text uses a heavier font weight instead of bright ANSI colors.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                GeistSection(
+                    title: "Colors",
+                    footer: "When bold-as-bright is off, bold text uses a heavier font weight instead of bright ANSI colors."
+                ) {
+                    GeistLabeledRow(title: "Background") {
+                        ColorPicker("", selection: $terminalBackgroundColor, supportsOpacity: false)
+                            .labelsHidden()
+                            .onChange(of: terminalBackgroundColor) { _, newValue in terminalManager.applyBackgroundColor(newValue) }
+                    }
+                    GeistLabeledRow(title: "Foreground") {
+                        ColorPicker("", selection: $terminalForegroundColor, supportsOpacity: false)
+                            .labelsHidden()
+                            .onChange(of: terminalForegroundColor) { _, newValue in terminalManager.applyForegroundColor(newValue) }
+                    }
+                    GeistLabeledRow(title: "Cursor") {
+                        ColorPicker("", selection: $terminalCursorColor, supportsOpacity: false)
+                            .labelsHidden()
+                            .onChange(of: terminalCursorColor) { _, newValue in terminalManager.applyCursorColor(newValue) }
+                    }
+                    GeistToggleRow(title: "Bold text as bright colors", isOn: $terminalBoldAsBright, divider: false)
+                        .onChange(of: terminalBoldAsBright) { _, newValue in terminalManager.applyBoldAsBright(newValue) }
                 }
 
-                // MARK: Cursor
-                Section {
-                    Picker("Cursor style", selection: cursorStyleBinding) {
-                        ForEach(TerminalCursorStyleOption.allCases, id: \.self) { style in
-                            Text(style.displayName).tag(style)
-                        }
+                GeistSection(title: "Cursor") {
+                    GeistPickerRow(title: "Cursor style", selection: cursorStyleBinding, divider: false) {
+                        ForEach(TerminalCursorStyleOption.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
                     .onChange(of: terminalCursorStyle) { _, newValue in
                         if let style = TerminalCursorStyleOption(rawValue: newValue) {
                             terminalManager.applyCursorStyle(style)
                         }
                     }
-                    .settingsHighlight(id: highlightID("Cursor style"))
-                } header: {
-                    Text("Cursor")
                 }
 
-                // MARK: Scrollback
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Scrollback lines")
-                            Spacer()
-                            Text("\(terminalScrollbackLines)")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        Slider(
-                            value: Binding(
-                                get: { Double(terminalScrollbackLines) },
-                                set: { terminalScrollbackLines = Int($0) }
-                            ),
-                            in: 100...10000,
-                            step: 100
-                        )
-                        .onChange(of: terminalScrollbackLines) { _, newValue in
-                            terminalManager.applyScrollback(newValue)
-                        }
+                GeistSection(
+                    title: "Scrollback",
+                    footer: "Number of lines kept in the scrollback buffer. Higher values use more memory."
+                ) {
+                    GeistSliderRow(
+                        title: "Scrollback lines",
+                        valueLabel: "\(terminalScrollbackLines)",
+                        value: Binding(get: { Double(terminalScrollbackLines) }, set: { terminalScrollbackLines = Int($0) }),
+                        range: 100...10000, step: 100, divider: false,
+                        onChange: { terminalManager.applyScrollback(terminalScrollbackLines) }
+                    )
+                }
+
+                GeistSection(
+                    title: "Input",
+                    footer: "Option as Meta sends Esc+key instead of macOS special characters. Mouse reporting forwards mouse events to terminal applications like vim or tmux."
+                ) {
+                    GeistToggleRow(title: "Option as Meta key", isOn: $terminalOptionAsMeta)
+                        .onChange(of: terminalOptionAsMeta) { _, newValue in terminalManager.applyOptionAsMeta(newValue) }
+                    GeistToggleRow(title: "Allow mouse reporting", isOn: $terminalMouseReporting, divider: false)
+                        .onChange(of: terminalMouseReporting) { _, newValue in terminalManager.applyMouseReporting(newValue) }
+                }
+
+                GeistSection(
+                    title: "Actions",
+                    footer: "Restarts the shell process. Any unsaved work in the terminal will be lost."
+                ) {
+                    GeistRow(divider: false) {
+                        Button("Restart Shell") { terminalManager.restartShell() }
+                            .buttonStyle(.geist)
+                            .disabled(!terminalManager.isProcessRunning)
                     }
-                    .settingsHighlight(id: highlightID("Scrollback lines"))
-                } header: {
-                    Text("Scrollback")
-                } footer: {
-                    Text("Number of lines kept in the scrollback buffer. Higher values use more memory.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                // MARK: Input
-                Section {
-                    Toggle("Option as Meta key", isOn: $terminalOptionAsMeta)
-                        .onChange(of: terminalOptionAsMeta) { _, newValue in
-                            terminalManager.applyOptionAsMeta(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Option as Meta"))
-
-                    Toggle("Allow mouse reporting", isOn: $terminalMouseReporting)
-                        .onChange(of: terminalMouseReporting) { _, newValue in
-                            terminalManager.applyMouseReporting(newValue)
-                        }
-                        .settingsHighlight(id: highlightID("Mouse reporting"))
-                } header: {
-                    Text("Input")
-                } footer: {
-                    Text("Option as Meta sends Esc+key instead of macOS special characters. Mouse reporting forwards mouse events to terminal applications like vim or tmux.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                // MARK: Actions
-                Section {
-                    Button("Restart Shell") {
-                        terminalManager.restartShell()
-                    }
-                    .disabled(!terminalManager.isProcessRunning)
-                } header: {
-                    Text("Actions")
-                } footer: {
-                    Text("Restarts the shell process. Any unsaved work in the terminal will be lost.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .navigationTitle("Terminal")
     }
 }
 
