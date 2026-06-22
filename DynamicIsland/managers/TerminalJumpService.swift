@@ -430,18 +430,27 @@ struct TerminalJumpService {
     }
 
     private func jumpToITermSession(_ target: JumpTarget) throws -> Bool {
+        let wantSession = escapeAppleScript(target.terminalSessionID)
+        let wantTTY = escapeAppleScript(target.terminalTTY)
         let script = """
         tell application "iTerm"
             if not (it is running) then return ""
             activate
+            set sessionDump to ""
             repeat with aWindow in windows
                 repeat with aTab in tabs of aWindow
                     repeat with aSession in sessions of aTab
+                        set sid to (id of aSession as text)
+                        set stty to (tty of aSession as text)
+                        set sessionDump to sessionDump & sid & "=" & stty & ";"
                         set matched to false
-                        if "\(escapeAppleScript(target.terminalSessionID))" is not "" and (id of aSession as text) is "\(escapeAppleScript(target.terminalSessionID))" then
+                        if "\(wantSession)" is not "" and sid is "\(wantSession)" then
                             set matched to true
                         end if
-                        if not matched and "\(escapeAppleScript(target.terminalTTY))" is not "" and (tty of aSession as text) is "\(escapeAppleScript(target.terminalTTY))" then
+                        if not matched and "\(wantTTY)" is not "" and stty is "\(wantTTY)" then
+                            set matched to true
+                        end if
+                        if not matched and "\(wantSession)" is not "" and sid contains "\(wantSession)" then
                             set matched to true
                         end if
                         if matched then
@@ -453,11 +462,16 @@ struct TerminalJumpService {
                     end repeat
                 end repeat
             end repeat
+            return "nomatch:" & sessionDump
         end tell
-        return ""
         """
 
-        return try runAppleScript(script) == "matched"
+        let result = try runAppleScript(script)
+        if result != "matched" {
+            NSLog("[VibeIsland jump] iTerm no match — want sessionID=%@ tty=%@ | live: %@",
+                  target.terminalSessionID ?? "nil", target.terminalTTY ?? "nil", result)
+        }
+        return result == "matched"
     }
 
     // MARK: - VS Code family (VS Code, Insiders, Cursor, Windsurf, Trae, Qoder)
