@@ -2651,19 +2651,33 @@ struct About: View {
             }
 
             GeistSection {
-                GeistRow(divider: false) {
-                    HStack(spacing: Geist.Spacing.sm) {
-                        Spacer(minLength: 0)
-                        Button {
-                            NSWorkspace.shared.open(productPage)
-                        } label: {
-                            Label("GitHub", image: "Github")
+                Button {
+                    NSWorkspace.shared.open(productPage)
+                } label: {
+                    GeistRow(divider: false) {
+                        HStack(spacing: Geist.Spacing.sm) {
+                            Image("Github")
+                                .resizable()
+                                .renderingMode(.template)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                                .foregroundStyle(Geist.Colors.ink)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("GitHub")
+                                    .font(Geist.Typography.bodyStrong)
+                                    .foregroundStyle(Geist.Colors.ink)
+                                Text("Zaaacqwq/vibeIsland")
+                                    .font(Geist.Typography.caption)
+                                    .foregroundStyle(Geist.Colors.mute)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.right")
+                                .font(Geist.Typography.caption)
+                                .foregroundStyle(Geist.Colors.mute)
                         }
-                        .buttonStyle(.geist)
-                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.plain)
             }
 
             Text("Made with ❤️ by Zaaacqwq")

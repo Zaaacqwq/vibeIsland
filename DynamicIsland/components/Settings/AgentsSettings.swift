@@ -28,7 +28,7 @@ struct AgentsSettings: View {
     @Default(.enableAgentMonitoring) var enableAgentMonitoring
 
     var body: some View {
-        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code) in the notch.") {
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Gemini CLI) in the notch.") {
             GeistSection(
                 footer: "Adds an Agents tab and a closed-notch live activity showing running Claude Code sessions, permission prompts, and one-click jump-back to the terminal."
             ) {
@@ -57,7 +57,7 @@ struct AgentsSettings: View {
                             .foregroundStyle(agentMonitor.isBridgeReady ? Geist.Colors.success : Geist.Colors.mute)
                             .labelStyle(.titleAndIcon)
                     }
-                    GeistLabeledRow(title: "Claude Code hooks") { hookStatusLabel }
+                    GeistLabeledRow(title: "Claude Code hooks") { hookStatusLabel(agentMonitor.hookStatus) }
                     GeistRow(divider: false) {
                         HStack(spacing: Geist.Spacing.xs) {
                             switch agentMonitor.hookStatus {
@@ -70,6 +70,22 @@ struct AgentsSettings: View {
                         }
                     }
                 }
+
+                hookSection(
+                    title: "Codex",
+                    footer: "Installing writes VibeIsland-namespaced hooks into ~/.codex (config.toml + hooks.json). Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.codexHookStatus,
+                    install: { agentMonitor.installCodexHooks() },
+                    uninstall: { agentMonitor.uninstallCodexHooks() }
+                )
+
+                hookSection(
+                    title: "Gemini CLI",
+                    footer: "Installing writes VibeIsland-namespaced hooks into ~/.gemini/settings.json. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.geminiHookStatus,
+                    install: { agentMonitor.installGeminiHooks() },
+                    uninstall: { agentMonitor.uninstallGeminiHooks() }
+                )
 
                 GeistSection(
                     title: "Usage",
@@ -117,6 +133,8 @@ struct AgentsSettings: View {
         }
         .onAppear {
             agentMonitor.refreshHookStatus()
+            agentMonitor.refreshCodexHookStatus()
+            agentMonitor.refreshGeminiHookStatus()
             agentMonitor.refreshStatusLineStatus()
         }
     }
@@ -143,8 +161,8 @@ struct AgentsSettings: View {
     }
 
     @ViewBuilder
-    private var hookStatusLabel: some View {
-        switch agentMonitor.hookStatus {
+    private func hookStatusLabel(_ status: AgentMonitorManager.HookStatus) -> some View {
+        switch status {
         case .installed:
             Label("Installed", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
@@ -157,6 +175,31 @@ struct AgentsSettings: View {
             Label("Unknown", systemImage: "questionmark.circle")
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
+        }
+    }
+
+    /// A reusable per-agent hook section: status row + Install/Reinstall/Remove.
+    @ViewBuilder
+    private func hookSection(
+        title: String,
+        footer: String,
+        status: AgentMonitorManager.HookStatus,
+        install: @escaping () -> Void,
+        uninstall: @escaping () -> Void
+    ) -> some View {
+        GeistSection(title: title, footer: footer) {
+            GeistLabeledRow(title: "\(title) hooks") { hookStatusLabel(status) }
+            GeistRow(divider: false) {
+                HStack(spacing: Geist.Spacing.xs) {
+                    switch status {
+                    case .installed:
+                        Button("Reinstall", action: install).buttonStyle(.geist)
+                        Button("Remove", action: uninstall).buttonStyle(.geist)
+                    case .notInstalled, .unknown:
+                        Button("Install hooks", action: install).buttonStyle(.geistProminent)
+                    }
+                }
+            }
         }
     }
 }
