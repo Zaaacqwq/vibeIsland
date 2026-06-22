@@ -359,7 +359,7 @@ struct StandaloneCalendarView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
         }
-        .frame(height: maxTabContentHeight)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipped()
         .onAppear {
             selectedDate = Date.now

@@ -34,7 +34,7 @@ struct NotchWeatherView: View {
                 loading
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .onAppear { Task { await weather.refresh(force: false) } }
