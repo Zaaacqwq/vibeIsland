@@ -75,6 +75,10 @@ struct WeatherSettings: View {
                         if weather.locationDenied {
                             Label("Denied", systemImage: "xmark.circle")
                                 .font(Geist.Typography.body).foregroundStyle(Geist.Colors.warning).labelStyle(.titleAndIcon)
+                        } else if let name = weather.snapshot?.locationName, !name.isEmpty {
+                            Label(name, systemImage: "location.fill")
+                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.body).labelStyle(.titleAndIcon)
+                                .lineLimit(1).truncationMode(.tail)
                         } else {
                             Label("OK", systemImage: "checkmark.circle.fill")
                                 .font(Geist.Typography.body).foregroundStyle(Geist.Colors.success).labelStyle(.titleAndIcon)
