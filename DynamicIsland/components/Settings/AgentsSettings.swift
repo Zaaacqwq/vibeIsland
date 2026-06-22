@@ -39,6 +39,7 @@ struct AgentsSettings: View {
                     divider: enableAgentMonitoring
                 )
                 if enableAgentMonitoring {
+                    GeistToggleRow(title: "Play a sound when Claude needs input", isOn: geistBinding(.agentInputSoundEnabled))
                     GeistToggleRow(title: "Play a sound when Claude finishes", isOn: geistBinding(.agentCompletionSoundEnabled))
                     GeistToggleRow(title: "Expand the notch to Agents when Claude finishes", isOn: geistBinding(.agentExpandOnComplete), divider: false)
                 }

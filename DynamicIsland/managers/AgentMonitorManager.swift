@@ -222,9 +222,13 @@ final class AgentMonitorManager: ObservableObject {
                 haloActivity[activity.sessionID] = .executing
             }
         case let .permissionRequested(request):
+            let wasInputNeeded = haloActivity[request.sessionID] == .inputNeeded
             haloActivity[request.sessionID] = .inputNeeded
+            if !wasInputNeeded { playInputNeededSoundIfEnabled() }
         case let .questionAsked(question):
+            let wasInputNeeded = haloActivity[question.sessionID] == .inputNeeded
             haloActivity[question.sessionID] = .inputNeeded
+            if !wasInputNeeded { playInputNeededSoundIfEnabled() }
         case let .sessionCompleted(completed):
             let wasCompleted = haloActivity[completed.sessionID] == .completed
             haloActivity[completed.sessionID] = .completed
@@ -264,6 +268,29 @@ final class AgentMonitorManager: ObservableObject {
         }
         completionSoundPlayer?.currentTime = 0
         completionSoundPlayer?.play()
+    }
+
+    // MARK: - Input-needed sound
+
+    private var inputSoundPlayer: AVAudioPlayer?
+    private var lastInputSoundAt: Date = .distantPast
+
+    /// Plays a notification when Claude needs the user to respond (permission or
+    /// question — the red "input needed" halo). Throttled so a burst of events
+    /// for the same prompt doesn't stack plays.
+    private func playInputNeededSoundIfEnabled() {
+        guard Defaults[.agentInputSoundEnabled] else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastInputSoundAt) > 0.5 else { return }
+        lastInputSoundAt = now
+
+        if inputSoundPlayer == nil {
+            guard let url = Bundle.main.url(forResource: "agent-input-needed", withExtension: "mp3") else { return }
+            inputSoundPlayer = try? AVAudioPlayer(contentsOf: url)
+            inputSoundPlayer?.prepareToPlay()
+        }
+        inputSoundPlayer?.currentTime = 0
+        inputSoundPlayer?.play()
     }
 
     /// The halo state for a session: phase is authoritative for attention and
