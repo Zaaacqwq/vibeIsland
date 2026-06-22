@@ -468,10 +468,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Use a consistent height for different view types
         if coordinator.currentView == .timer {
             baseSize.height = 250 // Extra space for timer presets
-        } else if coordinator.currentView == .terminal {
-            let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
-            let maxFraction = Defaults[.terminalMaxHeightFraction]
-            baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
         }
         
         return addShadowPadding(
@@ -725,15 +721,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }.store(in: &cancellables)
         Defaults.publisher(.openNotchWidth, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-
-        // Observe terminal settings changes
-        Defaults.publisher(.enableTerminalFeature, options: []).sink { [weak self] _ in
-            self?.debouncedUpdateWindowSize()
-        }.store(in: &cancellables)
-
-        Defaults.publisher(.terminalMaxHeightFraction, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
         }.store(in: &cancellables)
 
@@ -1078,34 +1065,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TimerManager.shared.startDemoTimer(duration: 300)
         }
 
-        KeyboardShortcuts.onKeyDown(for: .toggleTerminalTab) { [weak self] in
-            guard let self else { return }
-            guard Defaults[.enableShortcuts], Defaults[.enableTerminalFeature] else { return }
-
-            if vm.notchState == .closed {
-                closeNotchWorkItem?.cancel()
-                closeNotchWorkItem = nil
-                vm.open()
-                coordinator.currentView = .terminal
-                TerminalManager.shared.refreshTerminalAppearanceIfNeeded()
-                TerminalManager.shared.focusTerminalIfPossible()
-                TerminalManager.shared.refreshTerminalAppearanceIfNeeded()
-            } else {
-                if coordinator.currentView == .terminal {
-                    coordinator.suppressHoverOpen()
-                    TerminalManager.shared.resignTerminalFirstResponderIfNeeded()
-                    vm.close()
-                } else {
-                    closeNotchWorkItem?.cancel()
-                    closeNotchWorkItem = nil
-                    coordinator.currentView = .terminal
-                    TerminalManager.shared.refreshTerminalAppearanceIfNeeded()
-                    TerminalManager.shared.focusTerminalIfPossible()
-                    TerminalManager.shared.refreshTerminalAppearanceIfNeeded()
-                }
-            }
-        }
-
         KeyboardShortcuts.onKeyDown(for: .screenAssistantPanel) { [weak self] in
             guard let self else { return }
             guard Defaults[.enableShortcuts], Defaults[.enableScreenAssistant] else { return }
@@ -1130,7 +1089,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateFeatureShortcutAvailability() {
         updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
         updateShortcut(.screenAssistantPanel, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableScreenAssistant])
-        updateShortcut(.toggleTerminalTab, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTerminalFeature])
     }
 
     @MainActor

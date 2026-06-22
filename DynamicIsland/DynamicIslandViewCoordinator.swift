@@ -105,7 +105,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .terminal, .agents, .calendar, .notifications, .weather, .extensionExperience]
+    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .agents, .calendar, .notifications, .weather, .extensionExperience]
 
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
@@ -257,7 +257,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showMirror).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableTerminalFeature).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableWeather).map { _ in () }.eraseToAnyPublisher(),
