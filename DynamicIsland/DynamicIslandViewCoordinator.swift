@@ -133,7 +133,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
         }
         if Defaults[.dynamicShelf] { tabs.append(.shelf) }
         if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab { tabs.append(.timer) }
-        if Defaults[.enableTerminalFeature] { tabs.append(.terminal) }
         if Defaults[.enableAgentMonitoring] { tabs.append(.agents) }
         if Defaults[.showCalendar] { tabs.append(.calendar) }
         if Defaults[.enableNotificationMonitoring] { tabs.append(.notifications) }
