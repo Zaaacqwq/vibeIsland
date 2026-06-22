@@ -28,10 +28,17 @@ let downloadSneakSize: CGSize = .init(width: 65, height: 1)
 let batterySneakSize: CGSize = .init(width: 160, height: 1)
 
 var openNotchSize: CGSize {
-    let storedWidth = Defaults[.openNotchWidth]
-    let minWidth = currentRecommendedMinimumNotchWidth()
     let maxWidth = maxAllowedNotchWidth()
-    let width = min(max(storedWidth, minWidth), maxWidth)
+    let width: CGFloat
+    if Defaults[.autoNotchWidth] {
+        // Auto: size purely from the number of enabled tabs.
+        width = min(autoNotchWidth(forTabCount: enabledStandardTabCount()), maxWidth)
+    } else {
+        // Manual: use the stored width, floored at the tab-count minimum.
+        let storedWidth = Defaults[.openNotchWidth]
+        let minWidth = currentRecommendedMinimumNotchWidth()
+        width = min(max(storedWidth, minWidth), maxWidth)
+    }
     return .init(width: width, height: 200)
 }
 
@@ -111,18 +118,41 @@ func currentRecommendedMinimumNotchWidth() -> CGFloat {
     recommendedMinimumNotchWidth(forTabCount: enabledStandardTabCount())
 }
 
-/// Enforces the minimum notch width based on current tab count.
-/// Also clamps to screen width so the notch never exceeds the display.
-/// Only adjusts when not in minimalistic mode.
+/// The automatic expanded-notch width for a given tab count. Unlike the
+/// "minimum" above (a one-way floor), this scales both up and down so the notch
+/// grows when tabs are added and shrinks when they're removed. Floored at a
+/// width that still fits the home tab's media + side-panel content.
+func autoNotchWidth(forTabCount count: Int) -> CGFloat {
+    switch count {
+    case ...1: return 560
+    case 2: return 580
+    case 3: return 610
+    case 4: return 640
+    case 5: return 720
+    case 6: return 800
+    default: return 880
+    }
+}
+
+/// Keeps the stored notch width in sync with the current tab count and clamps it
+/// to the screen width. In auto mode it tracks the tab-based width (up *and*
+/// down); in manual mode it only enforces the per-tab minimum. Writing the value
+/// also drives the window-resize publisher. Skipped in minimalistic mode.
 func enforceMinimumNotchWidth() {
     guard !Defaults[.enableMinimalisticUI] else { return }
-    let minWidth = currentRecommendedMinimumNotchWidth()
     let maxWidth = maxAllowedNotchWidth()
-    var width = Defaults[.openNotchWidth]
-    if width < minWidth { width = minWidth }
-    if width > maxWidth { width = maxWidth }
-    if Defaults[.openNotchWidth] != width {
-        Defaults[.openNotchWidth] = width
+    let target: CGFloat
+    if Defaults[.autoNotchWidth] {
+        target = min(autoNotchWidth(forTabCount: enabledStandardTabCount()), maxWidth)
+    } else {
+        let minWidth = currentRecommendedMinimumNotchWidth()
+        var width = Defaults[.openNotchWidth]
+        if width < minWidth { width = minWidth }
+        if width > maxWidth { width = maxWidth }
+        target = width
+    }
+    if Defaults[.openNotchWidth] != target {
+        Defaults[.openNotchWidth] = target
     }
 }
 private let minimalisticBaseOpenNotchSize: CGSize = .init(width: 420, height: 180)

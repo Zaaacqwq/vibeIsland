@@ -3198,6 +3198,7 @@ struct Appearance: View {
     @Default(.customAppIcons) private var customAppIcons
     @Default(.selectedAppIconID) private var selectedAppIconID
     @Default(.openNotchWidth) var openNotchWidth
+    @Default(.autoNotchWidth) var autoNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
     @State private var selectedListVisualizer: CustomVisualizer? = nil
@@ -3641,21 +3642,34 @@ struct Appearance: View {
         )
         let description = enableMinimalisticUI
         ? String(localized: "Width adjustments apply only to the standard notch layout. Disable Minimalistic UI to edit this value.")
-        : String(localized: "Recommended minimum width adjusts automatically based on the number of enabled tabs.")
+        : (autoNotchWidth
+            ? String(localized: "The expanded notch sizes itself to the number of enabled tabs. Turn this off to set a fixed width.")
+            : String(localized: "Recommended minimum width adjusts automatically based on the number of enabled tabs."))
 
         GeistSection(title: "Notch Width", badge: "Beta") {
-            GeistSliderRow(title: "Expanded notch width", valueLabel: "\(Int(openNotchWidth)) px", value: widthBinding, range: dynamicRange, step: 10)
-                .disabled(enableMinimalisticUI)
-            GeistRow {
-                HStack {
-                    Text("\(tabCount) tab\(tabCount == 1 ? "" : "s") enabled · min \(Int(recommendedMin)) px")
-                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                    Spacer()
-                    Button("Reset Width") { openNotchWidth = recommendedMin }
-                        .buttonStyle(.geist)
-                        .disabled(abs(openNotchWidth - recommendedMin) < 0.5)
+            GeistToggleRow(
+                title: "Auto width",
+                description: "Size the expanded notch from the number of enabled tabs.",
+                isOn: $autoNotchWidth
+            )
+            .disabled(enableMinimalisticUI)
+            .onChange(of: autoNotchWidth) { _, _ in enforceMinimumNotchWidth() }
+
+            if !autoNotchWidth {
+                GeistSliderRow(title: "Expanded notch width", valueLabel: "\(Int(openNotchWidth)) px", value: widthBinding, range: dynamicRange, step: 10)
+                    .disabled(enableMinimalisticUI)
+                GeistRow {
+                    HStack {
+                        Text("\(tabCount) tab\(tabCount == 1 ? "" : "s") enabled · min \(Int(recommendedMin)) px")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                        Spacer()
+                        Button("Reset Width") { openNotchWidth = recommendedMin }
+                            .buttonStyle(.geist)
+                            .disabled(abs(openNotchWidth - recommendedMin) < 0.5)
+                    }
                 }
             }
+
             GeistRow(divider: false) {
                 Text(description)
                     .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)

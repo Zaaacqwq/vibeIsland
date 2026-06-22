@@ -262,6 +262,9 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableWeather).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableTimerFeature).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.timerDisplayMode).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.autoNotchWidth).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher()
         )
         .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
