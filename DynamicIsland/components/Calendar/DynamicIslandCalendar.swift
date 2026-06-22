@@ -278,6 +278,7 @@ struct StandaloneCalendarView: View {
     @State private var datePickerScrollTarget: Date?
     @Default(.hideAllDayEvents) private var hideAllDayEvents
     @Default(.hideCompletedReminders) private var hideCompletedReminders
+    @Default(.calendarTabLayout) private var layout
 
     private let calendar = Calendar.current
 
@@ -338,21 +339,21 @@ struct StandaloneCalendarView: View {
         return max(130, available)
     }
 
+    private let weekColumns: [GridItem] = Array(repeating: GridItem(.flexible(minimum: 14), spacing: 6), count: 7)
+
     var body: some View {
         GeometryReader { geometry in
-            let paneSpacing: CGFloat = 12
+            let paneSpacing: CGFloat = 14
             let paneWidth = max((geometry.size.width - paneSpacing) / 2, 0)
             let paneHeight = max(0, geometry.size.height)
 
             HStack(alignment: .top, spacing: paneSpacing) {
-                leftPickerPane
-                    .frame(width: paneWidth, alignment: .topLeading)
-                    .frame(height: paneHeight, alignment: .topLeading)
+                leftPickerPane(height: paneHeight)
+                    .frame(width: paneWidth, height: paneHeight, alignment: .topLeading)
                     .layoutPriority(1)
 
                 rightEventsPane
-                    .frame(width: paneWidth, alignment: .topLeading)
-                    .frame(height: paneHeight, alignment: .topLeading)
+                    .frame(width: paneWidth, height: paneHeight, alignment: .topLeading)
                     .layoutPriority(1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -366,15 +367,17 @@ struct StandaloneCalendarView: View {
             requestDatePickerCenterOnCurrentDate()
             Task {
                 await calendarManager.updateCurrentDate(selectedDate)
+                await calendarManager.loadEventDates(forMonth: displayedMonth)
             }
         }
         .onChange(of: selectedDate) { _, newDate in
             withAnimation(.smooth(duration: 0.22)) {
                 displayedMonth = newDate.startOfMonth
             }
-            Task {
-                await calendarManager.updateCurrentDate(newDate)
-            }
+            Task { await calendarManager.updateCurrentDate(newDate) }
+        }
+        .onChange(of: displayedMonth) { _, newMonth in
+            Task { await calendarManager.loadEventDates(forMonth: newMonth) }
         }
         .onChange(of: vm.notchState) { _, newState in
             guard newState == .open else { return }
@@ -383,99 +386,140 @@ struct StandaloneCalendarView: View {
             requestDatePickerCenterOnCurrentDate()
             Task {
                 await calendarManager.updateCurrentDate(selectedDate)
+                await calendarManager.loadEventDates(forMonth: displayedMonth)
             }
         }
     }
 
-    private var leftPickerPane: some View {
-        GeometryReader { geometry in
-            let pickerViewportHeight = max(96, geometry.size.height - 56)
+    // MARK: - Left pane (date picker)
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(monthTitle)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                        Text(yearTitle)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Color(white: 0.65))
-                    }
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Button(action: showPreviousMonth) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 11, weight: .bold))
-                                .frame(width: 24, height: 24)
-                        }
-                        .buttonStyle(.plain)
-
-                        Button(action: showNextMonth) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .bold))
-                                .frame(width: 24, height: 24)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .foregroundStyle(.white)
-                }
-
-                ScrollViewReader { proxy in
-                    VStack(spacing: 6) {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 14), spacing: 6), count: 7), spacing: 6) {
-                            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
-                                Text(symbol.prefix(1))
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color(white: 0.55))
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-
-                        ZStack {
-                            ScrollView(.vertical, showsIndicators: false) {
-                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 14), spacing: 6), count: 7), spacing: 6) {
-                                    ForEach(monthDays, id: \.self) { day in
-                                        dayCell(for: day)
-                                            .id(calendar.startOfDay(for: day))
-                                    }
-                                }
-                                .padding(.bottom, 2)
-                            }
-                            .onChange(of: datePickerScrollTarget) { _, target in
-                                guard let target else { return }
-                                centerDatePicker(on: target, proxy: proxy)
-                            }
-
-                            LinearGradient(colors: [Color.black.opacity(0.65), .clear], startPoint: .top, endPoint: .bottom)
-                                .frame(height: 16)
-                                .allowsHitTesting(false)
-                                .frame(maxHeight: .infinity, alignment: .top)
-
-                            LinearGradient(colors: [.clear, Color.black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
-                                .frame(height: 16)
-                                .allowsHitTesting(false)
-                                .frame(maxHeight: .infinity, alignment: .bottom)
-                        }
-                        .frame(height: max(0, pickerViewportHeight - 22))
-                        .clipped()
-                    }
-                    .frame(height: pickerViewportHeight)
-                }
-                .frame(height: pickerViewportHeight)
-                .clipped()
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
+    private func leftPickerPane(height: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            pickerHeader
+            weekdayHeader
+            pickerBody(height: height)
         }
         .padding(.horizontal, 6)
         .padding(.top, 4)
+        .frame(maxHeight: .infinity, alignment: .top)
         .clipped()
     }
 
+    private var pickerHeader: some View {
+        HStack(alignment: .center) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(monthTitle)
+                    .font(.title3).fontWeight(.semibold)
+                    .foregroundStyle(CalendarStyle.ink)
+                Text(yearTitle)
+                    .font(.subheadline).fontWeight(.medium)
+                    .foregroundStyle(CalendarStyle.muted)
+            }
+            Spacer()
+            HStack(spacing: 2) {
+                if !calendar.isDateInToday(selectedDate) {
+                    headerButton(icon: "smallcircle.filled.circle", action: goToToday)
+                }
+                headerButton(icon: "chevron.left", action: showPrevious)
+                headerButton(icon: "chevron.right", action: showNext)
+            }
+            .foregroundStyle(CalendarStyle.ink)
+        }
+    }
+
+    private func headerButton(icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var weekdayHeader: some View {
+        LazyVGrid(columns: weekColumns, spacing: 6) {
+            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                Text(symbol.prefix(1))
+                    .font(.caption2).fontWeight(.semibold)
+                    .foregroundStyle(CalendarStyle.muted)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pickerBody(height: CGFloat) -> some View {
+        switch layout {
+        case .monthGrid: monthGridView(height: height)
+        case .scrollingMonth: scrollingMonthView
+        case .week: weekStripView
+        }
+    }
+
+    private func monthGridView(height: CGFloat) -> some View {
+        let rows = max(1, Int(ceil(Double(monthDays.count) / 7.0)))
+        let available = max(0, height - 64)
+        let rowHeight = max(20, min(34, available / CGFloat(rows)))
+        return LazyVGrid(columns: weekColumns, spacing: 2) {
+            ForEach(monthDays, id: \.self) { day in
+                dayCell(for: day, rowHeight: rowHeight, dimOtherMonths: true)
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private var scrollingMonthView: some View {
+        ScrollViewReader { proxy in
+            ZStack {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVGrid(columns: weekColumns, spacing: 6) {
+                        ForEach(monthDays, id: \.self) { day in
+                            dayCell(for: day, rowHeight: 34, dimOtherMonths: true)
+                                .id(calendar.startOfDay(for: day))
+                        }
+                    }
+                    .padding(.bottom, 2)
+                }
+                .onChange(of: datePickerScrollTarget) { _, target in
+                    guard let target else { return }
+                    centerDatePicker(on: target, proxy: proxy)
+                }
+                edgeFade(top: true)
+                edgeFade(top: false)
+            }
+        }
+        .clipped()
+    }
+
+    private var weekStripView: some View {
+        LazyVGrid(columns: weekColumns, spacing: 2) {
+            ForEach(currentWeekDays, id: \.self) { day in
+                dayCell(for: day, rowHeight: 44, dimOtherMonths: false)
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func edgeFade(top: Bool) -> some View {
+        LinearGradient(
+            colors: top ? [Color.black.opacity(0.6), .clear] : [.clear, Color.black.opacity(0.6)],
+            startPoint: .top, endPoint: .bottom
+        )
+        .frame(height: 14)
+        .allowsHitTesting(false)
+        .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
+    }
+
+    // MARK: - Right pane (events)
+
     private var rightEventsPane: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(selectedDateTitle)
+                .font(.subheadline).fontWeight(.semibold)
+                .foregroundStyle(CalendarStyle.ink)
+                .padding(.horizontal, 2)
+
             if filteredEvents.isEmpty {
                 EmptyEventsView(selectedDate: selectedDate)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -489,35 +533,50 @@ struct StandaloneCalendarView: View {
                         }
                     }
                 )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.top, 4)
         .clipped()
     }
 
-    private func dayCell(for day: Date) -> some View {
-        let isCurrentMonth = calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
+    private var selectedDateTitle: String {
+        if calendar.isDateInToday(selectedDate) { return String(localized: "Today") }
+        if calendar.isDateInTomorrow(selectedDate) { return String(localized: "Tomorrow") }
+        return selectedDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
+    // MARK: - Day cell
+
+    private func dayCell(for day: Date, rowHeight: CGFloat, dimOtherMonths: Bool) -> some View {
+        let isCurrentMonth = !dimOtherMonths || calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
+        let hasEvent = calendarManager.eventDates.contains(calendar.startOfDay(for: day))
 
         return Button {
-            withAnimation(.smooth(duration: 0.18)) {
-                selectedDate = day
-            }
+            withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
         } label: {
             ZStack {
                 if isSelected {
-                    Circle()
-                        .fill(Color.effectiveAccent)
-                        .frame(width: 28, height: 28)
+                    Circle().fill(CalendarStyle.accent).frame(width: 26, height: 26)
+                } else if isToday {
+                    Circle().stroke(CalendarStyle.accent, lineWidth: 1.5).frame(width: 26, height: 26)
                 }
-
                 Text(day.formatted(.dateTime.day()))
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                    .font(.system(size: 12, weight: isSelected || isToday ? .semibold : .medium))
                     .foregroundStyle(dayTextColor(isCurrentMonth: isCurrentMonth, isSelected: isSelected, isToday: isToday))
             }
-            .frame(maxWidth: .infinity, minHeight: 30)
+            .frame(width: 26, height: 26)
+            .overlay(alignment: .bottom) {
+                Circle()
+                    .fill(isSelected ? Color.white : CalendarStyle.accent)
+                    .frame(width: 4, height: 4)
+                    .offset(y: 6)
+                    .opacity(hasEvent ? 1 : 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: rowHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -525,25 +584,52 @@ struct StandaloneCalendarView: View {
 
     private func dayTextColor(isCurrentMonth: Bool, isSelected: Bool, isToday: Bool) -> Color {
         if isSelected { return .white }
-        if !isCurrentMonth { return Color(white: 0.35) }
-        if isToday { return Color.effectiveAccent }
-        return .white
+        if !isCurrentMonth { return CalendarStyle.faint }
+        if isToday { return CalendarStyle.accent }
+        return CalendarStyle.ink
     }
 
-    private func showPreviousMonth() {
-        guard let newMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) else { return }
+    // MARK: - Navigation
+
+    private var currentWeekDays: [Date] {
+        guard let interval = calendar.dateInterval(of: .weekOfMonth, for: selectedDate) else { return [] }
+        var days: [Date] = []
+        var current = interval.start
+        for _ in 0..<7 {
+            days.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+        return days
+    }
+
+    private func goToToday() {
+        withAnimation(.smooth(duration: 0.22)) {
+            selectedDate = Date.now
+            displayedMonth = selectedDate.startOfMonth
+        }
+        requestDatePickerCenterOnCurrentDate()
+    }
+
+    private func showPrevious() {
+        layout == .week ? shiftWeek(by: -1) : shiftMonth(by: -1)
+    }
+
+    private func showNext() {
+        layout == .week ? shiftWeek(by: 1) : shiftMonth(by: 1)
+    }
+
+    private func shiftMonth(by value: Int) {
+        guard let newMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) else { return }
         withAnimation(.smooth(duration: 0.22)) {
             displayedMonth = newMonth.startOfMonth
             selectedDate = newMonth.startOfMonth
         }
     }
 
-    private func showNextMonth() {
-        guard let newMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) else { return }
-        withAnimation(.smooth(duration: 0.22)) {
-            displayedMonth = newMonth.startOfMonth
-            selectedDate = newMonth.startOfMonth
-        }
+    private func shiftWeek(by value: Int) {
+        guard let newDate = calendar.date(byAdding: .weekOfMonth, value: value, to: selectedDate) else { return }
+        withAnimation(.smooth(duration: 0.22)) { selectedDate = newDate }
     }
 
     private func requestDatePickerCenterOnCurrentDate() {
@@ -567,17 +653,18 @@ struct EmptyEventsView: View {
     let selectedDate: Date
 
     var body: some View {
-        VStack {
+        VStack(spacing: 6) {
             Image(systemName: "calendar.badge.checkmark")
-                .font(.title)
-                .foregroundColor(Color(white: 0.65))
+                .font(.title2)
+                .foregroundStyle(CalendarStyle.muted)
             Text(Calendar.current.isDateInToday(selectedDate) ? "No events today" : "No events")
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundStyle(CalendarStyle.body)
             Text("Enjoy your free time!")
                 .font(.caption)
-                .foregroundColor(Color(white: 0.65))
+                .foregroundStyle(CalendarStyle.muted)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
