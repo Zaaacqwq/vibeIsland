@@ -413,6 +413,24 @@ final class AgentMonitorManager: ObservableObject {
         send(.resolvePermission(sessionID: sessionID, resolution: resolution))
     }
 
+    /// Answer the pending question for a session, relaying the choice back to
+    /// the (blocked) hooks process via the bridge.
+    func answerQuestion(sessionID: String, response: QuestionPromptResponse) {
+        guard let session = state.session(id: sessionID),
+              session.questionPrompt != nil else { return }
+
+        state.answerQuestion(sessionID: sessionID, response: response)
+        bridgeServer.updateStateSnapshot(state)
+        sessions = ClaudeSessionFilter.claudeSessions(in: state)
+
+        send(.answerQuestion(sessionID: sessionID, response: response))
+    }
+
+    /// Convenience: answer a single-question prompt by the chosen option label.
+    func answerQuestion(sessionID: String, optionLabel: String) {
+        answerQuestion(sessionID: sessionID, response: QuestionPromptResponse(answer: optionLabel))
+    }
+
     private func send(_ command: BridgeCommand) {
         guard let client = bridgeClient else { return }
         Task {

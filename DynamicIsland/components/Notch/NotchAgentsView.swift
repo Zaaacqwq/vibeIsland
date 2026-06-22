@@ -202,6 +202,9 @@ private struct AgentSessionRow: View {
             if let permission = session.permissionRequest {
                 permissionActions(permission)
             }
+            if let question = session.questionPrompt {
+                questionActions(question, sessionID: session.id)
+            }
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
@@ -241,5 +244,50 @@ private struct AgentSessionRow: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    @ViewBuilder
+    private func questionActions(_ prompt: QuestionPrompt, sessionID: String) -> some View {
+        let options = questionOptionLabels(prompt)
+        VStack(alignment: .leading, spacing: 4) {
+            if !prompt.title.isEmpty {
+                Text(prompt.title)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.gray)
+                    .lineLimit(2)
+            }
+            ForEach(Array(options.enumerated()), id: \.offset) { index, label in
+                Button {
+                    agentMonitor.answerQuestion(sessionID: sessionID, optionLabel: label)
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .frame(width: 15, height: 15)
+                            .background(Circle().fill(Color.white.opacity(0.15)))
+                        Text(label)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Capsule().fill(Color.white.opacity(0.10)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Flattened option labels for the prompt — prefers the first structured
+    /// question's options, falling back to the legacy flat string options.
+    private func questionOptionLabels(_ prompt: QuestionPrompt) -> [String] {
+        if let first = prompt.questions.first, !first.options.isEmpty {
+            return first.options.map(\.label)
+        }
+        return prompt.options
     }
 }
