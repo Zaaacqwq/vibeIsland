@@ -147,7 +147,11 @@ struct ContentView: View {
         if coordinator.currentView == .timer {
             return CGSize(width: baseSize.width, height: 250) // Extra height for timer presets
         }
-        
+
+        if coordinator.currentView == .calendar {
+            return CGSize(width: baseSize.width, height: 230)
+        }
+
 
         if coordinator.currentView == .terminal {
             // Dynamic height: up to terminalMaxHeightFraction of screen, min 300pt

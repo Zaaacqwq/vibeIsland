@@ -325,17 +325,17 @@ struct StandaloneCalendarView: View {
         )
     }
 
-    private var resolvedNotchHeight: CGFloat {
-        let height = vm.notchSize.height
-        return height > 0 ? height : openNotchSize.height
-    }
+    /// Target notch height for the Calendar tab — must match the height returned
+    /// by `ContentView.dynamicNotchSize` for `.calendar` so the content isn't
+    /// clipped by the window frame.
+    private var targetNotchHeight: CGFloat { 230 }
 
     private var headerHeight: CGFloat {
         max(24, vm.effectiveClosedNotchHeight)
     }
 
     private var maxTabContentHeight: CGFloat {
-        let available = resolvedNotchHeight - headerHeight - 36
+        let available = targetNotchHeight - headerHeight - 36
         return max(130, available)
     }
 
@@ -451,22 +451,9 @@ struct StandaloneCalendarView: View {
     @ViewBuilder
     private func pickerBody(height: CGFloat) -> some View {
         switch layout {
-        case .monthGrid: monthGridView(height: height)
         case .scrollingMonth: scrollingMonthView
         case .week: weekStripView
         }
-    }
-
-    private func monthGridView(height: CGFloat) -> some View {
-        let rows = max(1, Int(ceil(Double(monthDays.count) / 7.0)))
-        let available = max(0, height - 64)
-        let rowHeight = max(20, min(34, available / CGFloat(rows)))
-        return LazyVGrid(columns: weekColumns, spacing: 2) {
-            ForEach(monthDays, id: \.self) { day in
-                dayCell(for: day, rowHeight: rowHeight, dimOtherMonths: true)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var scrollingMonthView: some View {

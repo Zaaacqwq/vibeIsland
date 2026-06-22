@@ -303,7 +303,6 @@ enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable 
 
 /// Layout style for the in-notch Calendar tab's left date picker.
 enum CalendarTabLayout: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case monthGrid = "MonthGrid"
     case scrollingMonth = "ScrollingMonth"
     case week = "Week"
 
@@ -311,8 +310,7 @@ enum CalendarTabLayout: String, CaseIterable, Defaults.Serializable, Identifiabl
 
     var displayName: String {
         switch self {
-        case .monthGrid: return String(localized: "Month grid")
-        case .scrollingMonth: return String(localized: "Scrolling month")
+        case .scrollingMonth: return String(localized: "Month")
         case .week: return String(localized: "Week")
         }
     }
