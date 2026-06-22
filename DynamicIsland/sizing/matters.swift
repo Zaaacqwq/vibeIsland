@@ -82,10 +82,6 @@ func enabledStandardTabCount() -> Int {
     if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
         count += 1
     }
-    // Terminal tab
-    if Defaults[.enableTerminalFeature] {
-        count += 1
-    }
     // Agents tab
     if Defaults[.enableAgentMonitoring] {
         count += 1

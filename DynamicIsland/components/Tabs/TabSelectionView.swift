@@ -74,9 +74,6 @@ struct TabSelectionView: View {
         if enableTimerFeature && timerDisplayMode == .tab {
             tabsArray.append(TabModel(label: "Timer", icon: "timer", view: .timer))
         }
-        if Defaults[.enableTerminalFeature] {
-            tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))
-        }
         if Defaults[.enableAgentMonitoring] {
             tabsArray.append(TabModel(label: "Agents", icon: "sparkles", view: .agents))
         }
