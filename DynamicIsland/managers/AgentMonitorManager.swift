@@ -1,6 +1,6 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Agent monitoring feature ported from Open Vibe Island (Open Island),
  * GPL v3 — Copyright (C) Octane0411 and Open Island contributors.
@@ -56,7 +56,12 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     /// Claude-family sessions, ordered by the engine's own sort.
-    @Published private(set) var sessions: [AgentSession] = []
+    @Published private(set) var sessions: [AgentSession] = [] {
+        didSet { AgentInputHotkeyMonitor.shared.updatePendingState() }
+    }
+    /// Set by the hotkey monitor when ⌘<n> lands on a freeform ("Other") option,
+    /// so the overlay can switch into text-entry mode (which needs view state).
+    @Published var requestedFreeformOptionID: UUID?
     @Published private(set) var isBridgeReady = false
     @Published private(set) var hookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
@@ -234,7 +239,10 @@ final class AgentMonitorManager: ObservableObject {
         case let .sessionCompleted(completed):
             let wasCompleted = haloActivity[completed.sessionID] == .completed
             haloActivity[completed.sessionID] = .completed
-            if !wasCompleted {
+            // Only chime / auto-expand on a turn-level completion (Stop). A full
+            // session teardown (SessionEnd — e.g. closing the Claude terminal)
+            // shouldn't play the completion sound or surface the notch.
+            if !wasCompleted, completed.isSessionEnd != true {
                 playCompletionSoundIfEnabled()
                 announceCompletionIfEnabled(sessionID: completed.sessionID)
             }

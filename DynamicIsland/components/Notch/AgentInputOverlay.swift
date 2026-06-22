@@ -1,6 +1,6 @@
 /*
  * VibeIsland (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,9 @@ import SwiftUI
 struct AgentInputOverlay: View {
     let session: AgentSession
     @ObservedObject private var agentMonitor = AgentMonitorManager.shared
+    @State private var freeformOption: QuestionOption?
+    @State private var freeformText: String = ""
+    @FocusState private var inputFocused: Bool
 
     private enum Palette {
         static let orange = Color(red: 1.0, green: 0.56, blue: 0.22)
@@ -45,6 +48,24 @@ struct AgentInputOverlay: View {
         .padding(.horizontal, 18)
         .padding(.top, 6)
         .padding(.bottom, 12)
+        .onChange(of: agentMonitor.requestedFreeformOptionID) { _, id in
+            defer { agentMonitor.requestedFreeformOptionID = nil }
+            guard let id, let prompt = session.questionPrompt,
+                  let option = questionOptions(prompt).first(where: { $0.id == id }) else { return }
+            freeformText = ""
+            freeformOption = option
+            focusInput()
+        }
+    }
+
+    /// Bring the notch forward and focus the freeform text field so the user can
+    /// type immediately (the panel needs key focus to receive keystrokes).
+    private func focusInput() {
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first { $0 is DynamicIslandWindow }?.makeKeyAndOrderFront(nil)
+            inputFocused = true
+        }
     }
 
     // MARK: - Permission
@@ -118,7 +139,7 @@ struct AgentInputOverlay: View {
 
     @ViewBuilder
     private func questionCard(_ prompt: QuestionPrompt) -> some View {
-        let options = optionLabels(prompt)
+        let options = questionOptions(prompt)
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "bubble.left.fill")
@@ -135,36 +156,101 @@ struct AgentInputOverlay: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(spacing: 8) {
-                ForEach(Array(options.enumerated()), id: \.offset) { index, label in
-                    Button {
-                        agentMonitor.answerQuestion(sessionID: session.id, optionLabel: label)
-                    } label: {
-                        HStack(spacing: 10) {
-                            HStack(spacing: 1) {
-                                Image(systemName: "command").font(.system(size: 9, weight: .bold))
-                                Text("\(index + 1)").font(.system(size: 12, weight: .bold))
-                            }
-                            .foregroundStyle(Palette.teal)
-                            .frame(width: 32, height: 28)
-                            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.teal.opacity(0.18)))
-
-                            Text(label)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Palette.teal.opacity(0.10)))
+            if let editing = freeformOption {
+                freeformEntry(editing)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                        optionButton(index: index, option: option)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             Spacer(minLength: 0)
         }
+    }
+
+    private func optionButton(index: Int, option: QuestionOption) -> some View {
+        Button {
+            if option.allowsFreeform {
+                freeformText = ""
+                freeformOption = option
+            } else {
+                agentMonitor.answerQuestion(sessionID: session.id, optionLabel: option.label)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                HStack(spacing: 1) {
+                    Image(systemName: "command").font(.system(size: 9, weight: .bold))
+                    Text("\(index + 1)").font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(Palette.teal)
+                .frame(width: 32, height: 28)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.teal.opacity(0.18)))
+
+                Text(option.label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                if option.allowsFreeform {
+                    Image(systemName: "pencil").font(.system(size: 11)).foregroundStyle(Palette.teal)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Palette.teal.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func freeformEntry(_ option: QuestionOption) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField(option.label.isEmpty ? "Type your answer…" : option.label, text: $freeformText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 15))
+                .foregroundStyle(.white)
+                .tint(Palette.teal)
+                .focused($inputFocused)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Palette.teal.opacity(0.12)))
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Palette.teal.opacity(0.4), lineWidth: 1))
+                .onSubmit { submitFreeform() }
+                .onAppear { focusInput() }
+
+            HStack(spacing: 8) {
+                Button { freeformOption = nil } label: {
+                    Text("Back")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+                Button { submitFreeform() } label: {
+                    Text("Submit")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.92)))
+                }
+                .buttonStyle(.plain)
+                .disabled(freeformText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(freeformText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
+            }
+        }
+    }
+
+    private func submitFreeform() {
+        let answer = freeformText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !answer.isEmpty else { return }
+        agentMonitor.answerQuestion(sessionID: session.id, response: QuestionPromptResponse(answer: answer))
+        freeformOption = nil
+        freeformText = ""
     }
 
     private func questionText(_ prompt: QuestionPrompt) -> String {
@@ -172,11 +258,11 @@ struct AgentInputOverlay: View {
         return prompt.title
     }
 
-    private func optionLabels(_ prompt: QuestionPrompt) -> [String] {
+    private func questionOptions(_ prompt: QuestionPrompt) -> [QuestionOption] {
         if let first = prompt.questions.first, !first.options.isEmpty {
-            return first.options.map(\.label)
+            return first.options
         }
-        return prompt.options
+        return prompt.options.map { QuestionOption(label: $0) }
     }
 }
 

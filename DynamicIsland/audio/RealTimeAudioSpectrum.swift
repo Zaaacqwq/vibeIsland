@@ -1,7 +1,7 @@
 /*
- * Atoll (DynamicIsland)
+ * VibeIsland (DynamicIsland)
  * Original work Copyright (C) 2026 ZephyrCodesStuff (https://github.com/ZephyrCodesStuff/rtaudio)
- * Modified work Copyright (C) 2026 Atoll Contributors
+ * Modified work Copyright (C) 2026 VibeIsland Contributors
  *
  * Real-time audio spectrum visualization using CoreAudio tap data.
  *

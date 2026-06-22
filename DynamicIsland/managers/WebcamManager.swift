@@ -1,9 +1,9 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Originally from boring.notch project
- * Modified and adapted for Atoll (DynamicIsland)
+ * Modified and adapted for VibeIsland (DynamicIsland)
  * See NOTICE for details.
  *
  * This program is free software: you can redistribute it and/or modify

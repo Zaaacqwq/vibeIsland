@@ -1,7 +1,7 @@
 /*
- * Atoll (DynamicIsland)
+ * VibeIsland (DynamicIsland)
  * Original work Copyright (C) 2026 ZephyrCodesStuff (https://github.com/ZephyrCodesStuff/rtaudio)
- * Modified work Copyright (C) 2026 Atoll Contributors
+ * Modified work Copyright (C) 2026 VibeIsland Contributors
  *
  * CoreAudio tap for capturing real-time audio from music applications.
  * Uses macOS 14.2+ Process Tap API for efficient audio capture.
@@ -223,7 +223,7 @@ class AudioTap: NSObject {
         // Create the Aggregate Device (a "virtual microphone" that we can route the tap into)
         let tapList = [[kAudioSubTapUIDKey: tapUID]]
         let aggregateDict: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Atoll_Virtual_Tap",
+            kAudioAggregateDeviceNameKey: "VibeIsland_Virtual_Tap",
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceIsPrivateKey: true,  // Hides it from the user's sound settings
             kAudioAggregateDeviceTapListKey: tapList,
