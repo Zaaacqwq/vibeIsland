@@ -1125,6 +1125,8 @@ extension Defaults.Keys {
     static let weatherRefreshInterval = Key<TimeInterval>("weatherRefreshInterval", default: 30 * 60)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
+    /// Play a sound when a Claude session needs your input (permission / question).
+    static let agentInputSoundEnabled = Key<Bool>("agentInputSoundEnabled", default: true)
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.
     static let agentExpandOnComplete = Key<Bool>("agentExpandOnComplete", default: true)
 
