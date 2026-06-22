@@ -64,6 +64,8 @@ final class AgentMonitorManager: ObservableObject {
     @Published var requestedFreeformOptionID: UUID?
     @Published private(set) var isBridgeReady = false
     @Published private(set) var hookStatus: HookStatus = .unknown
+    @Published private(set) var codexHookStatus: HookStatus = .unknown
+    @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
     /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
@@ -577,6 +579,71 @@ final class AgentMonitorManager: ObservableObject {
                 self.hookStatus = .notInstalled
                 if let message { self.lastErrorMessage = message }
             }
+        }
+    }
+
+    // MARK: - Codex / Gemini hooks (reuse the bundled OpenIslandHooks binary)
+
+    /// Shared plumbing for the Codex/Gemini install/uninstall/status calls:
+    /// runs `work` off the main actor, maps thrown errors to `lastErrorMessage`,
+    /// and publishes the resulting `HookStatus` via `assign`.
+    private func applyHookChange(
+        label: String,
+        assign: @escaping @MainActor @Sendable (HookStatus) -> Void,
+        work: @escaping @Sendable () throws -> Bool
+    ) {
+        Task.detached {
+            var message: String?
+            var status: HookStatus = .unknown
+            do {
+                status = try work() ? .installed : .notInstalled
+            } catch {
+                message = "Failed to \(label): \(error.localizedDescription)"
+            }
+            await MainActor.run {
+                assign(status)
+                if let message { self.lastErrorMessage = message }
+            }
+        }
+    }
+
+    func refreshCodexHookStatus() {
+        applyHookChange(label: "check Codex hooks", assign: { self.codexHookStatus = $0 }) {
+            try CodexHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installCodexHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Codex hooks", assign: { self.codexHookStatus = $0 }) {
+            try CodexHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallCodexHooks() {
+        applyHookChange(label: "remove Codex hooks", assign: { self.codexHookStatus = $0 }) {
+            _ = try CodexHookInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    func refreshGeminiHookStatus() {
+        applyHookChange(label: "check Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            try GeminiHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installGeminiHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            try GeminiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallGeminiHooks() {
+        applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            _ = try GeminiHookInstallationManager().uninstall()
+            return false
         }
     }
 
