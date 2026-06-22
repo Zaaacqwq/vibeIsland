@@ -78,6 +78,10 @@ func enabledStandardTabCount() -> Int {
     if Defaults[.dynamicShelf] {
         count += 1
     }
+    // Timer tab (only when shown as a tab, not in popover mode)
+    if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
+        count += 1
+    }
     // Terminal tab
     if Defaults[.enableTerminalFeature] {
         count += 1
