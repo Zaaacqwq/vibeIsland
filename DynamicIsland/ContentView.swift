@@ -184,7 +184,9 @@ struct ContentView: View {
     @State private var isHoveringClosedMusicWaveformControl: Bool = false
 
     @State private var gestureProgress: CGFloat = .zero
-    @State private var tabSwitchGestureArmed = true
+    /// How many tabs the current horizontal swipe has already advanced, so a
+    /// single longer swipe can move multiple tabs (one per sensitivity step).
+    @State private var tabSwitchStepsConsumed = 0
     @State private var calendarTabScrollSuppressionToken = UUID()
     @State private var isMusicControlWindowVisible = false
     @State private var pendingMusicControlTask: Task<Void, Never>?
@@ -2500,24 +2502,28 @@ struct ContentView: View {
     /// Swipe left → next tab, swipe right → previous tab (respects reverseSwipeGestures).
     private func handleTabSwitchGesture(forward: Bool, translation: CGFloat, phase: NSEvent.Phase) {
         if phase == .ended {
-            tabSwitchGestureArmed = true
+            tabSwitchStepsConsumed = 0
             return
         }
 
         guard canPerformTabSwitchGesture() else {
-            tabSwitchGestureArmed = true
+            tabSwitchStepsConsumed = 0
             return
         }
 
-        if tabSwitchGestureArmed && translation > Defaults[.gestureSensitivity] {
-            tabSwitchGestureArmed = false
+        // `translation` is the cumulative distance of the in-progress swipe.
+        // Advance one tab per full sensitivity step, so a longer swipe moves
+        // multiple tabs in a single continuous gesture.
+        let step = max(1, Defaults[.gestureSensitivity])
+        let desiredSteps = Int(translation / step)
+        guard desiredSteps > tabSwitchStepsConsumed else { return }
 
-            let effectiveForward = Defaults[.reverseSwipeGestures] ? !forward : forward
-
+        let effectiveForward = Defaults[.reverseSwipeGestures] ? !forward : forward
+        while tabSwitchStepsConsumed < desiredSteps {
+            tabSwitchStepsConsumed += 1
             if Defaults[.enableHaptics] {
                 triggerHapticIfAllowed()
             }
-
             coordinator.navigateToAdjacentTab(forward: effectiveForward)
         }
     }
