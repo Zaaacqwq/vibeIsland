@@ -474,45 +474,6 @@ final class AgentMonitorManager: ObservableObject {
         }
     }
 
-    /// Open VibeIsland's embedded terminal and resume this Claude session there,
-    /// so the full conversation is visible and interactive in the notch.
-    ///
-    /// `claude --resume` is project-scoped, so it must run from the session's
-    /// *launch* directory — not the live process cwd, which may have moved. We
-    /// recover the launch cwd from the session's transcript (the authoritative
-    /// source) and fall back to the jump target only if that's unavailable.
-    /// The Claude session currently resumed in the embedded terminal, so a
-    /// re-click reveals it instead of typing the command into the live REPL.
-    private var terminalSessionID: String?
-
-    func openInTerminal(_ session: AgentSession) {
-        DynamicIslandViewCoordinator.shared.currentView = .terminal
-        let id = session.id
-
-        // Already showing this session's live REPL — just reveal the tab.
-        if terminalSessionID == id, TerminalManager.shared.isProcessRunning {
-            return
-        }
-        // Switching sessions while a REPL is running: restart the shell so the
-        // new command runs in a clean shell, not into the old claude prompt.
-        if terminalSessionID != nil, TerminalManager.shared.isProcessRunning {
-            TerminalManager.shared.restartShell()
-        }
-        terminalSessionID = id
-
-        let fallbackDir = session.jumpTarget?.workingDirectory
-
-        Task.detached(priority: .userInitiated) {
-            let cwd = Self.resolveSessionLaunchDirectory(sessionID: id) ?? fallbackDir
-            var command = ""
-            if let cwd, !cwd.isEmpty {
-                command += "cd \(Self.shellQuote(cwd)) && "
-            }
-            command += "claude --resume \(Self.shellQuote(id))"
-            await MainActor.run { TerminalManager.shared.run(command: command) }
-        }
-    }
-
     /// Finds the session's transcript (`~/.claude/projects/<proj>/<id>.jsonl`)
     /// and reads the `cwd` it recorded — the directory the session was launched
     /// in, which `claude --resume` needs.

@@ -205,7 +205,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     // Developer Profile Settings
     let isDeveloper = profiles.contains("developer")
     if isDeveloper {
-        Defaults[.enableTerminalFeature] = true
         Defaults[.enableTimerFeature] = true
         Defaults[.enableScreenAssistant] = true
         Defaults[.showMirror] = false

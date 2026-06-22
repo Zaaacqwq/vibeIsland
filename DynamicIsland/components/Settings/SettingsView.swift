@@ -60,7 +60,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case downloads
     case shelf
     case shortcuts
-    case terminal
     case agents
     case notifications
     case weather
@@ -78,7 +77,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .timer, .calendar:                                      return .productivity
         case .screenAssistant, .shelf,
              .downloads, .shortcuts:                                         return .utilities
-        case .terminal, .agents, .debug:                             return .developer
+        case .agents, .debug:                             return .developer
         case .extensions:                                                    return .integrations
         case .about:                                                         return .info
         }
@@ -100,7 +99,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
-        case .terminal: return String(localized: "Terminal")
         case .agents: return String(localized: "Agents")
         case .notifications: return String(localized: "Notifications")
         case .weather: return String(localized: "Weather")
@@ -125,7 +123,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "books.vertical"
         case .shortcuts: return "keyboard"
-        case .terminal: return "apple.terminal"
         case .agents: return "sparkles"
         case .notifications: return "bell.fill"
         case .weather: return "cloud.sun.fill"
@@ -150,7 +147,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
-        case .terminal: return Color(red: 0.2, green: 0.8, blue: 0.4)
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .notifications: return .red
         case .weather: return .cyan
@@ -485,7 +481,6 @@ struct SettingsView: View {
             .downloads,
             .shortcuts,
             // Developer
-            .terminal,
             .agents,
             .debug,
             // Integrations
@@ -836,25 +831,12 @@ struct SettingsView: View {
             // Color Picker
 
             // Terminal
-            SettingsSearchEntry(tab: .terminal, title: "Enable terminal", keywords: ["terminal", "guake", "shell"], highlightID: SettingsTab.terminal.highlightID(for: "Enable terminal")),
-            SettingsSearchEntry(tab: .terminal, title: "Shell path", keywords: ["shell", "zsh", "bash", "terminal"], highlightID: SettingsTab.terminal.highlightID(for: "Shell path")),
-            SettingsSearchEntry(tab: .terminal, title: "Font size", keywords: ["terminal", "font", "text size"], highlightID: SettingsTab.terminal.highlightID(for: "Font size")),
-            SettingsSearchEntry(tab: .terminal, title: "Terminal opacity", keywords: ["terminal", "opacity", "transparency", "blur", "background"], highlightID: SettingsTab.terminal.highlightID(for: "Terminal opacity")),
-            SettingsSearchEntry(tab: .terminal, title: "Maximum height", keywords: ["terminal", "height", "size"], highlightID: SettingsTab.terminal.highlightID(for: "Maximum height")),
-            SettingsSearchEntry(tab: .terminal, title: "Background color", keywords: ["terminal", "background", "color", "theme"], highlightID: SettingsTab.terminal.highlightID(for: "Background color")),
-            SettingsSearchEntry(tab: .terminal, title: "Foreground color", keywords: ["terminal", "foreground", "text color", "theme"], highlightID: SettingsTab.terminal.highlightID(for: "Foreground color")),
-            SettingsSearchEntry(tab: .terminal, title: "Cursor color", keywords: ["terminal", "cursor", "caret", "color"], highlightID: SettingsTab.terminal.highlightID(for: "Cursor color")),
-            SettingsSearchEntry(tab: .terminal, title: "Bold as bright", keywords: ["terminal", "bold", "bright", "colors"], highlightID: SettingsTab.terminal.highlightID(for: "Bold as bright")),
-            SettingsSearchEntry(tab: .terminal, title: "Cursor style", keywords: ["terminal", "cursor", "block", "underline", "bar", "blink"], highlightID: SettingsTab.terminal.highlightID(for: "Cursor style")),
-            SettingsSearchEntry(tab: .terminal, title: "Scrollback lines", keywords: ["terminal", "scrollback", "buffer", "history"], highlightID: SettingsTab.terminal.highlightID(for: "Scrollback lines")),
-            SettingsSearchEntry(tab: .terminal, title: "Option as Meta", keywords: ["terminal", "option", "meta", "alt", "key"], highlightID: SettingsTab.terminal.highlightID(for: "Option as Meta")),
-            SettingsSearchEntry(tab: .terminal, title: "Mouse reporting", keywords: ["terminal", "mouse", "reporting", "vim", "tmux"], highlightID: SettingsTab.terminal.highlightID(for: "Mouse reporting")),
         ]
     }
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
         switch tab {
-        case .timer, .screenAssistant, .shelf, .terminal:
+        case .timer, .screenAssistant, .shelf:
             return !enableMinimalisticUI
         default:
             return true
@@ -919,10 +901,6 @@ struct SettingsView: View {
         case .shortcuts:
             SettingsForm(tab: .shortcuts) {
                 Shortcuts()
-            }
-        case .terminal:
-            SettingsForm(tab: .terminal) {
-                TerminalSettings()
             }
         case .agents:
             SettingsForm(tab: .agents) {
@@ -3743,14 +3721,6 @@ struct Shortcuts: View {
                     footer: "Opens the AI assistant panel for file analysis and conversation. Default is Cmd+Shift+A. Only works when screen assistant feature is enabled."
                 )
 
-                shortcutSection(
-                    title: "Terminal",
-                    label: "Toggle Terminal Tab",
-                    name: .toggleTerminalTab,
-                    enabled: Defaults[.enableTerminalFeature],
-                    disabledNote: "Terminal feature is disabled",
-                    footer: "Opens the terminal tab in the notch. Default is Ctrl+`. Only works when terminal feature is enabled."
-                )
             } else {
                 GeistSection {
                     GeistRow(divider: false) {
@@ -4683,173 +4653,6 @@ struct SettingsPermissionCallout: View {
     HUD()
 }
 
-
-// MARK: - Terminal Settings
-
-struct TerminalSettings: View {
-    @ObservedObject var terminalManager = TerminalManager.shared
-    @Default(.enableTerminalFeature) var enableTerminalFeature
-    @Default(.terminalShellPath) var terminalShellPath
-    @Default(.terminalFontFamily) var terminalFontFamily
-    @Default(.terminalFontSize) var terminalFontSize
-    @Default(.terminalOpacity) var terminalOpacity
-    @Default(.terminalMaxHeightFraction) var terminalMaxHeightFraction
-    @Default(.terminalCursorStyle) var terminalCursorStyle
-    @Default(.terminalScrollbackLines) var terminalScrollbackLines
-    @Default(.terminalOptionAsMeta) var terminalOptionAsMeta
-    @Default(.terminalMouseReporting) var terminalMouseReporting
-    @Default(.terminalBoldAsBright) var terminalBoldAsBright
-    @Default(.terminalBackgroundColor) var terminalBackgroundColor
-    @Default(.terminalForegroundColor) var terminalForegroundColor
-    @Default(.terminalCursorColor) var terminalCursorColor
-
-    private var formattedMaxHeight: String {
-        "\(Int(terminalMaxHeightFraction * 100))% of screen"
-    }
-
-    /// All monospaced font families available on the system.
-    private var monospacedFontFamilies: [String] {
-        NSFontManager.shared.availableFontFamilies.filter { family in
-            guard let font = NSFont(name: family, size: 12) else { return false }
-            return font.isFixedPitch
-                || font.fontDescriptor.symbolicTraits.contains(.monoSpace)
-        }
-        .sorted()
-    }
-
-    /// Display name for the font picker — shows "System Monospaced" when no custom font is set.
-    private var fontDisplayName: String {
-        terminalFontFamily.isEmpty ? "System Monospaced" : terminalFontFamily
-    }
-
-    private var cursorStyleBinding: Binding<TerminalCursorStyleOption> {
-        Binding(
-            get: { TerminalCursorStyleOption(rawValue: terminalCursorStyle) ?? .blinkBlock },
-            set: { terminalCursorStyle = $0.rawValue }
-        )
-    }
-
-    var body: some View {
-        GeistSettingsPage(title: "Terminal") {
-            GeistSection(
-                title: "General",
-                footer: "Adds a Guake-style dropdown terminal tab. The terminal session persists across notch open/close cycles."
-            ) {
-                GeistToggleRow(title: "Enable terminal", isOn: $enableTerminalFeature, divider: enableTerminalFeature)
-                if enableTerminalFeature {
-                    GeistToggleRow(
-                        title: "Keep terminal open until clicked outside",
-                        description: "Prevents the terminal from closing when the cursor accidentally leaves the notch area.",
-                        isOn: geistBinding(.terminalStickyMode),
-                        divider: false
-                    )
-                }
-            }
-
-            if enableTerminalFeature {
-                GeistSection(title: "Shell") {
-                    GeistLabeledRow(title: "Shell path", divider: false) {
-                        TextField("", text: $terminalShellPath)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 200)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-
-                GeistSection(
-                    title: "Appearance",
-                    footer: "Terminal opacity only affects the terminal backdrop; text stays fully opaque. Blur uses the system material behind the window."
-                ) {
-                    GeistPickerRow(title: "Font family", selection: $terminalFontFamily) {
-                        Text("System Monospaced").tag("")
-                        Divider()
-                        ForEach(monospacedFontFamilies, id: \.self) { family in
-                            Text(family).font(.custom(family, size: 13)).tag(family)
-                        }
-                    }
-                    .onChange(of: terminalFontFamily) { _, newValue in
-                        terminalManager.applyFontFamily(newValue)
-                    }
-                    GeistSliderRow(title: "Font size", valueLabel: "\(Int(terminalFontSize)) pt", value: $terminalFontSize, range: 8...24, step: 1, onChange: {
-                        terminalManager.applyFontSize(terminalFontSize)
-                    })
-                    GeistSliderRow(title: "Terminal opacity", valueLabel: "\(Int(terminalOpacity * 100))%", value: $terminalOpacity, range: 0.3...1.0, step: 0.05, onChange: {
-                        terminalManager.applyOpacity(terminalOpacity)
-                    })
-                    GeistSliderRow(title: "Maximum height", valueLabel: formattedMaxHeight, value: $terminalMaxHeightFraction, range: 0.2...0.5, step: 0.05, divider: false)
-                }
-
-                GeistSection(
-                    title: "Colors",
-                    footer: "When bold-as-bright is off, bold text uses a heavier font weight instead of bright ANSI colors."
-                ) {
-                    GeistLabeledRow(title: "Background") {
-                        ColorPicker("", selection: $terminalBackgroundColor, supportsOpacity: false)
-                            .labelsHidden()
-                            .onChange(of: terminalBackgroundColor) { _, newValue in terminalManager.applyBackgroundColor(newValue) }
-                    }
-                    GeistLabeledRow(title: "Foreground") {
-                        ColorPicker("", selection: $terminalForegroundColor, supportsOpacity: false)
-                            .labelsHidden()
-                            .onChange(of: terminalForegroundColor) { _, newValue in terminalManager.applyForegroundColor(newValue) }
-                    }
-                    GeistLabeledRow(title: "Cursor") {
-                        ColorPicker("", selection: $terminalCursorColor, supportsOpacity: false)
-                            .labelsHidden()
-                            .onChange(of: terminalCursorColor) { _, newValue in terminalManager.applyCursorColor(newValue) }
-                    }
-                    GeistToggleRow(title: "Bold text as bright colors", isOn: $terminalBoldAsBright, divider: false)
-                        .onChange(of: terminalBoldAsBright) { _, newValue in terminalManager.applyBoldAsBright(newValue) }
-                }
-
-                GeistSection(title: "Cursor") {
-                    GeistPickerRow(title: "Cursor style", selection: cursorStyleBinding, divider: false) {
-                        ForEach(TerminalCursorStyleOption.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                    }
-                    .onChange(of: terminalCursorStyle) { _, newValue in
-                        if let style = TerminalCursorStyleOption(rawValue: newValue) {
-                            terminalManager.applyCursorStyle(style)
-                        }
-                    }
-                }
-
-                GeistSection(
-                    title: "Scrollback",
-                    footer: "Number of lines kept in the scrollback buffer. Higher values use more memory."
-                ) {
-                    GeistSliderRow(
-                        title: "Scrollback lines",
-                        valueLabel: "\(terminalScrollbackLines)",
-                        value: Binding(get: { Double(terminalScrollbackLines) }, set: { terminalScrollbackLines = Int($0) }),
-                        range: 100...10000, step: 100, divider: false,
-                        onChange: { terminalManager.applyScrollback(terminalScrollbackLines) }
-                    )
-                }
-
-                GeistSection(
-                    title: "Input",
-                    footer: "Option as Meta sends Esc+key instead of macOS special characters. Mouse reporting forwards mouse events to terminal applications like vim or tmux."
-                ) {
-                    GeistToggleRow(title: "Option as Meta key", isOn: $terminalOptionAsMeta)
-                        .onChange(of: terminalOptionAsMeta) { _, newValue in terminalManager.applyOptionAsMeta(newValue) }
-                    GeistToggleRow(title: "Allow mouse reporting", isOn: $terminalMouseReporting, divider: false)
-                        .onChange(of: terminalMouseReporting) { _, newValue in terminalManager.applyMouseReporting(newValue) }
-                }
-
-                GeistSection(
-                    title: "Actions",
-                    footer: "Restarts the shell process. Any unsaved work in the terminal will be lost."
-                ) {
-                    GeistRow(divider: false) {
-                        Button("Restart Shell") { terminalManager.restartShell() }
-                            .buttonStyle(.geist)
-                            .disabled(!terminalManager.isProcessRunning)
-                    }
-                }
-            }
-        }
-    }
-}
 
 // MARK: - Reusable App Icon View
 
