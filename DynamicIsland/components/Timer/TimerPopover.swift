@@ -234,7 +234,18 @@ private struct CustomTimerSection: View {
     private var totalSeconds: Int {
         hours * 3600 + minutes * 60 + seconds
     }
-    
+
+    private func addMinutes(_ increment: Int) {
+        let maxSeconds = 23 * 3600 + 59 * 60 + 59
+        let total = min(totalSeconds + increment * 60, maxSeconds)
+        let components = TimerPreset.components(for: Double(total))
+        withAnimation(.smooth(duration: 0.2)) {
+            hours = components.hours
+            minutes = components.minutes
+            seconds = components.seconds
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(String(localized: "Custom Timer"))
@@ -247,7 +258,15 @@ private struct CustomTimerSection: View {
                     DurationStepper(title: String(localized: "Seconds"), value: $seconds, range: 0...59)
                 }
             }
-            
+
+            HStack(spacing: 6) {
+                ForEach([1, 5, 10, 30], id: \.self) { increment in
+                    Button("+\(increment)m") { addMinutes(increment) }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            }
+
             Text(formattedDuration)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
