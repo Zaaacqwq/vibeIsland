@@ -246,6 +246,14 @@ private struct CustomTimerSection: View {
         }
     }
 
+    private func resetDuration() {
+        withAnimation(.smooth(duration: 0.2)) {
+            hours = 0
+            minutes = 0
+            seconds = 0
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(String(localized: "Custom Timer"))
@@ -265,12 +273,20 @@ private struct CustomTimerSection: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
+                Spacer(minLength: 0)
+                Button(action: resetDuration) {
+                    Image(systemName: "arrow.counterclockwise")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(String(localized: "Reset"))
+                .disabled(totalSeconds == 0)
             }
 
             Text(formattedDuration)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
-            
+
             Button(action: startAction) {
                 Label("Start Custom Timer", systemImage: "play.fill")
                     .font(.system(size: 13, weight: .medium))
