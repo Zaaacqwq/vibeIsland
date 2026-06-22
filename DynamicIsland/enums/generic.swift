@@ -290,13 +290,30 @@ enum TemperatureUnit: String, CaseIterable, Defaults.Serializable, Identifiable 
 enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
     case ruler = "Ruler"
     case manual = "Manual"
-    
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
         case .ruler: return String(localized: "Ruler")
         case .manual: return String(localized: "Manual")
+        }
+    }
+}
+
+/// Layout style for the in-notch Calendar tab's left date picker.
+enum CalendarTabLayout: String, CaseIterable, Defaults.Serializable, Identifiable {
+    case monthGrid = "MonthGrid"
+    case scrollingMonth = "ScrollingMonth"
+    case week = "Week"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .monthGrid: return String(localized: "Month grid")
+        case .scrollingMonth: return String(localized: "Scrolling month")
+        case .week: return String(localized: "Week")
         }
     }
 }

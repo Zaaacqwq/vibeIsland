@@ -32,6 +32,9 @@ class CalendarManager: ObservableObject {
 
     @Published var currentWeekStartDate: Date
     @Published var events: [EventModel] = []
+    /// Days (start-of-day) in the currently displayed month range that have at
+    /// least one event/reminder — used to draw dots on the calendar tab grid.
+    @Published var eventDates: Set<Date> = []
     @Published var allCalendars: [CalendarModel] = []
     @Published var eventCalendars: [CalendarModel] = []
     @Published var reminderLists: [CalendarModel] = []
@@ -239,6 +242,24 @@ class CalendarManager: ObservableObject {
     func updateCurrentDate(_ date: Date) async {
         currentWeekStartDate = Calendar.current.startOfDay(for: date)
         await updateEvents(force: true)
+    }
+
+    /// Loads the set of days that have events across the displayed month (padded
+    /// by a week on each side so adjacent-month grid cells also show dots).
+    /// Does not touch `events` (the single-day list used elsewhere).
+    func loadEventDates(forMonth date: Date) async {
+        let cal = Calendar.current
+        guard let monthInterval = cal.dateInterval(of: .month, for: date) else { return }
+        let start = cal.date(byAdding: .day, value: -7, to: monthInterval.start) ?? monthInterval.start
+        let end = cal.date(byAdding: .day, value: 7, to: monthInterval.end) ?? monthInterval.end
+        let calendarIDs = selectedCalendars.map { $0.id }
+        let service = calendarService
+
+        let monthEvents = await eventFetchLimiter.run {
+            await service.events(from: start, to: end, calendars: calendarIDs)
+        }
+
+        self.eventDates = Set(monthEvents.map { cal.startOfDay(for: $0.start) })
     }
 
     private func updateEvents(force: Bool = false) async {

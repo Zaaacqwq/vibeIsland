@@ -821,6 +821,7 @@ extension Defaults.Keys {
     static let showCalendar = Key<Bool>("showCalendar", default: true)
     static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)
     static let hideAllDayEvents = Key<Bool>("hideAllDayEvents", default: false)
+    static let calendarTabLayout = Key<CalendarTabLayout>("calendarTabLayout", default: .monthGrid)
     static let sliderColor = Key<SliderColorEnum>(
         "sliderUseAlbumArtColor",
         default: SliderColorEnum.white
