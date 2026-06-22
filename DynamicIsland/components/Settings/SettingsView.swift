@@ -2672,7 +2672,7 @@ struct About: View {
                 }
             }
 
-            Text("Made with ❤️ by Ebullioscopic")
+            Text("Made with ❤️ by Zaaacqwq")
                 .font(Geist.Typography.caption)
                 .foregroundStyle(Geist.Colors.mute)
                 .frame(maxWidth: .infinity, alignment: .center)
