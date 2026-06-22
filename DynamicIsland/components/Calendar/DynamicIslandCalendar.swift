@@ -20,6 +20,25 @@ import SwiftUI
 import Defaults
 import EventKit
 
+/// Shared visual tokens for the in-notch Calendar tab. Notch-native dark glass,
+/// accent-driven — kept separate from the Geist settings design system.
+enum CalendarStyle {
+    static let surface = Color.white.opacity(0.05)
+    static let surfaceHover = Color.white.opacity(0.10)
+    static let hairline = Color.white.opacity(0.08)
+
+    static let ink = Color.white
+    static let body = Color(white: 0.72)
+    static let muted = Color(white: 0.55)
+    static let faint = Color(white: 0.35)
+
+    static let cardRadius: CGFloat = 14
+    static let chipRadius: CGFloat = 10
+    static let cellSize: CGFloat = 28
+
+    static var accent: Color { Color.effectiveAccent }
+}
+
 struct Config: Equatable {
     var past: Int = 7
     var future: Int = 14

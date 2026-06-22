@@ -2403,6 +2403,7 @@ struct CalendarSettings: View {
     @Default(.reminderSneakPeekDuration) var reminderSneakPeekDuration
     @Default(.hideAllDayEvents) var hideAllDayEvents
     @Default(.hideCompletedReminders) var hideCompletedReminders
+    @Default(.calendarTabLayout) var calendarTabLayout
     @Default(.showFullEventTitles) var showFullEventTitles
     @Default(.autoScrollToNextEvent) var autoScrollToNextEvent
     @Default(.enableThirdPartyCalendarApp) private var enableThirdPartyCalendarApp
@@ -2479,6 +2480,15 @@ struct CalendarSettings: View {
 
                 GeistSection {
                     GeistToggleRow(title: "Show calendar", isOn: geistBinding(.showCalendar), divider: false)
+                }
+
+                GeistSection(
+                    title: "Notch Tab",
+                    footer: "Choose how the date picker appears in the notch Calendar tab."
+                ) {
+                    GeistPickerRow(title: "Calendar layout", selection: $calendarTabLayout, divider: false) {
+                        ForEach(CalendarTabLayout.allCases) { Text($0.displayName).tag($0) }
+                    }
                 }
 
                 GeistSection(title: "Event List") {
