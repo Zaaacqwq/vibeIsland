@@ -34,19 +34,19 @@ actor WeatherProvider {
         decoder = JSONDecoder()
     }
 
-    func fetchSnapshot(location: CLLocation?, source: WeatherProviderSource) async throws -> WeatherSnapshot {
+    func fetchSnapshot(location: CLLocation?, source: WeatherProviderSource, placeName: String? = nil) async throws -> WeatherSnapshot {
         switch source {
         case .wttr:
-            return try await fetchWttrSnapshot(location: location)
+            return try await fetchWttrSnapshot(location: location, placeName: placeName)
         case .openMeteo:
             guard let location else {
-                return try await fetchWttrSnapshot(location: nil)
+                return try await fetchWttrSnapshot(location: nil, placeName: placeName)
             }
-            return try await fetchOpenMeteoSnapshot(location: location)
+            return try await fetchOpenMeteoSnapshot(location: location, placeName: placeName)
         }
     }
 
-    private func fetchWttrSnapshot(location: CLLocation?) async throws -> WeatherSnapshot {
+    private func fetchWttrSnapshot(location: CLLocation?, placeName: String? = nil) async throws -> WeatherSnapshot {
         let locationSuffix: String
         if let coordinate = location?.coordinate {
             locationSuffix = "\(String(format: "%.4f", coordinate.latitude)),\(String(format: "%.4f", coordinate.longitude))"
@@ -93,7 +93,7 @@ actor WeatherProvider {
             temperatureText: temperatureText,
             symbolName: symbol,
             description: condition.localizedDescription,
-            locationName: payload.nearestArea.first?.preferredName,
+            locationName: payload.nearestArea.first?.preferredName ?? placeName,
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
             sunCycle: nil,
@@ -101,7 +101,7 @@ actor WeatherProvider {
         )
     }
 
-    private func fetchOpenMeteoSnapshot(location: CLLocation) async throws -> WeatherSnapshot {
+    private func fetchOpenMeteoSnapshot(location: CLLocation, placeName: String? = nil) async throws -> WeatherSnapshot {
         let latitude = String(format: "%.4f", location.coordinate.latitude)
         let longitude = String(format: "%.4f", location.coordinate.longitude)
         let unit = Defaults[.weatherTemperatureUnit]
@@ -158,7 +158,7 @@ actor WeatherProvider {
             temperatureText: temperatureText,
             symbolName: symbolName,
             description: mapping.description,
-            locationName: nil,
+            locationName: placeName,
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
             sunCycle: sunCycle,

@@ -36,9 +36,15 @@ final class WeatherManager: ObservableObject {
 
     private let provider = WeatherProvider()
     private let locationProvider = WeatherLocationProvider()
+    private let geocoder = CLGeocoder()
     private var refreshTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     private var isRunning = false
+
+    /// Cached reverse-geocoded place name + the location it was resolved for, so
+    /// we don't hit the geocoder on every refresh when the user hasn't moved.
+    private var cachedPlaceName: String?
+    private var cachedPlaceLocation: CLLocation?
 
     private init() {}
 
@@ -97,9 +103,10 @@ final class WeatherManager: ObservableObject {
         locationDenied = (status == .denied || status == .restricted)
 
         let location = await locationProvider.currentLocation()
+        let placeName = await resolvePlaceName(for: location)
         let primary = Defaults[.weatherProviderSource]
         do {
-            let result = try await fetchWithFallback(location: location, primary: primary)
+            let result = try await fetchWithFallback(location: location, primary: primary, placeName: placeName)
             snapshot = result
             lastError = nil
         } catch {
@@ -107,15 +114,39 @@ final class WeatherManager: ObservableObject {
         }
     }
 
-    private func fetchWithFallback(location: CLLocation?, primary: WeatherProviderSource) async throws -> WeatherSnapshot {
+    private func fetchWithFallback(location: CLLocation?, primary: WeatherProviderSource, placeName: String?) async throws -> WeatherSnapshot {
         do {
-            return try await provider.fetchSnapshot(location: location, source: primary)
+            return try await provider.fetchSnapshot(location: location, source: primary, placeName: placeName)
         } catch {
             // Open-Meteo can fail without a location; fall back to wttr.in.
             if primary == .openMeteo {
-                return try await provider.fetchSnapshot(location: location, source: .wttr)
+                return try await provider.fetchSnapshot(location: location, source: .wttr, placeName: placeName)
             }
             throw error
+        }
+    }
+
+    /// Reverse-geocodes the coordinate into a human-readable place name (e.g. a
+    /// city), caching the result until the user moves more than ~1km.
+    private func resolvePlaceName(for location: CLLocation?) async -> String? {
+        guard let location else { return nil }
+        if let cachedPlaceLocation, let cachedPlaceName,
+           location.distance(from: cachedPlaceLocation) < 1000 {
+            return cachedPlaceName
+        }
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            guard let placemark = placemarks.first else { return cachedPlaceName }
+            let name = placemark.locality
+                ?? placemark.subAdministrativeArea
+                ?? placemark.administrativeArea
+                ?? placemark.name
+            cachedPlaceName = name
+            cachedPlaceLocation = location
+            return name
+        } catch {
+            // Keep the previous name on transient geocoder failures.
+            return cachedPlaceName
         }
     }
 
