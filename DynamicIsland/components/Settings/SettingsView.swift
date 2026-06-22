@@ -2650,16 +2650,10 @@ struct About: View {
                 }
             }
 
-            GeistSection(footer: "Your support funds software development learning for students in 9th–12th grade.") {
+            GeistSection {
                 GeistRow(divider: false) {
                     HStack(spacing: Geist.Spacing.sm) {
                         Spacer(minLength: 0)
-                        Button {
-                            NSWorkspace.shared.open(sponsorPage)
-                        } label: {
-                            Label("Donate", systemImage: "cup.and.saucer.fill")
-                        }
-                        .buttonStyle(.geistProminent)
                         Button {
                             NSWorkspace.shared.open(productPage)
                         } label: {
