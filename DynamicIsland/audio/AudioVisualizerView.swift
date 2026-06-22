@@ -1,6 +1,6 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Unified audio visualizer that conditionally uses real-time audio spectrum
  * or the original animated spectrum based on user preference.

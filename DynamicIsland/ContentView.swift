@@ -1,9 +1,9 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Originally from boring.notch project
- * Modified and adapted for Atoll (DynamicIsland)
+ * Modified and adapted for VibeIsland (DynamicIsland)
  * See NOTICE for details.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -100,8 +100,16 @@ struct ContentView: View {
 
         // Focused approve/ask overlay needs extra height (diff preview / options).
         if vm.notchState == .open, let pending = agentMonitor.pendingInputSession {
-            let height: CGFloat = pending.permissionRequest != nil ? 340 : 260
-            return CGSize(width: baseSize.width, height: height)
+            if pending.permissionRequest != nil {
+                return CGSize(width: baseSize.width, height: 340)
+            }
+            if let question = pending.questionPrompt {
+                let optionCount = question.questions.first?.options.count ?? question.options.count
+                // header + title + one row (~62pt) per option, capped to the screen.
+                let height = min(460, CGFloat(150 + max(1, optionCount) * 62))
+                return CGSize(width: baseSize.width, height: height)
+            }
+            return CGSize(width: baseSize.width, height: 260)
         }
 
         // When inline sneak peek is active in closed notch, use the wider inline width
@@ -654,14 +662,23 @@ struct ContentView: View {
             alignment: .top
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Smoothly animate the notch height when switching tabs (e.g. into the
+        // taller weather tab) instead of snapping.
+        .animation(.smooth(duration: 0.3), value: coordinator.currentView)
         .environmentObject(privacyManager)
         .background(dragDetector)
         .environmentObject(vm)
         .environmentObject(webcamManager)
         .onChange(of: agentMonitor.pendingInputSession?.id) { _, newID in
-            // Auto-expand the notch so the approve/ask overlay surfaces.
-            guard newID != nil, vm.notchState != .open, !Defaults[.enableMinimalisticUI] else { return }
-            openNotch()
+            if newID != nil {
+                // Auto-expand the notch so the approve/ask overlay surfaces.
+                guard vm.notchState != .open, !Defaults[.enableMinimalisticUI] else { return }
+                openNotch()
+            } else if vm.notchState == .open, !isHovering, !shouldPreventAutoClose() {
+                // Input handled (answered/approved) and the cursor isn't on the
+                // notch — close the overlay we surfaced.
+                withAnimation(.smooth(duration: 0.3)) { vm.close() }
+            }
         }
     }
 

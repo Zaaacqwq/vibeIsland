@@ -1,6 +1,6 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Swift bridging header for Objective-C/C++ code.
  *

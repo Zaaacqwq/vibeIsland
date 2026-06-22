@@ -1,6 +1,6 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -298,10 +298,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         let userInfo: [String: Any] = [
-            AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
+            VibeIslandDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
         ]
         DistributedNotificationCenter.default().postNotificationName(
-            AtollDistributedNotifications.didBecomeIdle,
+            VibeIslandDistributedNotifications.didBecomeIdle,
             object: nil,
             userInfo: userInfo,
             deliverImmediately: true
@@ -565,10 +565,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let userInfo: [String: Any] = [
-            AtollDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
+            VibeIslandDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
         ]
         DistributedNotificationCenter.default().postNotificationName(
-            AtollDistributedNotifications.didBecomeActive,
+            VibeIslandDistributedNotifications.didBecomeActive,
             object: nil,
             userInfo: userInfo,
             deliverImmediately: true

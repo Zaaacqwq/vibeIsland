@@ -1,6 +1,6 @@
 /*
- * Atoll (DynamicIsland)
- * Copyright (C) 2024-2026 Atoll Contributors
+ * VibeIsland (DynamicIsland)
+ * Copyright (C) 2024-2026 VibeIsland Contributors
  *
  * Agent monitoring feature ported from Open Vibe Island (Open Island),
  * GPL v3 — Copyright (C) Octane0411 and Open Island contributors.
