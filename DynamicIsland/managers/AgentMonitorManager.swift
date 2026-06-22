@@ -126,6 +126,7 @@ final class AgentMonitorManager: ObservableObject {
         connectObserver()
         refreshHookStatus()
         startLivenessMonitor()
+        AgentInputHotkeyMonitor.shared.start()
     }
 
     func stop() {
@@ -137,6 +138,7 @@ final class AgentMonitorManager: ObservableObject {
         livenessTimer = nil
         isBridgeReady = false
         hasStarted = false
+        AgentInputHotkeyMonitor.shared.stop()
     }
 
     private func connectObserver() {
@@ -311,6 +313,14 @@ final class AgentMonitorManager: ObservableObject {
     var aggregateHaloState: HaloState? {
         sessions.map { haloState(for: $0) }
             .max { $0.aggregatePriority < $1.aggregatePriority }
+    }
+
+    /// The session currently awaiting a permission decision or a question
+    /// answer — drives the focused approve/ask overlay. Permission requests take
+    /// priority over questions.
+    var pendingInputSession: AgentSession? {
+        sessions.first { $0.permissionRequest != nil }
+            ?? sessions.first { $0.questionPrompt != nil }
     }
 
     // MARK: - Process liveness

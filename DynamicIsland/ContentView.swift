@@ -98,7 +98,13 @@ struct ContentView: View {
     // Dynamic sizing based on view type and graph count with smooth transitions
     var dynamicNotchSize: CGSize {
         let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
-        
+
+        // Focused approve/ask overlay needs extra height (diff preview / options).
+        if vm.notchState == .open, let pending = agentMonitor.pendingInputSession {
+            let height: CGFloat = pending.permissionRequest != nil ? 340 : 260
+            return CGSize(width: baseSize.width, height: height)
+        }
+
         // When inline sneak peek is active in closed notch, use the wider inline width
         // so the outer maxWidth frame doesn't clip the expanded content
         let inlineSneakPeekActive = vm.notchState == .closed
@@ -672,6 +678,11 @@ struct ContentView: View {
         .background(dragDetector)
         .environmentObject(vm)
         .environmentObject(webcamManager)
+        .onChange(of: agentMonitor.pendingInputSession?.id) { _, newID in
+            // Auto-expand the notch so the approve/ask overlay surfaces.
+            guard newID != nil, vm.notchState != .open, !Defaults[.enableMinimalisticUI] else { return }
+            openNotch()
+        }
     }
 
     private func installRootLifecycleHandlers<Content: View>(on view: Content) -> some View {
@@ -961,6 +972,11 @@ struct ContentView: View {
               
               ZStack {
                   if vm.notchState == .open {
+                      if let pending = agentMonitor.pendingInputSession {
+                          AgentInputOverlay(session: pending)
+                              .id(pending.id)
+                              .transition(.opacity)
+                      } else {
                       Group {
                           switch coordinator.currentView {
                               case .home:
@@ -997,6 +1013,7 @@ struct ContentView: View {
                       }
                       .id(coordinator.currentView)
                       .transition(tabSwitchTransition)
+                      }
                   }
               }
               .zIndex(1)
