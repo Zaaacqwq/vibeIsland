@@ -34,7 +34,10 @@ enum PanDirection {
 }
 
 extension View {
-    func panGesture(direction: PanDirection, threshold: CGFloat = 4, action: @escaping (CGFloat, NSEvent.Phase) -> Void) -> some View {
+    /// - Parameter ignoreMomentum: When `true`, trackpad momentum scroll events
+    ///   (the "coasting" after you lift your fingers) are dropped, so one
+    ///   physical swipe maps to exactly one gesture instead of re-triggering.
+    func panGesture(direction: PanDirection, threshold: CGFloat = 4, ignoreMomentum: Bool = false, action: @escaping (CGFloat, NSEvent.Phase) -> Void) -> some View {
         self
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -45,13 +48,14 @@ extension View {
                     }
                     .onEnded { _ in action(0, .ended) }
             )
-            .background(ScrollMonitor(direction: direction, threshold: threshold, action: action))
+            .background(ScrollMonitor(direction: direction, threshold: threshold, ignoreMomentum: ignoreMomentum, action: action))
     }
 }
 
 private struct ScrollMonitor: NSViewRepresentable {
     let direction: PanDirection
     let threshold: CGFloat
+    var ignoreMomentum: Bool = false
     let action: (CGFloat, NSEvent.Phase) -> Void
 
     func makeNSView(context: Context) -> NSView {
@@ -62,13 +66,14 @@ private struct ScrollMonitor: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {}
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) { coordinator.removeMonitor() }
 
-    func makeCoordinator() -> Coordinator { 
-        Coordinator(direction: direction, threshold: threshold, action: action) 
+    func makeCoordinator() -> Coordinator {
+        Coordinator(direction: direction, threshold: threshold, ignoreMomentum: ignoreMomentum, action: action)
     }
 
     @MainActor final class Coordinator: NSObject {
         private let direction: PanDirection
         private let threshold: CGFloat
+        private let ignoreMomentum: Bool
         private let action: (CGFloat, NSEvent.Phase) -> Void
         private var monitor: Any?
         private var globalMonitor: Any?
@@ -83,9 +88,10 @@ private struct ScrollMonitor: NSViewRepresentable {
         private let verticalEdgeInset: CGFloat = 4
         private var lastEventTimestamp: TimeInterval = 0
 
-        init(direction: PanDirection, threshold: CGFloat, action: @escaping (CGFloat, NSEvent.Phase) -> Void) {
+        init(direction: PanDirection, threshold: CGFloat, ignoreMomentum: Bool = false, action: @escaping (CGFloat, NSEvent.Phase) -> Void) {
             self.direction = direction
             self.threshold = threshold
+            self.ignoreMomentum = ignoreMomentum
             self.action = action
         }
 
@@ -120,6 +126,17 @@ private struct ScrollMonitor: NSViewRepresentable {
         private func handleScroll(_ event: NSEvent) {
             guard lastEventTimestamp != event.timestamp else { return }
             lastEventTimestamp = event.timestamp
+
+            // Drop trackpad momentum ("coasting") events so a single physical
+            // swipe can't re-cross the threshold and switch several tabs.
+            if ignoreMomentum, !event.momentumPhase.isEmpty {
+                if event.momentumPhase.contains(.ended) {
+                    active = false
+                    accumulated = 0
+                }
+                return
+            }
+
             guard isCursorNearObservedView(using: event) else { return }
 
             if event.phase == .ended || event.momentumPhase == .ended {

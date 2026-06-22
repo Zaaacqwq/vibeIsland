@@ -548,10 +548,10 @@ struct ContentView: View {
                             .panGesture(direction: .down) { translation, phase in
                                 handleDownGesture(translation: translation, phase: phase)
                             }
-                            .panGesture(direction: .left) { translation, phase in
+                            .panGesture(direction: .left, ignoreMomentum: true) { translation, phase in
                                 handleTabSwitchGesture(forward: true, translation: translation, phase: phase)
                             }
-                            .panGesture(direction: .right) { translation, phase in
+                            .panGesture(direction: .right, ignoreMomentum: true) { translation, phase in
                                 handleTabSwitchGesture(forward: false, translation: translation, phase: phase)
                             }
                     }
