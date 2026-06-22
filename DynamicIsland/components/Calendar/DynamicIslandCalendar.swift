@@ -325,17 +325,17 @@ struct StandaloneCalendarView: View {
         )
     }
 
-    /// Target notch height for the Calendar tab — must match the height returned
-    /// by `ContentView.dynamicNotchSize` for `.calendar` so the content isn't
-    /// clipped by the window frame.
-    private var targetNotchHeight: CGFloat { 230 }
+    private var resolvedNotchHeight: CGFloat {
+        let height = vm.notchSize.height
+        return height > 0 ? height : openNotchSize.height
+    }
 
     private var headerHeight: CGFloat {
         max(24, vm.effectiveClosedNotchHeight)
     }
 
     private var maxTabContentHeight: CGFloat {
-        let available = targetNotchHeight - headerHeight - 36
+        let available = resolvedNotchHeight - headerHeight - 36
         return max(130, available)
     }
 
