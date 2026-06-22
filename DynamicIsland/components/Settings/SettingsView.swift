@@ -3855,7 +3855,6 @@ struct TimerSettings: View {
     @Default(.timerControlWindowEnabled) private var controlWindowEnabled
     @Default(.mirrorSystemTimer) private var mirrorSystemTimer
     @Default(.timerDisplayMode) private var timerDisplayMode
-    @Default(.timerInputStyle) private var timerInputStyle
     @AppStorage("customTimerDuration") private var customTimerDuration: Double = 600
     @State private var customHours: Int = 0
     @State private var customMinutes: Int = 10
@@ -3950,9 +3949,6 @@ struct TimerSettings: View {
                 GeistLabeledRow(title: "Solid colour") {
                     ColorPicker("", selection: $solidColor, supportsOpacity: false).labelsHidden()
                 }
-            }
-            GeistSegmentedRow(title: "Custom timer style", selection: $timerInputStyle) {
-                ForEach(TimerInputStyle.allCases) { Text($0.displayName).tag($0) }
             }
             GeistToggleRow(title: "Show timer name", isOn: $showsLabel)
             GeistToggleRow(title: "Show countdown", isOn: $showsCountdown)

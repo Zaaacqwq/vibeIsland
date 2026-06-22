@@ -55,7 +55,6 @@ struct NotchTimerView: View {
     @Default(.timerShowsProgress) private var showsProgress
     @Default(.timerProgressStyle) private var progressStyle
     @Default(.showTimerPresetsInNotchTab) private var showTimerPresetsInNotchTab
-    @Default(.timerInputStyle) private var timerInputStyle
 
     @AppStorage("customTimerDuration") private var customTimerDuration: Double = 600
     @State private var customHours: Int = 0
@@ -106,41 +105,26 @@ struct NotchTimerView: View {
             inputSection
                 .frame(maxWidth: .infinity)
 
-            if timerInputStyle != .ruler {
-                bottomChipRow
-            }
+            bottomChipRow
         }
         .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
     }
 
-    @ViewBuilder
     private var inputSection: some View {
-        if timerInputStyle == .ruler {
-            RulerTimerPicker(
+        HStack(alignment: .center, spacing: 12) {
+            DurationInputRow(
                 hours: $customHours,
                 minutes: $customMinutes,
-                seconds: $customSeconds,
-                tintColor: timerAccentColor,
-                startAction: startCustomTimer
+                seconds: $customSeconds
             )
-            .padding(12)
-            .background(card)
-        } else {
-            HStack(alignment: .center, spacing: 12) {
-                DurationInputRow(
-                    hours: $customHours,
-                    minutes: $customMinutes,
-                    seconds: $customSeconds
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-                startButton
-                    .frame(width: 132)
-                resetButton
-            }
-            .padding(12)
-            .background(card)
+            startButton
+                .frame(width: 132)
+            resetButton
         }
+        .padding(12)
+        .background(card)
     }
 
     /// Bottom band. With presets shown: presets on the left, quick-add chips on
