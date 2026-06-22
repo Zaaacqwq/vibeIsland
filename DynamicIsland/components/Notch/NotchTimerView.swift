@@ -143,10 +143,32 @@ struct NotchTimerView: View {
         }
     }
 
-    /// Bottom band: preset chips when configured, otherwise quick-add chips.
+    /// Bottom band. With presets shown: presets on the left, quick-add chips on
+    /// the right. Without presets: quick-add chips fill the row.
     @ViewBuilder
     private var bottomChipRow: some View {
-        if showTimerPresetsInNotchTab && !timerPresets.isEmpty {
+        HStack(alignment: .center, spacing: 12) {
+            if showTimerPresetsInNotchTab {
+                presetChipsArea
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                quickAddChips
+            } else {
+                quickAddChips
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(height: 46)
+    }
+
+    @ViewBuilder
+    private var presetChipsArea: some View {
+        if timerPresets.isEmpty {
+            Text("Configure presets in Settings to see them here.")
+                .font(.system(size: 12))
+                .foregroundStyle(TimerStyle.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+        } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(timerPresets) { preset in
@@ -158,22 +180,16 @@ struct NotchTimerView: View {
                 }
                 .padding(.horizontal, 2)
             }
-            .frame(height: 46)
-        } else if showTimerPresetsInNotchTab {
-            Text("Configure presets in Settings to see them here.")
-                .font(.system(size: 12))
-                .foregroundStyle(TimerStyle.muted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
-        } else {
-            HStack(spacing: 8) {
-                ForEach(TimerStyle.quickAddMinutes, id: \.self) { minutes in
-                    QuickAddChip(minutes: minutes, tint: timerAccentColor) { addQuickMinutes(minutes) }
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(height: 40)
         }
+    }
+
+    private var quickAddChips: some View {
+        HStack(spacing: 8) {
+            ForEach(TimerStyle.quickAddMinutes, id: \.self) { minutes in
+                QuickAddChip(minutes: minutes, tint: timerAccentColor) { addQuickMinutes(minutes) }
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     // MARK: - Active
@@ -562,14 +578,19 @@ private struct DurationField: View {
     var body: some View {
         VStack(spacing: 5) {
             TextField("00", text: binding)
-                .font(.system(size: 26, weight: .semibold, design: .monospaced))
+                .font(.system(size: 25, weight: .semibold, design: .monospaced))
                 .multilineTextAlignment(.center)
                 .textFieldStyle(.plain)
                 .foregroundColor(.white)
                 .tint(.white)
-                .frame(width: width, height: 44)
-                .background(TimerStyle.fieldFill)
-                .clipShape(RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous))
+                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: width, height: 48)
+                // Background fill (not a clipShape) so tall glyphs are never clipped.
+                .background(
+                    RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous)
+                        .fill(TimerStyle.fieldFill)
+                )
 
             Text(label)
                 .font(.caption)
