@@ -64,35 +64,152 @@ struct VibeIslandAgentConfigurationTests {
 
 @Suite("ClaudeSessionFilter")
 struct ClaudeSessionFilterTests {
-    @Test("Includes Claude Code and its hook-compatible forks")
-    func includesClaudeFamily() {
+    @Test("Includes the surfaced agents (Claude family, Codex, Gemini, Antigravity)")
+    func includesSurfacedAgents() {
         #expect(ClaudeSessionFilter.includes(.claudeCode))
         #expect(ClaudeSessionFilter.includes(.qoder))
         #expect(ClaudeSessionFilter.includes(.qwenCode))
         #expect(ClaudeSessionFilter.includes(.factory))
         #expect(ClaudeSessionFilter.includes(.codebuddy))
         #expect(ClaudeSessionFilter.includes(.kimiCLI))
+        #expect(ClaudeSessionFilter.includes(.codex))
+        #expect(ClaudeSessionFilter.includes(.geminiCLI))
+        #expect(ClaudeSessionFilter.includes(.antigravity))
     }
 
-    @Test("Excludes non-Claude agents for the MVP")
+    @Test("Excludes agents not yet surfaced")
     func excludesOtherAgents() {
-        #expect(!ClaudeSessionFilter.includes(.codex))
-        #expect(!ClaudeSessionFilter.includes(.geminiCLI))
         #expect(!ClaudeSessionFilter.includes(.openCode))
         #expect(!ClaudeSessionFilter.includes(.cursor))
     }
 
-    @Test("Filters a mixed state down to Claude-family sessions only")
+    @Test("Filters a mixed state down to surfaced sessions only")
     func filtersMixedState() {
         let state = SessionState(sessions: [
             makeSession(id: "a", tool: .claudeCode),
             makeSession(id: "b", tool: .codex),
             makeSession(id: "c", tool: .qoder),
             makeSession(id: "d", tool: .cursor),
+            makeSession(id: "e", tool: .antigravity),
         ])
 
-        let claude = ClaudeSessionFilter.claudeSessions(in: state)
-        let ids = Set(claude.map(\.id))
-        #expect(ids == ["a", "c"])
+        let surfaced = ClaudeSessionFilter.claudeSessions(in: state)
+        let ids = Set(surfaced.map(\.id))
+        // codex (b) and antigravity (e) are surfaced; cursor (d) is not.
+        #expect(ids == ["a", "b", "c", "e"])
+    }
+}
+
+@Suite("AntigravityHookPayload")
+struct AntigravityHookPayloadTests {
+    @Test("Decodes a real agy PreToolUse payload and maps core fields")
+    func decodesToolCallPayload() throws {
+        let json = """
+        {"artifactDirectoryPath":"/Users/x/.gemini/antigravity-cli/brain/abc",
+         "conversationId":"abc-123",
+         "stepIdx":3,
+         "toolCall":{"args":{"CommandLine":"echo hi","Cwd":"/repo","toolSummary":"Run echo hi"},"name":"run_command"},
+         "transcriptPath":"/Users/x/.gemini/antigravity-cli/brain/abc/.system_generated/logs/transcript_full.jsonl",
+         "workspacePaths":["/repo"]}
+        """
+        let payload = try JSONDecoder().decode(AntigravityHookPayload.self, from: Data(json.utf8))
+
+        #expect(payload.sessionID == "abc-123")
+        #expect(payload.cwd == "/repo")
+        #expect(payload.toolCall?.name == "run_command")
+        // Event is absent from the JSON; it defaults until the CLI injects it.
+        #expect(payload.hookEventName == .notification)
+        #expect(payload.transcriptPath?.hasSuffix("transcript_full.jsonl") == true)
+        #expect(payload.toolActivitySummary == "Run echo hi")
+    }
+
+    @Test("Event name round-trips through the bridge command codec")
+    func eventRoundTripsThroughBridge() throws {
+        var payload = try JSONDecoder().decode(
+            AntigravityHookPayload.self,
+            from: Data(#"{"conversationId":"s1","workspacePaths":["/r"]}"#.utf8)
+        )
+        payload.hookEventName = .stop
+
+        let command = BridgeCommand.processAntigravityHook(payload)
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(BridgeCommand.self, from: data)
+
+        guard case let .processAntigravityHook(roundTripped) = decoded else {
+            Issue.record("expected processAntigravityHook")
+            return
+        }
+        #expect(roundTripped.hookEventName == .stop)
+        #expect(roundTripped.sessionID == "s1")
+    }
+
+    @Test("Session title and summaries are branded Antigravity, not Gemini")
+    func brandedStrings() throws {
+        var payload = AntigravityHookPayload(conversationId: "s", workspacePaths: ["/Users/x/repo"])
+        payload.hookEventName = .sessionStart
+        #expect(payload.sessionTitle == "Antigravity · repo")
+        #expect(payload.implicitSummary.contains("Antigravity"))
+    }
+}
+
+@Suite("AntigravityHookInstallationManager")
+struct AntigravityHookInstallationManagerTests {
+    private func makeTempDir() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("agy-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test("Install writes a registered plugin with a per-event hook command")
+    func installWritesRegisteredPlugin() throws {
+        let configRoot = try makeTempDir()
+        let plugins = configRoot.appendingPathComponent("plugins")
+        let bundled = configRoot.appendingPathComponent("OpenIslandHooks")
+        try Data("#!/bin/sh\n".utf8).write(to: bundled)
+        let managed = configRoot.appendingPathComponent("managed/VibeIslandAgentHooks")
+
+        let manager = AntigravityHookInstallationManager(
+            pluginsDirectory: plugins,
+            managedHooksBinaryURL: managed
+        )
+
+        let status = try manager.install(hooksBinaryURL: bundled)
+        #expect(status.managedHooksPresent)
+
+        let hooksText = String(decoding: try Data(contentsOf: status.hooksFileURL), as: UTF8.self)
+        #expect(hooksText.contains("\"PreToolUse\""))
+        #expect(hooksText.contains("--source antigravity --event Stop"))
+
+        // Registered in import_manifest.json beside the plugins folder.
+        let registry = try Data(contentsOf: status.importManifestURL)
+        #expect(AntigravityHookInstaller.importManifestContains(plugin: "vibeisland", data: registry))
+    }
+
+    @Test("Install preserves other plugins; uninstall only drops ours")
+    func registryPreservesOtherPlugins() throws {
+        let configRoot = try makeTempDir()
+        let plugins = configRoot.appendingPathComponent("plugins")
+        let bundled = configRoot.appendingPathComponent("OpenIslandHooks")
+        try Data("#!/bin/sh\n".utf8).write(to: bundled)
+        let registryURL = configRoot.appendingPathComponent("import_manifest.json")
+        try Data(#"{"imports":[{"name":"other","source":"antigravity","components":["hooks"]}]}"#.utf8)
+            .write(to: registryURL)
+
+        let manager = AntigravityHookInstallationManager(
+            pluginsDirectory: plugins,
+            managedHooksBinaryURL: configRoot.appendingPathComponent("managed/VibeIslandAgentHooks")
+        )
+
+        _ = try manager.install(hooksBinaryURL: bundled)
+        var registry = try Data(contentsOf: registryURL)
+        #expect(AntigravityHookInstaller.importManifestContains(plugin: "other", data: registry))
+        #expect(AntigravityHookInstaller.importManifestContains(plugin: "vibeisland", data: registry))
+
+        let status = try manager.uninstall()
+        #expect(!status.managedHooksPresent)
+        registry = try Data(contentsOf: registryURL)
+        #expect(AntigravityHookInstaller.importManifestContains(plugin: "other", data: registry))
+        #expect(!AntigravityHookInstaller.importManifestContains(plugin: "vibeisland", data: registry))
     }
 }

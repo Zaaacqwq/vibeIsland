@@ -10,7 +10,7 @@ public enum ClaudeSessionFilter {
     /// Tools VibeIsland currently displays.
     public static func includes(_ tool: AgentTool) -> Bool {
         switch tool {
-        case .claudeCode, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI, .codex, .geminiCLI:
+        case .claudeCode, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI, .codex, .geminiCLI, .antigravity:
             true
         case .openCode, .cursor:
             false

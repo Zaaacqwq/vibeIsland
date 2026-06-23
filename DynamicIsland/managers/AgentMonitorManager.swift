@@ -66,6 +66,7 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var hookStatus: HookStatus = .unknown
     @Published private(set) var codexHookStatus: HookStatus = .unknown
     @Published private(set) var geminiHookStatus: HookStatus = .unknown
+    @Published private(set) var antigravityHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
     /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
@@ -102,6 +103,9 @@ final class AgentMonitorManager: ObservableObject {
     private var state = SessionState()
     private var hasStarted = false
     private var livenessTimer: Timer?
+    /// Lightweight in-memory watchdog (no `ps`) that completes idle Antigravity
+    /// turns promptly, since agy never delivers its `Stop` hook.
+    private var antigravityWatchdogTimer: Timer?
     /// Per-session fine-grained activity, refining the engine's coarse phase
     /// into Claude Halo's thinking / executing / compacting / idle states.
     private var haloActivity: [String: HaloState] = [:]
@@ -143,6 +147,8 @@ final class AgentMonitorManager: ObservableObject {
         bridgeServer.stop()
         livenessTimer?.invalidate()
         livenessTimer = nil
+        antigravityWatchdogTimer?.invalidate()
+        antigravityWatchdogTimer = nil
         isBridgeReady = false
         hasStarted = false
         AgentInputHotkeyMonitor.shared.stop()
@@ -347,6 +353,12 @@ final class AgentMonitorManager: ObservableObject {
         }
         livenessTimer = timer
         reconcileProcessLiveness()
+
+        antigravityWatchdogTimer?.invalidate()
+        let watchdog = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.completeStaleAntigravitySessions()
+        }
+        antigravityWatchdogTimer = watchdog
     }
 
     private func reconcileProcessLiveness() {
@@ -360,7 +372,30 @@ final class AgentMonitorManager: ObservableObject {
         }
     }
 
+    /// Antigravity (`agy`) fires its `Stop` hook unreliably — it often logs the
+    /// hook then tears the turn down, killing the subprocess before it reaches
+    /// the bridge, so a session can stick on "Executing" forever. As a safety
+    /// net, auto-complete an antigravity session that has been `running` with no
+    /// new activity for this long (its short turns emit events ~1s apart, so a
+    /// few seconds of quiet means the turn is done — agy never delivers `Stop`).
+    private static let antigravityIdleCompleteSeconds: TimeInterval = 3
+
+    private func completeStaleAntigravitySessions() {
+        let now = Date()
+        for session in state.sessions
+        where session.tool == .antigravity
+            && session.phase == .running
+            && !session.isDemoSession
+            && now.timeIntervalSince(session.updatedAt) > Self.antigravityIdleCompleteSeconds {
+            apply(.sessionCompleted(
+                SessionCompleted(sessionID: session.id, summary: session.summary, timestamp: now)
+            ))
+        }
+    }
+
     private func applyLiveness(aliveTTYs: Set<String>) {
+        completeStaleAntigravitySessions()
+
         // A session is "alive" if its TTY still runs Claude. Sessions with no
         // known TTY are kept alive to avoid false removal.
         let aliveIDs = Set(state.sessions.compactMap { session -> String? in
@@ -384,7 +419,7 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     /// Process names of the agent CLIs we surface, used for TTY liveness.
-    private nonisolated static let agentProcessNames = ["claude", "codex", "gemini"]
+    private nonisolated static let agentProcessNames = ["claude", "codex", "gemini", "agy"]
 
     /// TTYs (normalized, e.g. `ttys003`) that currently host a supported agent
     /// CLI process (claude / codex / gemini). Used so a completed session whose
@@ -651,6 +686,26 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallGeminiHooks() {
         applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
             _ = try GeminiHookInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    func refreshAntigravityHookStatus() {
+        applyHookChange(label: "check Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
+            try AntigravityHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installAntigravityHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
+            try AntigravityHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallAntigravityHooks() {
+        applyHookChange(label: "remove Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
+            _ = try AntigravityHookInstallationManager().uninstall()
             return false
         }
     }
