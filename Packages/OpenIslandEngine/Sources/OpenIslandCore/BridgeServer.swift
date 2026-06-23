@@ -1067,7 +1067,14 @@ public final class BridgeServer: @unchecked Sendable {
             send(.response(.acknowledged), to: clientID)
 
         case .preToolUse:
-            clearStaleOpenCodeInteractionIfNeeded(for: payload.sessionID)
+            // NOTE: do NOT clear pending interactions here. OpenCode sends each
+            // event on a separate fire-and-forget socket, so a same-turn
+            // PreToolUse (fired just before `permission.asked`) can arrive at the
+            // bridge AFTER the held PermissionRequest and wrongly cancel the
+            // just-created prompt. A tool *starting* never resolves a permission;
+            // stale prompts from a prior turn are cleared by SessionStart /
+            // UserPromptSubmit (which always precede a turn's tools) and by
+            // PostToolUse (tool actually completed).
             ensureOpenCodeSessionExists(for: payload)
             synchronizeOpenCodeJumpTarget(for: payload)
             synchronizeOpenCodeMetadata(for: payload)

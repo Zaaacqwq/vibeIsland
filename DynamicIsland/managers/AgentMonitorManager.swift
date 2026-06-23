@@ -29,6 +29,11 @@ extension Notification.Name {
     /// Posted when a Claude session finishes a turn. `AppDelegate` listens and,
     /// if enabled, expands the notch to the Agents tab. `object` is the session ID.
     static let vibeIslandAgentDidComplete = Notification.Name("vibeIslandAgentDidComplete")
+
+    /// Posted when an agent session needs input (permission/approve or a
+    /// question). `AppDelegate` listens and expands the notch so the approve/ask
+    /// overlay surfaces. `object` is the session ID.
+    static let vibeIslandAgentNeedsInput = Notification.Name("vibeIslandAgentNeedsInput")
 }
 
 /// Bridges Open Island's agent-monitoring engine into Atoll's Combine /
@@ -217,6 +222,19 @@ final class AgentMonitorManager: ObservableObject {
         state.apply(event)
         bridgeServer.updateStateSnapshot(state)
         sessions = ClaudeSessionFilter.claudeSessions(in: state)
+
+        // Surface the notch when a session needs the user (permission/question).
+        // Routed through a notification handled at the app/window level, which
+        // reliably opens the notch — the SwiftUI onChange auto-open in
+        // ContentView doesn't always fire.
+        switch event {
+        case let .permissionRequested(payload):
+            postNeedsInput(sessionID: payload.sessionID)
+        case let .questionAsked(payload):
+            postNeedsInput(sessionID: payload.sessionID)
+        default:
+            break
+        }
     }
 
     // MARK: - Halo state
@@ -263,6 +281,11 @@ final class AgentMonitorManager: ObservableObject {
     /// Throttle so a multi-turn burst doesn't repeatedly fling the notch open.
     private var lastAutoExpandAt: Date = .distantPast
     private static let autoExpandThrottle: TimeInterval = 8
+
+    private func postNeedsInput(sessionID: String) {
+        guard Defaults[.enableAgentMonitoring] else { return }
+        NotificationCenter.default.post(name: .vibeIslandAgentNeedsInput, object: sessionID)
+    }
 
     private func announceCompletionIfEnabled(sessionID: String) {
         guard Defaults[.agentExpandOnComplete] else { return }

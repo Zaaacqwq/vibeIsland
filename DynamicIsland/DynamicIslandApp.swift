@@ -683,6 +683,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // When a session needs input (approve/ask), open the notch and keep it
+        // open — no auto-close timer, since the overlay must stay until resolved
+        // (ContentView closes it when the pending input clears).
+        NotificationCenter.default.publisher(for: .vibeIslandAgentNeedsInput)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self, Defaults[.enableAgentMonitoring] else { return }
+                self.coordinator.currentView = .agents
+                self.vm.open()
+            }
+            .store(in: &cancellables)
+
         NotificationCenter.default.publisher(for: NotificationMonitorManager.didArrive)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in

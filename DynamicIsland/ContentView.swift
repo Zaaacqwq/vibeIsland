@@ -2310,6 +2310,8 @@ struct ContentView: View {
 
     private func shouldPreventAutoClose() -> Bool {
         coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || SharingStateManager.shared.preventNotchClose
+            // Keep the notch open while an agent is waiting for approve/ask input.
+            || agentMonitor.pendingInputSession != nil
     }
     
     // Helper to prevent rapid haptic feedback
