@@ -101,7 +101,19 @@ final class AgentInputHotkeyMonitor {
         let pending = AgentMonitorManager.shared.pendingInputSession
         hasPendingPermission = pending?.permissionRequest != nil
         hasPendingQuestion = pending?.questionPrompt != nil
+
+        // Self-heal: if a prompt is now pending but the tap was never created
+        // (Accessibility was granted after launch), try again now so the user
+        // doesn't have to relaunch the app for the chords to be captured.
+        if (hasPendingPermission || hasPendingQuestion), tapPort == nil {
+            start()
+        }
     }
+
+    /// Whether the event tap is live — i.e. ⌘Y/⌘N/⌘1-9 will be captured and
+    /// kept from reaching other apps. `false` usually means Accessibility
+    /// permission is missing. The overlay can surface this as a hint.
+    var isCapturingKeys: Bool { tapPort != nil }
 
     // MARK: - Event tap callback (main run loop)
 
