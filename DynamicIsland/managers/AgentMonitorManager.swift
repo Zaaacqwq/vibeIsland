@@ -67,6 +67,7 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var codexHookStatus: HookStatus = .unknown
     @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var antigravityHookStatus: HookStatus = .unknown
+    @Published private(set) var openCodeHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
     /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
@@ -419,7 +420,7 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     /// Process names of the agent CLIs we surface, used for TTY liveness.
-    private nonisolated static let agentProcessNames = ["claude", "codex", "gemini", "agy"]
+    private nonisolated static let agentProcessNames = ["claude", "codex", "gemini", "agy", "opencode"]
 
     /// TTYs (normalized, e.g. `ttys003`) that currently host a supported agent
     /// CLI process (claude / codex / gemini). Used so a completed session whose
@@ -706,6 +707,50 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallAntigravityHooks() {
         applyHookChange(label: "remove Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
             _ = try AntigravityHookInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    // MARK: - OpenCode plugin installation
+
+    /// OpenCode loads a JS plugin (not the hooks CLI binary). The bundled plugin
+    /// defaults to the legacy OpenIsland socket, so patch it to VibeIsland's
+    /// before installing.
+    private func openCodePluginSource() throws -> Data {
+        guard let url = Bundle.main.url(forResource: "open-island-opencode", withExtension: "js"),
+              let js = try? String(contentsOf: url, encoding: .utf8) else {
+            throw NSError(
+                domain: "VibeIsland.OpenCode", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Bundled OpenCode plugin (open-island-opencode.js) is missing."]
+            )
+        }
+        let patched = js.replacingOccurrences(
+            of: "Library/Application Support/OpenIsland/bridge.sock",
+            with: "Library/Application Support/VibeIsland/agent-bridge.sock"
+        )
+        return Data(patched.utf8)
+    }
+
+    func refreshOpenCodeHookStatus() {
+        applyHookChange(label: "check OpenCode plugin", assign: { self.openCodeHookStatus = $0 }) {
+            try OpenCodePluginInstallationManager().status().isInstalled
+        }
+    }
+
+    func installOpenCodeHooks() {
+        let source: Data
+        do { source = try openCodePluginSource() } catch {
+            lastErrorMessage = error.localizedDescription
+            return
+        }
+        applyHookChange(label: "install OpenCode plugin", assign: { self.openCodeHookStatus = $0 }) {
+            try OpenCodePluginInstallationManager().install(pluginSourceData: source).isInstalled
+        }
+    }
+
+    func uninstallOpenCodeHooks() {
+        applyHookChange(label: "remove OpenCode plugin", assign: { self.openCodeHookStatus = $0 }) {
+            _ = try OpenCodePluginInstallationManager().uninstall()
             return false
         }
     }

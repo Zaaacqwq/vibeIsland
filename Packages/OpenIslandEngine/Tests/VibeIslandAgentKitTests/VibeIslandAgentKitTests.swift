@@ -64,7 +64,7 @@ struct VibeIslandAgentConfigurationTests {
 
 @Suite("ClaudeSessionFilter")
 struct ClaudeSessionFilterTests {
-    @Test("Includes the surfaced agents (Claude family, Codex, Gemini, Antigravity)")
+    @Test("Includes the surfaced agents (Claude family, Codex, Gemini, Antigravity, OpenCode)")
     func includesSurfacedAgents() {
         #expect(ClaudeSessionFilter.includes(.claudeCode))
         #expect(ClaudeSessionFilter.includes(.qoder))
@@ -75,11 +75,11 @@ struct ClaudeSessionFilterTests {
         #expect(ClaudeSessionFilter.includes(.codex))
         #expect(ClaudeSessionFilter.includes(.geminiCLI))
         #expect(ClaudeSessionFilter.includes(.antigravity))
+        #expect(ClaudeSessionFilter.includes(.openCode))
     }
 
     @Test("Excludes agents not yet surfaced")
     func excludesOtherAgents() {
-        #expect(!ClaudeSessionFilter.includes(.openCode))
         #expect(!ClaudeSessionFilter.includes(.cursor))
     }
 

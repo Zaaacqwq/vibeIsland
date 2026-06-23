@@ -28,7 +28,7 @@ struct AgentsSettings: View {
     @Default(.enableAgentMonitoring) var enableAgentMonitoring
 
     var body: some View {
-        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Gemini CLI, Antigravity) in the notch.") {
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Gemini CLI, Antigravity, OpenCode) in the notch.") {
             GeistSection(
                 footer: "Adds an Agents tab and a closed-notch live activity showing running Claude Code sessions, permission prompts, and one-click jump-back to the terminal."
             ) {
@@ -95,6 +95,14 @@ struct AgentsSettings: View {
                     uninstall: { agentMonitor.uninstallAntigravityHooks() }
                 )
 
+                hookSection(
+                    title: "OpenCode",
+                    footer: "Installs a JS plugin into ~/.config/opencode/plugins/ and registers it in config.json. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.openCodeHookStatus,
+                    install: { agentMonitor.installOpenCodeHooks() },
+                    uninstall: { agentMonitor.uninstallOpenCodeHooks() }
+                )
+
                 GeistSection(
                     title: "Usage",
                     footer: "Installs a managed Claude Code status line that reports your 5-hour and 7-day rate-limit usage. Modifies the statusLine entry in ~/.claude/settings.json."
@@ -144,6 +152,7 @@ struct AgentsSettings: View {
             agentMonitor.refreshCodexHookStatus()
             agentMonitor.refreshGeminiHookStatus()
             agentMonitor.refreshAntigravityHookStatus()
+            agentMonitor.refreshOpenCodeHookStatus()
             agentMonitor.refreshStatusLineStatus()
         }
     }
