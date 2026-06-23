@@ -11,6 +11,7 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
     case codebuddy
     case cursor
     case kimiCLI
+    case antigravity
 
     public var displayName: String {
         switch self {
@@ -34,6 +35,8 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "Cursor"
         case .kimiCLI:
             "Kimi CLI"
+        case .antigravity:
+            "Antigravity"
         }
     }
 
@@ -59,6 +62,8 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "CURSOR"
         case .kimiCLI:
             "KIMI"
+        case .antigravity:
+            "AGY"
         }
     }
 
@@ -87,6 +92,7 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
         case .factory:    "#6e9fff"
         case .codebuddy:  "#fca5a5"
         case .kimiCLI:    "#fde047"
+        case .antigravity: "#4f9bff"
         }
     }
 }
@@ -508,7 +514,7 @@ public extension AgentSession {
     }
 
     var isTrackedLiveSession: Bool {
-        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .qoder || tool == .qwenCode || tool == .factory || tool == .codebuddy || tool == .cursor || tool == .kimiCLI)
+        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .qoder || tool == .qwenCode || tool == .factory || tool == .codebuddy || tool == .cursor || tool == .kimiCLI || tool == .antigravity)
     }
 
     var isTrackedLiveCodexSession: Bool {

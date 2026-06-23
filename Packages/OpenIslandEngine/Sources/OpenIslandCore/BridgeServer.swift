@@ -74,6 +74,13 @@ public final class BridgeServer: @unchecked Sendable {
     private var pendingAgentDescriptions: [String: String] = [:]
     /// Maps toolUseID → temporary task ID for TaskCreate, so postToolUse can update with real ID.
     private var pendingTaskCreations: [String: PendingTaskCreation] = [:]
+    /// Per-Antigravity-session `stepIdx` at which the turn last completed (`Stop`).
+    /// Antigravity fires each hook as a separate process, so a `PreToolUse` can
+    /// arrive at the bridge *after* the turn's `Stop` and wrongly flip the
+    /// session back to "running". `stepIdx` is monotonic across a session, so we
+    /// ignore any tool event whose step is not strictly newer than the latest
+    /// completion — only a genuinely newer turn re-opens the session.
+    private var antigravityCompletedStepIdx: [String: Int] = [:]
     private var stateSnapshot = SessionState()
     /// Local working state: tracks sessions emitted by this server between
     /// snapshot pushes from AppModel. This is NOT a duplicate of AppModel's
@@ -468,6 +475,9 @@ public final class BridgeServer: @unchecked Sendable {
 
         case let .processGeminiHook(payload):
             handleGeminiHook(payload, from: clientID)
+
+        case let .processAntigravityHook(payload):
+            handleAntigravityHook(payload, from: clientID)
         }
     }
 
@@ -1446,6 +1456,207 @@ public final class BridgeServer: @unchecked Sendable {
             lastUserPrompt: update.lastUserPrompt ?? existingSession.geminiMetadata?.lastUserPrompt,
             lastAssistantMessage: update.lastAssistantMessage ?? existingSession.geminiMetadata?.lastAssistantMessage,
             lastAssistantMessageBody: update.lastAssistantMessageBody ?? existingSession.geminiMetadata?.lastAssistantMessageBody
+        )
+        guard !merged.isEmpty else {
+            return
+        }
+
+        guard existingSession.geminiMetadata != merged else {
+            return
+        }
+
+        emit(
+            .geminiSessionMetadataUpdated(
+                GeminiSessionMetadataUpdated(
+                    sessionID: payload.sessionID,
+                    geminiMetadata: merged,
+                    timestamp: .now
+                )
+            )
+        )
+    }
+
+    // MARK: - Antigravity (agy)
+
+    /// Handles a hook from Antigravity CLI. Mirrors the Gemini flow but tags
+    /// sessions as `.antigravity` and reuses `GeminiSessionMetadata` storage
+    /// (a generic transcript holder). Antigravity's payload carries no event
+    /// name; the CLI injects it from `--event`.
+    private func handleAntigravityHook(_ payload: AntigravityHookPayload, from clientID: UUID) {
+        switch payload.hookEventName {
+        case .sessionStart:
+            emit(
+                .sessionStarted(
+                    SessionStarted(
+                        sessionID: payload.sessionID,
+                        title: payload.sessionTitle,
+                        tool: .antigravity,
+                        origin: .live,
+                        initialPhase: .completed,
+                        summary: payload.implicitSummary,
+                        timestamp: .now,
+                        jumpTarget: payload.defaultJumpTarget,
+                        geminiMetadata: payload.defaultMetadata.isEmpty ? nil : payload.defaultMetadata
+                    )
+                )
+            )
+            send(.response(.acknowledged), to: clientID)
+
+        case .preToolUse:
+            ensureAntigravitySessionExists(for: payload)
+            synchronizeAntigravityJumpTarget(for: payload)
+            synchronizeAntigravityMetadata(for: payload)
+            // Ignore stragglers from an already-completed turn (out-of-order
+            // arrival). Only a strictly newer step (a new turn) re-opens it.
+            if let completedStep = antigravityCompletedStepIdx[payload.sessionID],
+               let step = payload.stepIdx, step <= completedStep {
+                send(.response(.acknowledged), to: clientID)
+                return
+            }
+            emit(
+                .activityUpdated(
+                    SessionActivityUpdated(
+                        sessionID: payload.sessionID,
+                        summary: payload.implicitSummary,
+                        phase: .running,
+                        timestamp: .now
+                    )
+                )
+            )
+            send(.response(.acknowledged), to: clientID)
+
+        case .postToolUse:
+            // A tool finished. Do NOT emit an activity/phase change here:
+            // Antigravity fires a trailing PostToolUse *after* `Stop` (post-turn
+            // bookkeeping), which would otherwise resurrect a completed turn
+            // back to "running"/"executing". `Stop` is the authoritative
+            // turn-complete signal; PreToolUse is the authoritative "working"
+            // signal. PostToolUse only refreshes jump target + metadata.
+            ensureAntigravitySessionExists(for: payload)
+            synchronizeAntigravityJumpTarget(for: payload)
+            synchronizeAntigravityMetadata(for: payload)
+            send(.response(.acknowledged), to: clientID)
+
+        case .stop:
+            ensureAntigravitySessionExists(for: payload)
+            synchronizeAntigravityJumpTarget(for: payload)
+            synchronizeAntigravityMetadata(for: payload)
+            latchAntigravityCompletion(for: payload)
+            emit(
+                .sessionCompleted(
+                    SessionCompleted(
+                        sessionID: payload.sessionID,
+                        summary: payload.implicitSummary,
+                        timestamp: .now
+                    )
+                )
+            )
+            send(.response(.acknowledged), to: clientID)
+
+        case .sessionEnd:
+            ensureAntigravitySessionExists(for: payload)
+            synchronizeAntigravityJumpTarget(for: payload)
+            synchronizeAntigravityMetadata(for: payload)
+            latchAntigravityCompletion(for: payload)
+            emit(
+                .sessionCompleted(
+                    SessionCompleted(
+                        sessionID: payload.sessionID,
+                        summary: payload.implicitSummary,
+                        timestamp: .now,
+                        isInterrupt: true,
+                        isSessionEnd: true
+                    )
+                )
+            )
+            send(.response(.acknowledged), to: clientID)
+
+        case .notification:
+            ensureAntigravitySessionExists(for: payload)
+            synchronizeAntigravityJumpTarget(for: payload)
+            synchronizeAntigravityMetadata(for: payload)
+            let currentPhase = localState.session(id: payload.sessionID)?.phase ?? .completed
+            emit(
+                .activityUpdated(
+                    SessionActivityUpdated(
+                        sessionID: payload.sessionID,
+                        summary: payload.notificationSummary,
+                        phase: currentPhase,
+                        timestamp: .now
+                    )
+                )
+            )
+            send(.response(.acknowledged), to: clientID)
+        }
+    }
+
+    /// Records the `stepIdx` at which an Antigravity turn completed so that
+    /// out-of-order tool stragglers from the same turn can't re-open it.
+    private func latchAntigravityCompletion(for payload: AntigravityHookPayload) {
+        guard let step = payload.stepIdx else { return }
+        let previous = antigravityCompletedStepIdx[payload.sessionID] ?? Int.min
+        antigravityCompletedStepIdx[payload.sessionID] = max(previous, step)
+    }
+
+    private func ensureAntigravitySessionExists(for payload: AntigravityHookPayload) {
+        guard !hasSession(id: payload.sessionID) else {
+            return
+        }
+
+        emit(
+            .sessionStarted(
+                SessionStarted(
+                    sessionID: payload.sessionID,
+                    title: payload.sessionTitle,
+                    tool: .antigravity,
+                    origin: .live,
+                    initialPhase: .completed,
+                    summary: payload.implicitSummary,
+                    timestamp: .now,
+                    jumpTarget: payload.defaultJumpTarget,
+                    geminiMetadata: payload.defaultMetadata.isEmpty ? nil : payload.defaultMetadata
+                )
+            )
+        )
+    }
+
+    private func synchronizeAntigravityJumpTarget(for payload: AntigravityHookPayload) {
+        guard let existingSession = localState.session(id: payload.sessionID) else {
+            return
+        }
+
+        let jumpTarget = Self.mergeJumpTargetPreservingExistingResolvedFields(
+            incoming: payload.defaultJumpTarget,
+            existing: existingSession.jumpTarget
+        )
+
+        guard existingSession.jumpTarget != jumpTarget else {
+            return
+        }
+
+        emit(
+            .jumpTargetUpdated(
+                JumpTargetUpdated(
+                    sessionID: payload.sessionID,
+                    jumpTarget: jumpTarget,
+                    timestamp: .now
+                )
+            )
+        )
+    }
+
+    private func synchronizeAntigravityMetadata(for payload: AntigravityHookPayload) {
+        guard let existingSession = localState.session(id: payload.sessionID) else {
+            return
+        }
+
+        let update = payload.defaultMetadata
+        let merged = GeminiSessionMetadata(
+            transcriptPath: update.transcriptPath ?? existingSession.geminiMetadata?.transcriptPath,
+            initialUserPrompt: existingSession.geminiMetadata?.initialUserPrompt,
+            lastUserPrompt: existingSession.geminiMetadata?.lastUserPrompt,
+            lastAssistantMessage: existingSession.geminiMetadata?.lastAssistantMessage,
+            lastAssistantMessageBody: existingSession.geminiMetadata?.lastAssistantMessageBody
         )
         guard !merged.isEmpty else {
             return

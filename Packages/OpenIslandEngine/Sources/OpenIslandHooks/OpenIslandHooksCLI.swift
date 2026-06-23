@@ -18,12 +18,13 @@ struct OpenIslandHooksCLI {
         case cursor
         case gemini
         case kimi
+        case antigravity
 
         var isClaudeFormat: Bool {
             switch self {
             case .claude, .qoder, .qwen, .factory, .droid, .codebuddy, .kimi:
                 return true
-            case .codex, .cursor, .gemini:
+            case .codex, .cursor, .gemini, .antigravity:
                 return false
             }
         }
@@ -107,6 +108,16 @@ struct OpenIslandHooksCLI {
                     .withRuntimeContext(environment: ProcessInfo.processInfo.environment)
 
                 _ = try? client.send(.processGeminiHook(payload), timeout: 45)
+            case .antigravity:
+                // Antigravity's payload omits the event name; the plugin
+                // registers it via `--event`, so inject it after decoding.
+                var payload = try decoder.decode(AntigravityHookPayload.self, from: input)
+                if let event = antigravityEvent(arguments: arguments) {
+                    payload.hookEventName = event
+                }
+                payload = payload.withRuntimeContext(environment: ProcessInfo.processInfo.environment)
+
+                _ = try? client.send(.processAntigravityHook(payload), timeout: 45)
             }
         } catch {
             // Hooks should fail open so the CLI continues working even if the bridge is unavailable.
@@ -130,6 +141,17 @@ struct OpenIslandHooksCLI {
         }
 
         return .codex
+    }
+
+    private static func antigravityEvent(arguments: [String]) -> AntigravityHookEventName? {
+        var index = 0
+        while index < arguments.count {
+            if arguments[index] == "--event", index + 1 < arguments.count {
+                return AntigravityHookEventName(rawValue: arguments[index + 1])
+            }
+            index += 1
+        }
+        return nil
     }
 
     private static func rawSourceString(arguments: [String]) -> String? {
