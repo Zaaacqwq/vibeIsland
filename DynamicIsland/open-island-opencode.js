@@ -40,22 +40,33 @@ function sendAndWaitResponse(json, timeoutMs = 300000) {
         sock.write(encodeEnvelope(json));
       });
       let buf = "";
+      // The bridge sends "hello", then BROADCASTS events (sessionStarted,
+      // permissionRequested, …) on this same connection, interleaved with the
+      // actual response envelope. So scan line-by-line for the {type:"response"}
+      // message rather than assuming it is line[1].
+      const tryResolve = (onFound) => {
+        let idx;
+        while ((idx = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 1);
+          if (!line) continue;
+          try {
+            const msg = JSON.parse(line);
+            if (msg && msg.type === "response") {
+              if (onFound) onFound();
+              resolve(msg);
+              return true;
+            }
+          } catch {}
+        }
+        return false;
+      };
       sock.on("data", (chunk) => {
         buf += chunk.toString();
-        // BridgeServer sends hello first, then response after processing
-        const lines = buf.split("\n").filter(Boolean);
-        if (lines.length >= 2) {
-          sock.destroy();
-          try { resolve(JSON.parse(lines[1])); } catch { resolve(null); }
-        }
+        tryResolve(() => sock.destroy());
       });
       sock.on("end", () => {
-        const lines = buf.split("\n").filter(Boolean);
-        if (lines.length >= 2) {
-          try { resolve(JSON.parse(lines[1])); } catch { resolve(null); }
-        } else {
-          resolve(null);
-        }
+        if (!tryResolve(null)) resolve(null);
       });
       sock.on("error", () => resolve(null));
       sock.setTimeout(timeoutMs, () => { sock.destroy(); resolve(null); });
