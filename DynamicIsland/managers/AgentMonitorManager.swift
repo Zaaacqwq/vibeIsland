@@ -351,7 +351,7 @@ final class AgentMonitorManager: ObservableObject {
 
     private func reconcileProcessLiveness() {
         Task.detached(priority: .utility) {
-            let aliveTTYs = Self.ttysHostingClaude()
+            let aliveTTYs = Self.ttysHostingAgents()
             let usage = try? ClaudeUsageLoader.load()
             await MainActor.run {
                 self.applyLiveness(aliveTTYs: aliveTTYs)
@@ -383,8 +383,14 @@ final class AgentMonitorManager: ObservableObject {
         sessions = ClaudeSessionFilter.claudeSessions(in: state)
     }
 
-    /// TTYs (normalized, e.g. `ttys003`) that currently host a `claude` process.
-    private nonisolated static func ttysHostingClaude() -> Set<String> {
+    /// Process names of the agent CLIs we surface, used for TTY liveness.
+    private nonisolated static let agentProcessNames = ["claude", "codex", "gemini"]
+
+    /// TTYs (normalized, e.g. `ttys003`) that currently host a supported agent
+    /// CLI process (claude / codex / gemini). Used so a completed session whose
+    /// terminal is still open isn't pruned by liveness polling — without codex/
+    /// gemini here, their sessions vanished the moment the turn finished.
+    private nonisolated static func ttysHostingAgents() -> Set<String> {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
         process.arguments = ["-Ao", "tty=,command="]
@@ -403,7 +409,9 @@ final class AgentMonitorManager: ObservableObject {
             let tty = String(line[..<space])
             let command = String(line[line.index(after: space)...])
             guard tty != "??", !tty.isEmpty else { continue }
-            if command.range(of: "claude", options: .caseInsensitive) != nil {
+            if agentProcessNames.contains(where: {
+                command.range(of: $0, options: .caseInsensitive) != nil
+            }) {
                 ttys.insert(normalizeTTY(tty))
             }
         }
