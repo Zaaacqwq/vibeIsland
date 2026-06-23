@@ -1,17 +1,18 @@
 import Foundation
 import OpenIslandCore
 
-/// MVP scope filter: Atoll surfaces only Claude Code sessions (and its
-/// hook-compatible forks — Qoder, Qwen Code, Factory, CodeBuddy, Kimi — which
-/// share Claude Code's hook payload format). Other agents flow through the
-/// engine but are not displayed yet.
+/// Scope filter for which agents VibeIsland surfaces in the notch. Claude Code
+/// and its hook-compatible forks (Qoder, Qwen Code, Factory, CodeBuddy, Kimi),
+/// plus Codex and Gemini CLI which have their own hook payloads but are fully
+/// wired through the bridge. OpenCode (plugin-based) and Cursor are not surfaced
+/// yet — they flow through the engine but aren't displayed.
 public enum ClaudeSessionFilter {
-    /// Tools that speak Claude Code's hook protocol.
+    /// Tools VibeIsland currently displays.
     public static func includes(_ tool: AgentTool) -> Bool {
         switch tool {
-        case .claudeCode, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI:
+        case .claudeCode, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI, .codex, .geminiCLI:
             true
-        case .codex, .geminiCLI, .openCode, .cursor:
+        case .openCode, .cursor:
             false
         }
     }

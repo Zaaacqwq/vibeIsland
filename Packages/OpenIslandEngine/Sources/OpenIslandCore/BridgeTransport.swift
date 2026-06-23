@@ -7,11 +7,14 @@ public enum BridgeSocketLocation {
     private static var stableDirectoryURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return appSupport.appendingPathComponent("OpenIsland")
+        return appSupport.appendingPathComponent("VibeIsland")
     }
 
     public static var defaultURL: URL {
-        stableDirectoryURL.appendingPathComponent("bridge.sock")
+        // Must match VibeIslandAgentConfiguration.defaultSocketURL so that hooks
+        // which don't inject OPEN_ISLAND_SOCKET_PATH (codex/gemini) still fall
+        // back to the same socket the app's BridgeServer listens on.
+        stableDirectoryURL.appendingPathComponent("agent-bridge.sock")
     }
 
     /// Legacy path for backward compatibility with older hook binaries.
