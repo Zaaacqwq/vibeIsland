@@ -303,29 +303,6 @@ enum ThirdPartyCalendarApp: String, CaseIterable, Codable, Defaults.Serializable
 }
 
 
-enum ThirdPartyDDCProvider: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
-    case betterDisplay
-    case lunar
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .betterDisplay:
-            return "BetterDisplay"
-        case .lunar:
-            return "Lunar"
-        }
-    }
-    
-    /// Bundle identifiers to try when looking up the app icon.
-    var bundleIdentifiers: [String] {
-        switch self {
-        case .betterDisplay: return ["pro.betterdisplay.BetterDisplay"]
-        case .lunar: return ["fyi.lunar.Lunar"]
-        }
-    }
-}
 
 enum HideNotchOption: String, Defaults.Serializable {
     case always
@@ -943,16 +920,6 @@ extension Defaults.Keys {
     static let circularHUDStrokeWidth = Key<CGFloat>("circularHUDStrokeWidth", default: 4)
     static let circularHUDUseAccentColor = Key<Bool>("circularHUDUseAccentColor", default: true)
 
-    // MARK: Third-Party DDC Integration
-    static let enableThirdPartyDDCIntegration = Key<Bool>("enableThirdPartyDDCIntegration", default: false)
-    static let thirdPartyDDCProvider = Key<ThirdPartyDDCProvider>("thirdPartyDDCProvider", default: .betterDisplay)
-    static let enableExternalVolumeControlListener = Key<Bool>("enableExternalVolumeControlListener", default: false)
-    static let didMigrateThirdPartyDDCIntegration = Key<Bool>("didMigrateThirdPartyDDCIntegration", default: false)
-
-    // Legacy keys retained for migration/backward compatibility
-    static let enableBetterDisplayIntegration = Key<Bool>("enableBetterDisplayIntegration", default: false)
-    static let enableLunarIntegration = Key<Bool>("enableLunarIntegration", default: false)
-    
     static let hasSeenOSDAlphaWarning = Key<Bool>("hasSeenOSDAlphaWarning", default: false)
     static let enableOSDVolume = Key<Bool>("enableOSDVolume", default: true)
     static let enableOSDBrightness = Key<Bool>("enableOSDBrightness", default: true)
@@ -1104,29 +1071,6 @@ extension Defaults.Keys {
 
         Defaults[.musicControlSlots] = baseLayout.normalized(allowingMediaOutput: allowMediaOutput)
         Defaults[.didMigrateMusicControlSlots] = true
-    }
-
-    static func migrateThirdPartyDDCIntegration() {
-        if Defaults[.didMigrateThirdPartyDDCIntegration] == false {
-            let legacyBetterDisplayEnabled = Defaults[.enableBetterDisplayIntegration]
-            let legacyLunarEnabled = Defaults[.enableLunarIntegration]
-
-            if legacyBetterDisplayEnabled || legacyLunarEnabled {
-                Defaults[.enableThirdPartyDDCIntegration] = true
-                Defaults[.thirdPartyDDCProvider] = (legacyLunarEnabled && !legacyBetterDisplayEnabled) ? .lunar : .betterDisplay
-            }
-
-            Defaults[.didMigrateThirdPartyDDCIntegration] = true
-        }
-
-        syncLegacyThirdPartyDDCKeys()
-    }
-
-    static func syncLegacyThirdPartyDDCKeys() {
-        let isIntegrationEnabled = Defaults[.enableThirdPartyDDCIntegration]
-        let selectedProvider = Defaults[.thirdPartyDDCProvider]
-        Defaults[.enableBetterDisplayIntegration] = isIntegrationEnabled && selectedProvider == .betterDisplay
-        Defaults[.enableLunarIntegration] = isIntegrationEnabled && selectedProvider == .lunar
     }
 
     private static func normalizeMusicAuxControls() {
