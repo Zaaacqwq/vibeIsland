@@ -2052,7 +2052,6 @@ private struct HUDSelectionCard<Preview: View>: View {
 
 private struct DevicesSettingsView: View {
     @Default(.progressBarStyle) var progressBarStyle
-    @Default(.useBluetoothHUD3DIcon) private var useBluetoothHUD3DIcon
 
     private var colorCodingDisabled: Bool {
         progressBarStyle == .segmented
@@ -2077,24 +2076,7 @@ private struct DevicesSettingsView: View {
                 GeistToggleRow(title: "Show Bluetooth device connections", isOn: geistBinding(.showBluetoothDeviceConnections))
                 GeistToggleRow(title: "Use circular battery indicator", isOn: geistBinding(.useCircularBluetoothBatteryIndicator))
                 GeistToggleRow(title: "Show battery percentage text in HUD", isOn: geistBinding(.showBluetoothBatteryPercentageText))
-                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee))
-                GeistRow(divider: false) {
-                    VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
-                        Text("HUD icon style")
-                            .font(Geist.Typography.bodyStrong)
-                            .foregroundStyle(Geist.Colors.ink)
-                        HStack(spacing: Geist.Spacing.md) {
-                            Spacer(minLength: 0)
-                            BluetoothHUDIconStyleCard(style: .symbol, isSelected: !useBluetoothHUD3DIcon) {
-                                useBluetoothHUD3DIcon = false
-                            }
-                            BluetoothHUDIconStyleCard(style: .threeD, isSelected: useBluetoothHUD3DIcon) {
-                                useBluetoothHUD3DIcon = true
-                            }
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
+                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee), divider: false)
             }
 
             GeistSection(title: "Battery Indicator Styling", footer: batteryFooter) {
@@ -2675,151 +2657,6 @@ struct About: View {
         .toolbar {
             CheckForUpdatesView(updater: updaterController.updater)
         }
-    }
-}
-
-private extension DevicesSettingsView {
-    enum BluetoothHUDIconStyle: String {
-        case symbol
-        case threeD
-
-        var title: String {
-            switch self {
-            case .symbol:
-                return "Symbol"
-            case .threeD:
-                return "3D"
-            }
-        }
-    }
-
-    struct BluetoothHUDIconStyleCard: View {
-        let style: BluetoothHUDIconStyle
-        let isSelected: Bool
-        let action: () -> Void
-
-        @State private var isHovering = false
-
-        var body: some View {
-            VStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(backgroundColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(borderColor, lineWidth: isSelected ? 2 : 1)
-                        )
-
-                    preview
-                }
-                .frame(width: 90, height: 64)
-                .onHover { hovering in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isHovering = hovering
-                    }
-                }
-
-                Text(style.title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { action() }
-        }
-
-        private var preview: some View {
-            Group {
-                switch style {
-                case .symbol:
-                    Image(systemName: BluetoothAudioDeviceType.airpods.sfSymbol)
-                        .font(.system(size: 24, weight: .semibold))
-                        .symbolRenderingMode(.hierarchical)
-                case .threeD:
-                    if let url = Bundle.main.url(
-                        forResource: BluetoothAudioDeviceType.airpods.inlineHUDAnimationBaseName,
-                        withExtension: "mov"
-                    ) {
-                        SettingsLoopingVideoIcon(url: url, size: CGSize(width: 28, height: 28))
-                            .frame(width: 28, height: 28)
-                    } else {
-                        Image(systemName: BluetoothAudioDeviceType.airpods.sfSymbol)
-                            .font(.system(size: 24, weight: .semibold))
-                            .symbolRenderingMode(.hierarchical)
-                    }
-                }
-            }
-        }
-
-        private var backgroundColor: Color {
-            if isSelected { return Color.accentColor.opacity(0.12) }
-            if isHovering { return Color.primary.opacity(0.05) }
-            return Color(nsColor: .controlBackgroundColor)
-        }
-
-        private var borderColor: Color {
-            if isSelected { return Color.accentColor }
-            if isHovering { return Color.primary.opacity(0.1) }
-            return Color.clear
-        }
-    }
-}
-
-private struct SettingsLoopingVideoIcon: NSViewRepresentable {
-    let url: URL
-    let size: CGSize
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: NSRect(origin: .zero, size: size))
-        view.wantsLayer = true
-
-        let layer = AVPlayerLayer()
-        layer.videoGravity = .resizeAspect
-        layer.frame = view.bounds
-        view.layer?.addSublayer(layer)
-        context.coordinator.attach(layer: layer, url: url)
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    final class Coordinator {
-        private var controller: SettingsLoopingPlayerController?
-
-        func attach(layer: AVPlayerLayer, url: URL) {
-            controller = SettingsLoopingPlayerController(url: url, autoPlay: true)
-            layer.player = controller?.player
-        }
-    }
-}
-
-private final class SettingsLoopingPlayerController {
-    let player: AVQueuePlayer
-    private var looper: AVPlayerLooper?
-
-    init(url: URL, autoPlay: Bool = true) {
-        let item = AVPlayerItem(url: url)
-        player = AVQueuePlayer()
-        player.isMuted = true
-        player.actionAtItemEnd = .none
-        looper = AVPlayerLooper(player: player, templateItem: item)
-        if autoPlay {
-            player.play()
-        }
-    }
-
-    func play() {
-        player.play()
-    }
-
-    func pause() {
-        player.pause()
-    }
-
-    deinit {
-        player.pause()
-        looper = nil
     }
 }
 
