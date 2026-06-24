@@ -56,7 +56,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case calendar
     case hudAndOSD
     case battery
-    case screenAssistant
     case downloads
     case shelf
     case shortcuts
@@ -75,7 +74,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .media, .liveActivities, .devices, .notifications, .weather: return .mediaAndDisplay
         case .hudAndOSD, .battery:                                           return .system
         case .timer, .calendar:                                      return .productivity
-        case .screenAssistant, .shelf,
+        case .shelf,
              .downloads, .shortcuts:                                         return .utilities
         case .agents, .debug:                             return .developer
         case .extensions:                                                    return .integrations
@@ -95,7 +94,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return String(localized: "Calendar")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
-        case .screenAssistant: return String(localized: "Screen Assistant")
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
@@ -119,7 +117,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .hudAndOSD: return "dial.medium.fill"
         case .battery: return "battery.100.bolt"
-        case .screenAssistant: return "brain.head.profile"
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "books.vertical"
         case .shortcuts: return "keyboard"
@@ -143,7 +140,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return .cyan
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
-        case .screenAssistant: return .pink
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
@@ -476,7 +472,6 @@ struct SettingsView: View {
             .timer,
             .calendar,
             // Utilities
-            .screenAssistant,
             .shelf,
             .downloads,
             .shortcuts,
@@ -824,10 +819,6 @@ struct SettingsView: View {
 
             // Clipboard
 
-            // Screen Assistant
-            SettingsSearchEntry(tab: .screenAssistant, title: "Enable Screen Assistant", keywords: ["screen assistant", "ai"], highlightID: SettingsTab.screenAssistant.highlightID(for: "Enable Screen Assistant")),
-            SettingsSearchEntry(tab: .screenAssistant, title: "Display Mode", keywords: ["screen assistant", "mode"], highlightID: SettingsTab.screenAssistant.highlightID(for: "Display Mode")),
-
             // Color Picker
 
             // Terminal
@@ -836,7 +827,7 @@ struct SettingsView: View {
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
         switch tab {
-        case .timer, .screenAssistant, .shelf:
+        case .timer, .shelf:
             return !enableMinimalisticUI
         default:
             return true
@@ -885,10 +876,6 @@ struct SettingsView: View {
         case .battery:
             SettingsForm(tab: .battery) {
                 Charge()
-            }
-        case .screenAssistant:
-            SettingsForm(tab: .screenAssistant) {
-                ScreenAssistantSettings()
             }
         case .downloads:
             SettingsForm(tab: .downloads) {
@@ -3720,15 +3707,6 @@ struct Shortcuts: View {
                     footer: "Starts a 5-minute demo timer to test the timer live activity feature. Only works when timer feature is enabled."
                 )
 
-                shortcutSection(
-                    title: "AI Assistant",
-                    label: "Screen Assistant",
-                    name: .screenAssistantPanel,
-                    enabled: Defaults[.enableScreenAssistant],
-                    disabledNote: "Screen Assistant feature is disabled",
-                    footer: "Opens the AI assistant panel for file analysis and conversation. Default is Cmd+Shift+A. Only works when screen assistant feature is enabled."
-                )
-
             } else {
                 GeistSection {
                     GeistRow(divider: false) {
@@ -4288,166 +4266,6 @@ private struct TimerPresetComponentControl: View {
             }
         }
         .frame(width: 110, alignment: .leading)
-    }
-}
-
-
-
-struct ScreenAssistantSettings: View {
-    @ObservedObject var screenAssistantManager = ScreenAssistantManager.shared
-    @Default(.enableScreenAssistant) var enableScreenAssistant
-    @Default(.screenAssistantDisplayMode) var screenAssistantDisplayMode
-    @Default(.geminiApiKey) var geminiApiKey
-    @State private var apiKeyText = ""
-    @State private var showingApiKey = false
-
-    private var displayModeFooter: String {
-        switch screenAssistantDisplayMode {
-        case .popover:
-            return "Popover mode shows the assistant as a dropdown attached to the AI button. Panel mode shows the assistant in a floating window near the notch."
-        case .panel:
-            return "Panel mode shows the assistant in a floating window near the notch. Popover mode shows the assistant as a dropdown attached to the AI button."
-        }
-    }
-
-    var body: some View {
-        GeistSettingsPage(title: "Screen Assistant") {
-            GeistSection(
-                title: "AI Assistant",
-                footer: "AI-powered assistant that can analyze files, images, and provide conversational help. Use Cmd+Shift+A to quickly access the assistant."
-            ) {
-                GeistToggleRow(title: "Enable Screen Assistant", isOn: $enableScreenAssistant, divider: false)
-            }
-
-            if enableScreenAssistant {
-                GeistSection(title: "Configuration", footer: displayModeFooter) {
-                    GeistLabeledRow(title: "Gemini API Key", divider: showingApiKey) {
-                        HStack(spacing: Geist.Spacing.xs) {
-                            if geminiApiKey.isEmpty {
-                                Text("Not Set").font(Geist.Typography.body).foregroundStyle(Geist.Colors.error)
-                            } else {
-                                Text("••••••••").font(Geist.Typography.body).foregroundStyle(Geist.Colors.success)
-                            }
-                            Button(showingApiKey ? "Hide" : (geminiApiKey.isEmpty ? "Set" : "Change")) {
-                                if showingApiKey {
-                                    showingApiKey = false
-                                    if !apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                        Defaults[.geminiApiKey] = apiKeyText
-                                    }
-                                    apiKeyText = ""
-                                } else {
-                                    showingApiKey = true
-                                    apiKeyText = geminiApiKey
-                                }
-                            }
-                            .buttonStyle(.geist)
-                        }
-                    }
-
-                    if showingApiKey {
-                        GeistRow {
-                            VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
-                                SecureField("Enter your Gemini API Key", text: $apiKeyText)
-                                    .textFieldStyle(.roundedBorder)
-                                Text("Get your free API key from Google AI Studio")
-                                    .font(Geist.Typography.caption)
-                                    .foregroundStyle(Geist.Colors.mute)
-                                HStack {
-                                    Button("Open Google AI Studio") {
-                                        NSWorkspace.shared.open(URL(string: "https://aistudio.google.com/app/apikey")!)
-                                    }
-                                    .buttonStyle(.link)
-                                    Spacer()
-                                    Button("Save") {
-                                        Defaults[.geminiApiKey] = apiKeyText
-                                        showingApiKey = false
-                                        apiKeyText = ""
-                                    }
-                                    .buttonStyle(.geistProminent)
-                                    .disabled(apiKeyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                }
-                            }
-                        }
-                    }
-
-                    GeistPickerRow(title: "Display Mode", selection: $screenAssistantDisplayMode) {
-                        ForEach(ScreenAssistantDisplayMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                    }
-                    GeistLabeledRow(title: "Attached Files") {
-                        Text("\(screenAssistantManager.attachedFiles.count)")
-                            .font(Geist.Typography.body).foregroundStyle(Geist.Colors.body)
-                    }
-                    GeistLabeledRow(title: "Recording Status", divider: false) {
-                        Text(screenAssistantManager.isRecording ? "Recording" : "Ready")
-                            .font(Geist.Typography.body)
-                            .foregroundStyle(screenAssistantManager.isRecording ? Geist.Colors.error : Geist.Colors.mute)
-                    }
-                }
-
-                GeistSection(
-                    title: "Actions",
-                    footer: "Clear all files removes all attached files and audio recordings. This action is permanent."
-                ) {
-                    GeistRow(divider: false) {
-                        Button {
-                            screenAssistantManager.clearAllFiles()
-                        } label: {
-                            Text("Clear All Files")
-                                .font(Geist.Typography.bodyStrong)
-                                .foregroundStyle(Geist.Colors.error)
-                                .padding(.horizontal, Geist.Spacing.md)
-                                .padding(.vertical, Geist.Spacing.xs)
-                                .overlay(Capsule().strokeBorder(Geist.Colors.error.opacity(0.4), lineWidth: Geist.hairlineWidth))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(screenAssistantManager.attachedFiles.isEmpty)
-                    }
-                }
-
-                if !screenAssistantManager.attachedFiles.isEmpty {
-                    GeistSection(title: "Attached Files") {
-                        let files = screenAssistantManager.attachedFiles
-                        ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
-                            GeistRow(divider: index < files.count - 1) {
-                                VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
-                                    HStack {
-                                        Image(systemName: file.type.iconName)
-                                            .foregroundStyle(Geist.Colors.accent)
-                                            .frame(width: 16)
-                                        Text(file.type.displayName)
-                                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                                        Spacer()
-                                        Text(timeAgoString(from: file.timestamp))
-                                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                                    }
-                                    Text(file.name)
-                                        .font(Geist.Typography.mono)
-                                        .foregroundStyle(Geist.Colors.ink)
-                                        .lineLimit(2)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func timeAgoString(from date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
-
-        if interval < 60 {
-            return "Just now"
-        } else if interval < 3600 {
-            let minutes = Int(interval / 60)
-            return "\(minutes)m ago"
-        } else if interval < 86400 {
-            let hours = Int(interval / 3600)
-            return "\(hours)h ago"
-        } else {
-            let days = Int(interval / 86400)
-            return "\(days)d ago"
-        }
     }
 }
 
