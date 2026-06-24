@@ -166,10 +166,19 @@ public extension OpenCodeHookPayload {
                 return nil
             }
 
+            // Mirror Claude/the CLIs: append a freeform "Other" so the user can
+            // type a custom answer (relayed back via the answer directive).
+            var resolvedOptions = options
+            if !resolvedOptions.contains(where: { $0.allowsFreeform }) {
+                resolvedOptions.append(
+                    QuestionOption(label: "Other", description: "", allowsFreeform: true)
+                )
+            }
+
             return QuestionPromptItem(
                 question: questionText,
                 header: question.header ?? "Question",
-                options: options,
+                options: resolvedOptions,
                 multiSelect: question.multiSelect ?? false
             )
         }
