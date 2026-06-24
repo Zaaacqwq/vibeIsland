@@ -34,6 +34,16 @@ import AppKit
 import UIKit
 #endif
 
+/// Blur + opacity applied via `AnyTransition.modifier` so the open notch content
+/// can blur out on close (used for the non-"simpler" close animation).
+private struct BlurFadeModifier: ViewModifier {
+    let radius: CGFloat
+    let opacity: Double
+    func body(content: Content) -> some View {
+        content.blur(radius: radius).opacity(opacity)
+    }
+}
+
 @MainActor
 struct ContentView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
@@ -247,6 +257,14 @@ struct ContentView: View {
 
     // MARK: - Tab switch direction for smooth transitions
     
+    /// Blur + fade used as the open-content transition when the "simpler close
+    /// animation" toggle is OFF — the content blurs out as the notch closes
+    /// instead of sliding (which read as a glitch with the old bouncy spring).
+    static let blurFadeTransition: AnyTransition = .modifier(
+        active: BlurFadeModifier(radius: 14, opacity: 0),
+        identity: BlurFadeModifier(radius: 0, opacity: 1)
+    )
+
     private var tabSwitchTransition: AnyTransition {
         if coordinator.tabSwitchForward {
             return .asymmetric(
@@ -516,12 +534,13 @@ struct ContentView: View {
         mainLayoutBase
             .conditionalModifier(!useModernCloseAnimation) { view in
                 let hoverAnimation = Animation.bouncy.speed(1.2)
-                let notchStateAnimation = Animation.spring.speed(1.2)
+                // Critically-damped spring so the resize doesn't bounce/jitter
+                // (the old default `Animation.spring` overshot and read as a glitch).
+                let notchStateAnimation = Animation.spring(response: 0.42, dampingFraction: 0.95, blendDuration: 0)
                 return view
                     .animation(hoverAnimation, value: isHovering)
                     .animation(notchStateAnimation, value: vm.notchState)
                     .animation(.smooth, value: gestureProgress)
-                    .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
             }
             .conditionalModifier(useModernCloseAnimation) { view in
                 let hoverAnimation = Animation.bouncy.speed(1.2)
@@ -1005,7 +1024,7 @@ struct ContentView: View {
                           }
                       }
                       .id(coordinator.currentView)
-                      .transition(tabSwitchTransition)
+                      .transition(useModernCloseAnimation ? tabSwitchTransition : Self.blurFadeTransition)
                       }
                   }
               }
@@ -1427,7 +1446,12 @@ struct ContentView: View {
             candidates.append(.shelf(count: shelfState.items.count))
         }
 
-        if enableDoNotDisturbDetection && showDoNotDisturbIndicator && (doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing) {
+        // In brief-toast mode Focus only occupies the closed-notch slot during the
+        // transient toast windows; otherwise it stays mounted while focus is active.
+        let focusVisible = Defaults[.focusIndicatorNonPersistent]
+            ? (doNotDisturbManager.isFocusToastShowing || doNotDisturbManager.isFocusToastDismissing)
+            : doNotDisturbManager.isDoNotDisturbActive
+        if enableDoNotDisturbDetection && showDoNotDisturbIndicator && focusVisible {
             let mode = FocusModeType.resolve(identifier: doNotDisturbManager.currentFocusModeIdentifier, name: doNotDisturbManager.currentFocusModeName)
             candidates.append(.focus(mode))
         }
