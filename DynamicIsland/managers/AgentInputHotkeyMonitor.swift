@@ -98,7 +98,7 @@ final class AgentInputHotkeyMonitor {
 
     /// Refresh the cached pending-input flags. Called when the session list changes.
     func updatePendingState() {
-        let pending = AgentMonitorManager.shared.pendingInputSession
+        let pending = AgentMonitorManager.shared.activeInputSession
         hasPendingPermission = pending?.permissionRequest != nil
         hasPendingQuestion = pending?.questionPrompt != nil
 
@@ -148,13 +148,13 @@ final class AgentInputHotkeyMonitor {
 
     private func resolvePermission(approve: Bool) {
         let manager = AgentMonitorManager.shared
-        guard let pending = manager.pendingInputSession, pending.permissionRequest != nil else { return }
+        guard let pending = manager.activeInputSession, pending.permissionRequest != nil else { return }
         manager.resolvePermission(sessionID: pending.id, approved: approve)
     }
 
     private func answerQuestion(index: Int) {
         let manager = AgentMonitorManager.shared
-        guard let pending = manager.pendingInputSession, let prompt = pending.questionPrompt else { return }
+        guard let pending = manager.activeInputSession, let prompt = pending.questionPrompt else { return }
         let options = questionOptions(prompt)
         guard index <= options.count else { return }
         let option = options[index - 1]

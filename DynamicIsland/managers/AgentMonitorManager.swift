@@ -62,8 +62,16 @@ final class AgentMonitorManager: ObservableObject {
 
     /// Claude-family sessions, ordered by the engine's own sort.
     @Published private(set) var sessions: [AgentSession] = [] {
-        didSet { AgentInputHotkeyMonitor.shared.updatePendingState() }
+        didSet {
+            pruneCollapsedInputSessions()
+            AgentInputHotkeyMonitor.shared.updatePendingState()
+        }
     }
+
+    /// Sessions whose approve/ask prompt the user collapsed — excluded from
+    /// `activeInputSession` until the request resolves or the user reopens it
+    /// from the agent row.
+    @Published private(set) var collapsedInputSessionIDs: Set<String> = []
     /// Set by the hotkey monitor when ⌘<n> lands on a freeform ("Other") option,
     /// so the overlay can switch into text-entry mode (which needs view state).
     @Published var requestedFreeformOptionID: UUID?
@@ -361,6 +369,36 @@ final class AgentMonitorManager: ObservableObject {
     var pendingInputSession: AgentSession? {
         sessions.first { $0.permissionRequest != nil }
             ?? sessions.first { $0.questionPrompt != nil }
+    }
+
+    private func hasPendingInput(_ session: AgentSession) -> Bool {
+        session.permissionRequest != nil || session.questionPrompt != nil
+    }
+
+    /// The session whose approve/ask overlay should show inside the Agents tab —
+    /// the highest-priority pending request the user hasn't collapsed. Pure
+    /// derived value so it never desyncs from the tab.
+    var activeInputSession: AgentSession? {
+        sessions.first { $0.permissionRequest != nil && !collapsedInputSessionIDs.contains($0.id) }
+            ?? sessions.first { $0.questionPrompt != nil && !collapsedInputSessionIDs.contains($0.id) }
+    }
+
+    /// Collapse the shown prompt without answering; it stays pending and can be
+    /// reopened from its agent row.
+    func collapseActiveInput() {
+        if let id = activeInputSession?.id { collapsedInputSessionIDs.insert(id) }
+    }
+
+    /// Reopen a previously-collapsed prompt (e.g. "Respond" from its row).
+    func presentInput(for sessionID: String) {
+        collapsedInputSessionIDs.remove(sessionID)
+    }
+
+    private func pruneCollapsedInputSessions() {
+        let stale = collapsedInputSessionIDs.filter { id in
+            !(sessions.first(where: { $0.id == id }).map(hasPendingInput) ?? false)
+        }
+        if !stale.isEmpty { collapsedInputSessionIDs.subtract(stale) }
     }
 
     // MARK: - Process liveness
