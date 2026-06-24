@@ -45,17 +45,43 @@ struct AgentInputOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 18)
-        .padding(.top, 6)
-        .padding(.bottom, 12)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .overlay(alignment: .topTrailing) { collapseButton }
+        // Apply on appear too, so opening straight into a freeform option (from a
+        // collapsed agent row) mounts already in text-entry mode (no flicker).
+        .onAppear { applyRequestedFreeformOption(agentMonitor.requestedFreeformOptionID) }
         .onChange(of: agentMonitor.requestedFreeformOptionID) { _, id in
-            defer { agentMonitor.requestedFreeformOptionID = nil }
-            guard let id, let prompt = session.questionPrompt,
-                  let option = questionOptions(prompt).first(where: { $0.id == id }) else { return }
-            freeformText = ""
-            freeformOption = option
-            focusInput()
+            applyRequestedFreeformOption(id)
         }
+    }
+
+    private func applyRequestedFreeformOption(_ id: UUID?) {
+        defer { agentMonitor.requestedFreeformOptionID = nil }
+        guard let id, let prompt = session.questionPrompt,
+              let option = questionOptions(prompt).first(where: { $0.id == id }) else { return }
+        freeformText = ""
+        freeformOption = option
+        focusInput()
+    }
+
+    /// Collapse without answering — the request stays pending and is reopenable
+    /// from its agent row.
+    private var collapseButton: some View {
+        Button {
+            withAnimation(.smooth(duration: 0.25)) { agentMonitor.collapseActiveInput() }
+        } label: {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.white.opacity(0.1)))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+        .padding(.trailing, 6)
+        .help("Collapse — reopen from the agent row")
     }
 
     /// Bring the notch forward and focus the freeform text field so the user can
@@ -72,24 +98,25 @@ struct AgentInputOverlay: View {
 
     @ViewBuilder
     private func permissionCard(_ permission: PermissionRequest) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Circle().fill(Palette.orange).frame(width: 8, height: 8)
                 Text("Permission Request")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.muted)
             }
+            .padding(.trailing, 28)
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.orange)
                 Text(permission.title.isEmpty ? "Tool use" : permission.title)
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Palette.orange)
                 if !permission.affectedPath.isEmpty, permission.affectedPath != permission.title {
                     Text(permission.affectedPath)
-                        .font(.system(size: 16, weight: .regular, design: .monospaced))
+                        .font(.system(size: 14, weight: .regular, design: .monospaced))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -98,8 +125,13 @@ struct AgentInputOverlay: View {
             }
 
             if !permission.summary.isEmpty {
-                DiffView(text: permission.summary)
-                    .frame(maxHeight: .infinity)
+                // Scroll so long diffs fit the (fixed) tab height without growing
+                // the notch — which is what removes the open/close glitch.
+                ScrollView(.vertical, showsIndicators: false) {
+                    DiffView(text: permission.summary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: .infinity)
             } else {
                 Spacer(minLength: 0)
             }
@@ -129,7 +161,7 @@ struct AgentInputOverlay: View {
             }
             .foregroundStyle(foreground)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
+            .padding(.vertical, 8)
             .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(background))
         }
         .buttonStyle(.plain)
@@ -140,32 +172,36 @@ struct AgentInputOverlay: View {
     @ViewBuilder
     private func questionCard(_ prompt: QuestionPrompt) -> some View {
         let options = questionOptions(prompt)
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "bubble.left.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Palette.teal)
                 Text("Claude asks")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.teal)
             }
+            .padding(.trailing, 28)
 
             Text(questionText(prompt))
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let editing = freeformOption {
                 freeformEntry(editing)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
-                VStack(spacing: 8) {
-                    ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                        optionButton(index: index, option: option)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 8) {
+                        ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                            optionButton(index: index, option: option)
+                        }
                     }
                 }
+                .frame(maxHeight: .infinity)
             }
-            Spacer(minLength: 0)
         }
     }
 

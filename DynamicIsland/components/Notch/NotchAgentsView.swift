@@ -25,6 +25,9 @@ import OpenIslandCore
 /// permission approve/deny. Falls back to a hook-setup empty state when no
 /// hooks are installed, or a "no sessions" state once they are.
 struct NotchAgentsView: View {
+    /// Only the primary Agents tab renders the full approve/ask overlay; the
+    /// home view's secondary panel shows the list (with per-row reopen buttons).
+    var showsInputOverlay: Bool = true
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
@@ -36,17 +39,30 @@ struct NotchAgentsView: View {
     @State private var isSuppressingScroll = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            header
-            content
+        Group {
+            if showsInputOverlay, let active = agentMonitor.activeInputSession {
+                // The approve/ask overlay lives inside the Agents tab so it sits
+                // at the normal tab height (content scrolls) — no notch-height
+                // jump, hence no open/close glitch.
+                AgentInputOverlay(session: active)
+                    .id(active.id)
+                    .transition(.opacity)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    header
+                    content
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .transition(.opacity)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onHover { updateScrollSuppression(for: $0) }
         .onAppear { agentMonitor.refreshHookStatus() }
         .onDisappear { updateScrollSuppression(for: false) }
+        .animation(.smooth(duration: 0.25), value: agentMonitor.activeInputSession?.id)
     }
 
     private func updateScrollSuppression(for hovering: Bool) {
@@ -177,6 +193,17 @@ private struct AgentSessionRow: View {
                         .foregroundStyle(halo.color)
                 }
                 Spacer()
+                if session.permissionRequest != nil || session.questionPrompt != nil {
+                    Button {
+                        agentMonitor.presentInput(for: session.id)
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(accent)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open the full prompt")
+                }
                 if session.jumpTarget != nil {
                     Button {
                         agentMonitor.jumpBack(to: session)
@@ -239,7 +266,6 @@ private struct AgentSessionRow: View {
 
     @ViewBuilder
     private func questionActions(_ prompt: QuestionPrompt, sessionID: String) -> some View {
-        let options = questionOptionLabels(prompt)
         VStack(alignment: .leading, spacing: 4) {
             if !prompt.title.isEmpty {
                 Text(prompt.title)
@@ -247,38 +273,51 @@ private struct AgentSessionRow: View {
                     .foregroundStyle(.gray)
                     .lineLimit(2)
             }
-            ForEach(Array(options.enumerated()), id: \.offset) { index, label in
-                Button {
-                    agentMonitor.answerQuestion(sessionID: sessionID, optionLabel: label)
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("\(index + 1)")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 15, height: 15)
-                            .background(Circle().fill(Color.white.opacity(0.15)))
-                        Text(label)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
+            if let options = prompt.questions.first?.options, !options.isEmpty {
+                ForEach(Array(options.enumerated()), id: \.offset) { index, option in
+                    optionButton(index: index, label: option.label, allowsFreeform: option.allowsFreeform) {
+                        if option.allowsFreeform {
+                            // Freeform needs the text field in the full overlay —
+                            // open it (un-collapse) straight into text-entry mode.
+                            agentMonitor.requestedFreeformOptionID = option.id
+                            agentMonitor.presentInput(for: sessionID)
+                        } else {
+                            agentMonitor.answerQuestion(sessionID: sessionID, optionLabel: option.label)
+                        }
                     }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Capsule().fill(Color.white.opacity(0.10)))
                 }
-                .buttonStyle(.plain)
+            } else {
+                ForEach(Array(prompt.options.enumerated()), id: \.offset) { index, label in
+                    optionButton(index: index, label: label, allowsFreeform: false) {
+                        agentMonitor.answerQuestion(sessionID: sessionID, optionLabel: label)
+                    }
+                }
             }
         }
     }
 
-    /// Flattened option labels for the prompt — prefers the first structured
-    /// question's options, falling back to the legacy flat string options.
-    private func questionOptionLabels(_ prompt: QuestionPrompt) -> [String] {
-        if let first = prompt.questions.first, !first.options.isEmpty {
-            return first.options.map(\.label)
+    private func optionButton(index: Int, label: String, allowsFreeform: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text("\(index + 1)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 15, height: 15)
+                    .background(Circle().fill(Color.white.opacity(0.15)))
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                if allowsFreeform {
+                    Image(systemName: "pencil").font(.system(size: 9)).foregroundStyle(.white.opacity(0.7))
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Capsule().fill(Color.white.opacity(0.10)))
         }
-        return prompt.options
+        .buttonStyle(.plain)
     }
 }

@@ -107,18 +107,11 @@ struct ContentView: View {
     var dynamicNotchSize: CGSize {
         let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
 
-        // Focused approve/ask overlay needs extra height (diff preview / options).
-        if vm.notchState == .open, let pending = agentMonitor.pendingInputSession {
-            if pending.permissionRequest != nil {
-                return CGSize(width: baseSize.width, height: 340)
-            }
-            if let question = pending.questionPrompt {
-                let optionCount = question.questions.first?.options.count ?? question.options.count
-                // header + title + one row (~62pt) per option, capped to the screen.
-                let height = min(460, CGFloat(150 + max(1, optionCount) * 62))
-                return CGSize(width: baseSize.width, height: height)
-            }
-            return CGSize(width: baseSize.width, height: 260)
+        // The approve/ask overlay lives inside the Agents tab; give it some extra
+        // height (its content scrolls) so multi-option prompts aren't clipped.
+        if vm.notchState == .open, coordinator.currentView == .agents,
+           agentMonitor.activeInputSession != nil {
+            return CGSize(width: baseSize.width, height: 250)
         }
 
         // When inline sneak peek is active in closed notch, use the wider inline width
@@ -686,18 +679,32 @@ struct ContentView: View {
         // Smoothly animate the notch height when switching tabs (e.g. into the
         // taller weather tab) instead of snapping.
         .animation(.smooth(duration: 0.3), value: coordinator.currentView)
+        // Smoothly grow/shrink when the approve/ask overlay appears or collapses
+        // within the Agents tab (no currentView change there).
+        .animation(.smooth(duration: 0.3), value: agentMonitor.activeInputSession != nil)
         .environmentObject(privacyManager)
         .background(dragDetector)
         .environmentObject(vm)
-        .onChange(of: agentMonitor.pendingInputSession?.id) { _, newID in
+        .onChange(of: agentMonitor.activeInputSession?.id) { _, newID in
             if newID != nil {
-                // Auto-expand the notch so the approve/ask overlay surfaces.
-                guard vm.notchState != .open, !Defaults[.enableMinimalisticUI] else { return }
-                openNotch()
-            } else if vm.notchState == .open, !isHovering, !shouldPreventAutoClose() {
-                // Input handled (answered/approved) and the cursor isn't on the
-                // notch — close the overlay we surfaced.
+                // Surface the approve/ask overlay on the Agents tab (it's rendered
+                // inside that tab), expanding the notch if needed.
+                guard !Defaults[.enableMinimalisticUI] else { return }
+                if Defaults[.enableAgentMonitoring] { coordinator.currentView = .agents }
+                if vm.notchState != .open { openNotch() }
+            } else if vm.notchState == .open, agentMonitor.pendingInputSession == nil,
+                      !isHovering, !shouldPreventAutoClose() {
+                // Everything resolved (not merely collapsed) and the cursor isn't
+                // on the notch — close.
                 withAnimation(.smooth(duration: 0.3)) { vm.close() }
+            }
+        }
+        .onChange(of: coordinator.currentView) { _, newView in
+            // Leaving the Agents tab while the overlay is up collapses it, so it
+            // can be reopened from the agent row (and reopening re-triggers cleanly
+            // even from the home view's embedded list).
+            if newView != .agents, agentMonitor.activeInputSession != nil {
+                agentMonitor.collapseActiveInput()
             }
         }
     }
@@ -986,11 +993,6 @@ struct ContentView: View {
               
               ZStack {
                   if vm.notchState == .open {
-                      if let pending = agentMonitor.pendingInputSession {
-                          AgentInputOverlay(session: pending)
-                              .id(pending.id)
-                              .transition(.opacity)
-                      } else {
                       Group {
                           switch coordinator.currentView {
                               case .home:
@@ -1025,7 +1027,6 @@ struct ContentView: View {
                       }
                       .id(coordinator.currentView)
                       .transition(useModernCloseAnimation ? tabSwitchTransition : Self.blurFadeTransition)
-                      }
                   }
               }
               .zIndex(1)
@@ -2337,7 +2338,7 @@ struct ContentView: View {
     private func shouldPreventAutoClose() -> Bool {
         coordinator.firstLaunch || hasAnyActivePopovers() || vm.isAutoCloseSuppressed || SharingStateManager.shared.preventNotchClose
             // Keep the notch open while an agent is waiting for approve/ask input.
-            || agentMonitor.pendingInputSession != nil
+            || agentMonitor.activeInputSession != nil
     }
     
     // Helper to prevent rapid haptic feedback

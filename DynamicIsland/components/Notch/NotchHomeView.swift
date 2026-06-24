@@ -732,7 +732,7 @@ struct NotchHomeView: View {
                 if Defaults[.enableAgentMonitoring] {
                     // Agent monitor takes the home view's secondary panel;
                     // the calendar moves to its own tab.
-                    NotchAgentsView()
+                    NotchAgentsView(showsInputOverlay: false)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .environmentObject(vm)
                 } else if Defaults[.showCalendar] {
