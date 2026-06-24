@@ -303,26 +303,6 @@ enum ThirdPartyCalendarApp: String, CaseIterable, Codable, Defaults.Serializable
 }
 
 
-enum ScreenAssistantDisplayMode: String, CaseIterable, Codable, Defaults.Serializable {
-    case popover = "popover"     // Traditional popover attached to button
-    case panel = "panel"         // Floating panel near notch
-    
-    var displayName: String {
-        switch self {
-        case .popover: return String(localized: "Popover")
-        case .panel: return String(localized: "Panel")
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .popover: return String(localized: "Shows screen assistant as a dropdown attached to the AI button")
-        case .panel: return String(localized: "Shows screen assistant in a floating panel near the notch")
-        }
-    }
-}
-
-
 enum ThirdPartyDDCProvider: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
     case betterDisplay
     case lunar
@@ -579,88 +559,6 @@ enum ReminderPresentationStyle: String, CaseIterable, Identifiable, Defaults.Ser
             case .minutes:
                 return String(localized: "Minutes")
         }
-    }
-}
-
-// AI Model types for screen assistant
-enum AIModelProvider: String, CaseIterable, Identifiable, Defaults.Serializable {
-    case gemini = "Gemini"
-    case openai = "OpenAI GPT"
-    case claude = "Claude"
-    case local = "Local Model"
-    case groq = "Groq"
-    
-    var id: String { self.rawValue }
-    
-    var displayName: String {
-        return self.rawValue
-    }
-    
-    var description: String {
-        switch self {
-        case .gemini: return "Google's Gemini AI with multimodal capabilities"
-        case .openai: return "OpenAI's GPT models with advanced reasoning"
-        case .claude: return "Anthropic's Claude with strong analytical skills"
-        case .local: return "Local AI model (Ollama or similar)"
-        case .groq: return "Groq's fast inference for OpenAI-compatible models"
-        }
-    }
-    
-    var supportedModels: [AIModel] {
-        switch self {
-        case .gemini:
-            return [
-                // Gemini 2.5 Models (Latest)
-                AIModel(id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", supportsThinking: true),
-                AIModel(id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", supportsThinking: true),
-                AIModel(id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", supportsThinking: false),
-                AIModel(id: "gemini-2.5-flash-live", name: "Gemini 2.5 Flash Live", supportsThinking: false),
-                AIModel(id: "gemini-2.5-flash-native-audio", name: "Gemini 2.5 Flash Native Audio", supportsThinking: true),
-                
-                // Gemini 2.0 Models
-                AIModel(id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", supportsThinking: false),
-                AIModel(id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash-Lite", supportsThinking: false),
-                AIModel(id: "gemini-2.0-flash-live", name: "Gemini 2.0 Flash Live", supportsThinking: false),
-                
-                // Legacy 1.5 Models (for compatibility)
-                AIModel(id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", supportsThinking: false),
-                AIModel(id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", supportsThinking: false)
-            ]
-        case .openai:
-            return [
-                AIModel(id: "gpt-4o", name: "GPT-4o", supportsThinking: false),
-                AIModel(id: "gpt-4o-mini", name: "GPT-4o Mini", supportsThinking: false),
-                AIModel(id: "o1-preview", name: "o1 Preview", supportsThinking: true),
-                AIModel(id: "o1-mini", name: "o1 Mini", supportsThinking: true)
-            ]
-        case .claude:
-            return [
-                AIModel(id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet", supportsThinking: false),
-                AIModel(id: "claude-3-haiku", name: "Claude 3 Haiku", supportsThinking: false)
-            ]
-        case .local:
-            return [
-                AIModel(id: "llama3.2", name: "Llama 3.2", supportsThinking: false),
-                AIModel(id: "qwen2.5", name: "Qwen 2.5", supportsThinking: false)
-            ]
-        case .groq:
-            return [
-                AIModel(id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B Versatile", supportsThinking: false),
-                AIModel(id: "llama-3.1-8b-instant", name: "Llama 3.1 8B Instant", supportsThinking: false),
-                AIModel(id: "qwen-qwq-32b", name: "Qwen QWQ 32B", supportsThinking: false),
-                AIModel(id: "mixtral-8x7b-32768", name: "Mixtral 8x7B", supportsThinking: false)
-            ]
-        }
-    }
-}
-
-struct AIModel: Codable, Identifiable, Defaults.Serializable {
-    let id: String
-    let name: String
-    let supportsThinking: Bool
-    
-    var displayName: String {
-        return name + (supportsThinking ? " (Thinking)" : "")
     }
 }
 
@@ -977,18 +875,6 @@ extension Defaults.Keys {
     // MARK: Clipboard Feature
     static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 3)
     
-    // MARK: Screen Assistant Feature
-    static let enableScreenAssistant = Key<Bool>("enableScreenAssistant", default: true)
-    static let screenAssistantDisplayMode = Key<ScreenAssistantDisplayMode>("screenAssistantDisplayMode", default: .panel)
-    static let geminiApiKey = Key<String>("geminiApiKey", default: "")
-    static let openaiApiKey = Key<String>("openaiApiKey", default: "")
-    static let claudeApiKey = Key<String>("claudeApiKey", default: "")
-    static let groqApiKey = Key<String>("groqApiKey", default: "")
-    static let selectedAIProvider = Key<AIModelProvider>("selectedAIProvider", default: .gemini)
-    static let selectedAIModel = Key<AIModel?>("selectedAIModel", default: nil)
-    static let enableThinkingMode = Key<Bool>("enableThinkingMode", default: false)
-    static let localModelEndpoint = Key<String>("localModelEndpoint", default: "http://localhost:11434")
-
     // MARK: Third-Party Extensions
     static let enableThirdPartyExtensions = Key<Bool>("enableThirdPartyExtensions", default: true)
     static let enableExtensionLiveActivities = Key<Bool>("enableExtensionLiveActivities", default: true)

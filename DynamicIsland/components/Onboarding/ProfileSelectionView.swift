@@ -36,7 +36,7 @@ struct ProfileSelectionView: View {
             id: "developer",
             name: String(localized: "Developer"),
             icon: "terminal.fill",
-            description: String(localized: "Code and debug with color picker, stats monitoring, and screen assistant."),
+            description: String(localized: "Code and debug with color picker and stats monitoring."),
             gradient: [Color.blue, Color.purple]
         ),
         UserProfile(
@@ -206,7 +206,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
     let isDeveloper = profiles.contains("developer")
     if isDeveloper {
         Defaults[.enableTimerFeature] = true
-        Defaults[.enableScreenAssistant] = true
         Defaults[.showMirror] = false
         Defaults[.enableMinimalisticUI] = false
     }
@@ -219,7 +218,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.inlineHUD] = true
         Defaults[.enableTimerFeature] = false
         Defaults[.enableMinimalisticUI] = false
-        Defaults[.enableScreenAssistant] = false
     }
     
     // Light Use Profile Settings
@@ -229,7 +227,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.showMirror] = false
         Defaults[.enableTimerFeature] = true
         Defaults[.inlineHUD] = true
-        Defaults[.enableScreenAssistant] = false
         Defaults[.enableLyrics] = false
     }
     
@@ -240,7 +237,6 @@ func applyProfileSettings(_ profiles: Set<String>) {
         Defaults[.showCalendar] = true
         Defaults[.showMirror] = false
         Defaults[.enableMinimalisticUI] = false
-        Defaults[.enableScreenAssistant] = false
     }
     
     // If Light Use is NOT selected but others are, ensure minimalistic is OFF
