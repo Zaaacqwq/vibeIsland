@@ -792,8 +792,6 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .appearance, title: "Enable player color tinting", keywords: ["tint", "album color", "player"], highlightID: SettingsTab.appearance.highlightID(for: "Enable player color tinting")),
             SettingsSearchEntry(tab: .appearance, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.appearance.highlightID(for: "Enable blur effect behind album art")),
             SettingsSearchEntry(tab: .appearance, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.appearance.highlightID(for: "Slider color")),
-            SettingsSearchEntry(tab: .appearance, title: "Enable Dynamic mirror", keywords: ["mirror", "reflection"], highlightID: SettingsTab.appearance.highlightID(for: "Enable Dynamic mirror")),
-            SettingsSearchEntry(tab: .appearance, title: "Mirror shape", keywords: ["mirror shape", "circle", "rectangle"], highlightID: SettingsTab.appearance.highlightID(for: "Mirror shape")),
             SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
             SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
@@ -922,7 +920,6 @@ struct GeneralSettings: View {
     @State private var screens: [String] = NSScreen.screens.compactMap { $0.localizedName }
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.mirrorShape) var mirrorShape
     @Default(.showEmojis) var showEmojis
     @Default(.gestureSensitivity) var gestureSensitivity
     @Default(.minimumHoverDuration) var minimumHoverDuration
@@ -2850,9 +2847,6 @@ struct LiveActivitiesSettings: View {
 
 struct Appearance: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @ObservedObject var webcamManager = WebcamManager.shared
-    @Default(.mirrorShape) var mirrorShape
-    @Default(.selectedCameraID) var selectedCameraID
     @Default(.sliderColor) var sliderColor
     @Default(.useMusicVisualizer) var useMusicVisualizer
     @Default(.customVisualizers) var customVisualizers
@@ -3071,30 +3065,8 @@ struct Appearance: View {
             }
 
             GeistSection(title: "Additional features") {
-                GeistToggleRow(title: "Enable Dynamic mirror", isOn: geistBinding(.showMirror))
-                    .disabled(!checkVideoInput())
-                GeistPickerRow(title: "Mirror shape", selection: $mirrorShape, divider: webcamManager.cameraAvailable) {
-                    Text("Circle").tag(MirrorShapeEnum.circle)
-                    Text("Square").tag(MirrorShapeEnum.rectangle)
-                }
-                if webcamManager.cameraAvailable {
-                    GeistPickerRow(title: "Mirror Camera", selection: $selectedCameraID) {
-                        ForEach(webcamManager.availableCameras, id: \.uniqueID) { device in
-                            Text(device.localizedName).tag(device.uniqueID)
-                        }
-                    }
-                    .onChange(of: selectedCameraID) { _, _ in
-                        if Defaults[.showMirror] {
-                            webcamManager.stopSession()
-                            webcamManager.startSession()
-                        }
-                    }
-                }
                 GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), divider: false)
             }
-
-            // MARK: - Custom Idle Animations Section
-            IdleAnimationsSettingsSection()
 
             GeistSection(title: "App icon") {
                 GeistRow(divider: false) {
@@ -3277,14 +3249,6 @@ struct Appearance: View {
             selectedAppIconID = nil
             applySelectedAppIcon()
         }
-    }
-
-    func checkVideoInput() -> Bool {
-        if let _ = AVCaptureDevice.default(for: .video) {
-            return true
-        }
-
-        return false
     }
 
     @ViewBuilder

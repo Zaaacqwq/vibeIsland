@@ -128,7 +128,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private func orderedVisibleTabs() -> [NotchViews] {
         if Defaults[.enableMinimalisticUI] { return [.home] }
         var tabs: [NotchViews] = []
-        if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] || Defaults[.showMirror] {
+        if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] {
             tabs.append(.home)
         }
         if Defaults[.dynamicShelf] { tabs.append(.shelf) }
@@ -255,7 +255,6 @@ class DynamicIslandViewCoordinator: ObservableObject {
         Publishers.MergeMany(
             Defaults.publisher(.showStandardMediaControls).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.showMirror).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),

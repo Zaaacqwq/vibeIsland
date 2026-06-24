@@ -41,60 +41,37 @@ class IdleAnimationManager {
     
     /// Load bundled animations from the LottieAnimations folder
     func initializeDefaultAnimations() {
-        var animations: [CustomIdleAnimation] = []
-        
-        // Load bundled Lottie files
-        if let bundledAnimations = loadBundledAnimations() {
-            animations.append(contentsOf: bundledAnimations)
-        }
-        
-        // Get existing animations
+        // Bundled presets — none ship by default; users add their own.
+        let bundled = loadBundledAnimations() ?? []
+
+        // Keep only user-added animations: drop any built-in presets and legacy
+        // builtin://face entries that older versions may have stored.
         var existing = Defaults[.customIdleAnimations]
-        
-        // Remove any legacy builtInFace entries that may be stored from older versions
         existing.removeAll { animation in
+            if animation.isBuiltIn { return true }
             if case .lottieFile(let url) = animation.source, url.absoluteString == "builtin://face" {
                 return true
             }
             return false
         }
-        
-        if existing.isEmpty {
-            // First launch - set everything
-            Defaults[.customIdleAnimations] = animations
-            Defaults[.selectedIdleAnimation] = animations.first
-            print("✅ [IdleAnimationManager] First launch: Initialized with \(animations.count) animations")
-        } else {
-            // Subsequent launch - ensure all bundled animations are present
-            let existingNames = Set(existing.filter { $0.isBuiltIn }.map { $0.name })
-            
-            // Add any missing bundled animations
-            for bundledAnim in animations where bundledAnim.isBuiltIn {
-                if !existingNames.contains(bundledAnim.name) {
-                    existing.insert(bundledAnim, at: existing.firstIndex(where: { !$0.isBuiltIn }) ?? existing.count)
-                    print("➕ [IdleAnimationManager] Added missing bundled animation: \(bundledAnim.name)")
-                }
-            }
-            
-            Defaults[.customIdleAnimations] = existing
-            
-            // If current selection was the old built-in face (no longer valid), select first available
-            if let selected = Defaults[.selectedIdleAnimation] {
-                let isValid: Bool
-                switch selected.source {
-                case .lottieFile(let url):
-                    isValid = url.absoluteString != "builtin://face"
-                case .lottieURL:
-                    isValid = true
-                }
-                if !isValid {
-                    Defaults[.selectedIdleAnimation] = existing.first
-                    print("🔄 [IdleAnimationManager] Migrated selection from legacy face to: \(existing.first?.name ?? "nil")")
-                }
-            }
-            
-            print("✅ [IdleAnimationManager] Subsequent launch: \(existing.count) total animations")
+
+        // Re-add any currently bundled presets that aren't already present.
+        let existingNames = Set(existing.map { $0.name })
+        for anim in bundled where !existingNames.contains(anim.name) {
+            existing.append(anim)
         }
+
+        Defaults[.customIdleAnimations] = existing
+
+        // Reset selection if it pointed at a now-removed animation.
+        let selectionIsValid = Defaults[.selectedIdleAnimation].map { selected in
+            existing.contains { $0.id == selected.id }
+        } ?? false
+        if !selectionIsValid {
+            Defaults[.selectedIdleAnimation] = existing.first
+        }
+
+        print("✅ [IdleAnimationManager] Initialized with \(existing.count) animations")
     }
     
     // MARK: - Bundled Animations
@@ -103,8 +80,8 @@ class IdleAnimationManager {
     private func loadBundledAnimations() -> [CustomIdleAnimation]? {
         print("📦 [IdleAnimationManager] Loading bundled animations...")
         
-        // The JSON files are added as individual resources, not in a folder
-        let bundledFiles = ["Dog waiting", "Moody Dog", "Orange Cat Peeping", "Reindeer"]
+        // No presets ship by default; users add their own idle animations.
+        let bundledFiles: [String] = []
         var animations: [CustomIdleAnimation] = []
         
         for filename in bundledFiles {
