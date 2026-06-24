@@ -25,7 +25,7 @@ import SwiftUI
 /// ``Defaults/showLyricsInClosedNotch``. Long lines marquee-scroll.
 struct ClosedNotchLyricsBand: View {
     @ObservedObject private var musicManager = MusicManager.shared
-    @Default(.coloredSpectrogram) private var coloredSpectrogram
+    @Default(.coloredLyrics) private var coloredLyrics
 
     /// Available width for the lyric text (the closed pill's center width).
     let width: CGFloat
@@ -36,7 +36,7 @@ struct ClosedNotchLyricsBand: View {
     var isActive: Bool = true
 
     private var textColor: Color {
-        coloredSpectrogram ? Color(nsColor: musicManager.avgColor) : .gray
+        coloredLyrics ? Color(nsColor: musicManager.avgColor) : .gray
     }
 
     /// Small inset so text breathes off the notch's bottom rounded corners
@@ -47,7 +47,7 @@ struct ClosedNotchLyricsBand: View {
 
     /// Played (sung) portion color for the KTV-style highlight.
     private var highlightColor: Color {
-        coloredSpectrogram ? Color(nsColor: musicManager.avgColor) : .white
+        coloredLyrics ? Color(nsColor: musicManager.avgColor) : .white
     }
 
     /// Not-yet-sung portion color (dimmed).

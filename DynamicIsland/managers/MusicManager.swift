@@ -1196,7 +1196,7 @@ class MusicManager: ObservableObject {
         workItem = DispatchWorkItem { [weak self] in
             withAnimation(.smooth) {
                 self?.albumArt = newAlbumArt
-                if Defaults[.coloredSpectrogram] {
+                if Defaults[.coloredSpectrogram] || Defaults[.coloredLyrics] {
                     self?.calculateAverageColor()
                 }
             }
