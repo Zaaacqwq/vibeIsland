@@ -80,16 +80,19 @@ struct NotchWeatherView: View {
                               text: "\(aq.scale.compactLabel) \(aq.index) · \(aq.category.displayName)",
                               tint: aqiColor(aq))
                 }
-                if let cycle = snapshot.sunCycle, cycle.sunrise != nil || cycle.sunset != nil {
-                    sunCycleRow(cycle)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let cycle = snapshot.sunCycle, cycle.sunrise != nil || cycle.sunset != nil {
+                sunCycleColumn(cycle)
+            }
         }
     }
 
-    private func sunCycleRow(_ cycle: WeatherSnapshot.SunCycleInfo) -> some View {
-        HStack(spacing: 12) {
+    /// Sunrise/sunset stacked on the right so the row keeps its original height
+    /// (and the notch's bottom corners stay rounded).
+    private func sunCycleColumn(_ cycle: WeatherSnapshot.SunCycleInfo) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
             if let sunrise = cycle.sunrise {
                 detailRow(icon: "sunrise.fill", text: sunTime(sunrise), tint: .orange)
             }
@@ -97,6 +100,7 @@ struct NotchWeatherView: View {
                 detailRow(icon: "sunset.fill", text: sunTime(sunset), tint: Color(red: 1.0, green: 0.55, blue: 0.3))
             }
         }
+        .padding(.trailing, 4)
     }
 
     private func forecastRow(_ snapshot: WeatherSnapshot) -> some View {
