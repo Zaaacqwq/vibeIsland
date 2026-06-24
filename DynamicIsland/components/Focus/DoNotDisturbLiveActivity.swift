@@ -90,14 +90,11 @@ struct DoNotDisturbLiveActivity: View {
         max(vm.effectiveClosedNotchHeight - 10, 20)
     }
 
-    private var iconWingWidth: CGFloat {
-        (isExpanded || showInactiveIcon) ? minimalWingWidth : 0
-    }
-
-    private var labelWingWidth: CGFloat {
-        guard shouldShowLabel else {
-            return focusToastMode ? 0 : ((isExpanded || showInactiveIcon) ? minimalWingWidth : 0)
-        }
+    /// Both wings share one width so the black center stays centered on the
+    /// physical notch and the label never slides under the notch cover.
+    private var wingWidth: CGFloat {
+        guard isExpanded || showInactiveIcon else { return 0 }
+        guard shouldShowLabel else { return minimalWingWidth }
 
         if focusToastMode {
             return max(labelIntrinsicWidth + 26, minimalWingWidth)
@@ -105,6 +102,10 @@ struct DoNotDisturbLiveActivity: View {
 
         return max(desiredLabelWidth, minimalWingWidth)
     }
+
+    private var iconWingWidth: CGFloat { wingWidth }
+
+    private var labelWingWidth: CGFloat { wingWidth }
 
     private var notchEnvelopeWidth: CGFloat {
         centerSegmentWidth + iconWingWidth + labelWingWidth
@@ -130,18 +131,14 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     private var desiredLabelWidth: CGFloat {
-        let fallbackWidth = max(collapsedNotchWidth * 0.52, 136)
-        var width = fallbackWidth
-
-        if focusMode == .doNotDisturb && shouldShowLabel {
-            width = max(width, 164)
+        // Long names get a reserved track to marquee within.
+        if shouldMarqueeLabel {
+            let reserved = max(collapsedNotchWidth * 0.52, 136)
+            return focusMode == .doNotDisturb ? max(reserved, 164) : reserved
         }
-
-        if !shouldMarqueeLabel {
-            width = max(width, labelIntrinsicWidth + 8)
-        }
-
-        return width
+        // Short names: size to the text (plus a little padding) so the label
+        // sits right next to the notch instead of floating at the far edge.
+        return labelIntrinsicWidth + 20
     }
 
     private var shouldShowLabel: Bool {
@@ -166,7 +163,7 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     private var focusLabelNSFont: NSFont {
-        NSFont.systemFont(ofSize: 12, weight: .semibold)
+        FocusLabelMetrics.roundedFont
     }
 
     private var focusLabelBaselineWidth: CGFloat {
@@ -269,7 +266,8 @@ struct DoNotDisturbLiveActivity: View {
 
     private var iconWing: some View {
         Color.clear
-            .overlay(alignment: .center) {
+            // Hug the inner edge so the icon sits next to the notch, not the far edge.
+            .overlay(alignment: .trailing) {
                 if iconWingWidth > 0 {
                     currentIcon
                         .font(.system(size: 13, weight: .semibold))
@@ -284,7 +282,8 @@ struct DoNotDisturbLiveActivity: View {
 
     private var labelWing: some View {
         Color.clear
-            .overlay(alignment: .trailing) {
+            // Hug the inner edge so the label sits next to the notch.
+            .overlay(alignment: .leading) {
                 if shouldShowLabel {
                     Group {
                         if shouldMarqueeLabel {
@@ -296,7 +295,7 @@ struct DoNotDisturbLiveActivity: View {
                                 minDuration: 0.4,
                                 frameWidth: marqueeFrameWidth
                             )
-                            .frame(width: marqueeFrameWidth, alignment: .trailing)
+                            .frame(width: marqueeFrameWidth, alignment: .leading)
                         } else {
                             Text(labelText)
                                 .font(focusLabelFont)
@@ -304,7 +303,7 @@ struct DoNotDisturbLiveActivity: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                                 .contentTransition(.opacity)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     .padding(.horizontal, 4)
@@ -522,10 +521,22 @@ private final class SymbolAvailabilityCache {
 private enum FocusLabelMetrics {
     static let baselineText = "Do Not Disturb"
 
+    /// Matches the rendered SwiftUI font (`.system(... design: .rounded)`) so
+    /// width measurements aren't underestimated (rounded glyphs are wider).
+    static let roundedFont: NSFont = {
+        let base = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        #if canImport(AppKit)
+        if let descriptor = base.fontDescriptor.withDesign(.rounded),
+           let rounded = NSFont(descriptor: descriptor, size: 12) {
+            return rounded
+        }
+        #endif
+        return base
+    }()
+
     static let baselineWidth: CGFloat = {
         #if canImport(AppKit)
-        let font = NSFont.systemFont(ofSize: 12, weight: .semibold)
-        return (baselineText as NSString).size(withAttributes: [.font: font]).width
+        return (baselineText as NSString).size(withAttributes: [.font: roundedFont]).width
         #else
         return 0
         #endif
