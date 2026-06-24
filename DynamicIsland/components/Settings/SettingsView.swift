@@ -791,6 +791,7 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .appearance, title: "Use simpler close animation", keywords: ["close animation", "notch"], highlightID: SettingsTab.appearance.highlightID(for: "Use simpler close animation")),
             SettingsSearchEntry(tab: .appearance, title: "Notch Width", keywords: ["expanded notch", "width", "resize"], highlightID: SettingsTab.appearance.highlightID(for: "Expanded notch width")),
             SettingsSearchEntry(tab: .appearance, title: "Enable colored spectrograms", keywords: ["spectrogram", "audio"], highlightID: SettingsTab.appearance.highlightID(for: "Enable colored spectrograms")),
+            SettingsSearchEntry(tab: .appearance, title: "Enable player color tinting", keywords: ["tint", "album color", "player"], highlightID: SettingsTab.appearance.highlightID(for: "Enable player color tinting")),
             SettingsSearchEntry(tab: .appearance, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.appearance.highlightID(for: "Enable blur effect behind album art")),
             SettingsSearchEntry(tab: .appearance, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.appearance.highlightID(for: "Slider color")),
             SettingsSearchEntry(tab: .appearance, title: "Enable Dynamic mirror", keywords: ["mirror", "reflection"], highlightID: SettingsTab.appearance.highlightID(for: "Enable Dynamic mirror")),
@@ -3078,7 +3079,7 @@ struct Appearance: View {
 
             GeistSection(title: "Media") {
                 GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
-                GeistToggleRow(title: "Enable colored spectograms", isOn: geistBinding(.playerColorTinting))
+                GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting))
                 GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
                 GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
                     ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
