@@ -742,8 +742,6 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .hudAndOSD, title: "Volume fine step", keywords: ["volume", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Volume fine step")),
             SettingsSearchEntry(tab: .hudAndOSD, title: "Brightness step", keywords: ["brightness", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness step")),
             SettingsSearchEntry(tab: .hudAndOSD, title: "Brightness fine step", keywords: ["brightness", "fine", "step", "percent"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Brightness fine step")),
-            SettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC app integration", keywords: ["ddc", "third party", "external", "display", "betterdisplay", "lunar"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC app integration")),
-            SettingsSearchEntry(tab: .hudAndOSD, title: "Third-party DDC provider", keywords: ["provider", "betterdisplay", "lunar", "integration", "refresh detection"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Third-party DDC provider")),
             SettingsSearchEntry(tab: .hudAndOSD, title: "Enable external volume control listener", keywords: ["external volume", "ddc volume", "betterdisplay volume", "lunar volume", "disable native volume"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Enable external volume control listener")),
 
             // Media
@@ -1467,7 +1465,6 @@ private struct HUDAndOSDSettingsView: View {
     @Default(.enableVolumeHUD) var enableVolumeHUD
     @Default(.enableBrightnessHUD) var enableBrightnessHUD
     @Default(.enableKeyboardBacklightHUD) var enableKeyboardBacklightHUD
-    @Default(.enableThirdPartyDDCIntegration) var enableThirdPartyDDCIntegration
     @Default(.verticalHUDShowValue) var verticalHUDShowValue
     @Default(.verticalHUDInteractive) var verticalHUDInteractive
     @Default(.verticalHUDHeight) var verticalHUDHeight
@@ -1710,8 +1707,8 @@ private struct HUDAndOSDSettingsView: View {
                 circularSections
             }
 
-            // Third-party display integrations (shared across all HUD variants)
-            ExternalDisplayIntegrationsSection()
+            // Step size controls (shared across all HUD variants)
+            HUDStepSizeSection()
         }
         .onAppear {
             if #unavailable(macOS 26.0), verticalHUDMaterial == .liquid {
@@ -1723,20 +1720,18 @@ private struct HUDAndOSDSettingsView: View {
 
     @ViewBuilder
     private var hudControlsSection: some View {
-        if accessibilityPermission.isAuthorized || enableThirdPartyDDCIntegration {
+        if accessibilityPermission.isAuthorized {
             GeistSection(title: "Controls", footer: "Choose which system controls should display HUD notifications.") {
                 GeistToggleRow(title: "Volume HUD", isOn: $enableVolumeHUD)
                 GeistToggleRow(title: "Brightness HUD", isOn: $enableBrightnessHUD)
                 GeistToggleRow(title: "Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD, divider: false)
-                    .disabled(enableThirdPartyDDCIntegration)
-                    .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
             }
         }
     }
 
     @ViewBuilder
     private var verticalSections: some View {
-        if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
+        if !accessibilityPermission.isAuthorized {
             SettingsPermissionCallout(
                 message: "Accessibility permission is needed to intercept system controls for the Vertical HUD.",
                 requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
@@ -1797,7 +1792,7 @@ private struct HUDAndOSDSettingsView: View {
 
     @ViewBuilder
     private var circularSections: some View {
-        if !accessibilityPermission.isAuthorized && !enableThirdPartyDDCIntegration {
+        if !accessibilityPermission.isAuthorized {
             SettingsPermissionCallout(
                 message: "Accessibility permission is needed to intercept system controls for the Circular HUD.",
                 requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
@@ -1829,161 +1824,20 @@ private struct HUDAndOSDSettingsView: View {
     }
 }
 
-// MARK: - External Display Integrations Settings Section
+// MARK: - HUD Step Size Settings Section
 
-private struct ExternalDisplayIntegrationsSection: View {
-    @Default(.enableThirdPartyDDCIntegration) var enableThirdPartyDDCIntegration
-    @Default(.thirdPartyDDCProvider) var thirdPartyDDCProvider
-    @Default(.enableExternalVolumeControlListener) var enableExternalVolumeControlListener
+private struct HUDStepSizeSection: View {
     @Default(.volumeStepPercent) var volumeStepPercent
     @Default(.volumeFineStepPercent) var volumeFineStepPercent
     @Default(.brightnessStepPercent) var brightnessStepPercent
     @Default(.brightnessFineStepPercent) var brightnessFineStepPercent
-    @ObservedObject private var betterDisplayManager = BetterDisplayManager.shared
-    @ObservedObject private var lunarManager = LunarManager.shared
-
-    private var ddcFooter: String? {
-        enableThirdPartyDDCIntegration ? "VibeIsland always listens to selected-provider brightness events, and listens to provider volume events only when external volume listener is enabled." : nil
-    }
-
-    private var volumeListenerNote: String {
-        enableExternalVolumeControlListener
-        ? "VibeIsland's built-in volume key interception is disabled while external volume listening is on. Volume HUD/OSD will follow \(thirdPartyDDCProvider.displayName) payloads."
-        : "VibeIsland keeps native volume key interception. External provider volume payloads are ignored while this is off."
-    }
-
-    private var providerStatusText: String {
-        switch thirdPartyDDCProvider {
-        case .betterDisplay:
-            if betterDisplayManager.isRunning { return "Running" }
-            if betterDisplayManager.isDetected { return "Not running" }
-            return "Not detected"
-        case .lunar:
-            if lunarManager.isConnected { return "Connected" }
-            if lunarManager.isRunning { return "Running" }
-            if lunarManager.isDetected { return "Not running" }
-            return "Not detected"
-        }
-    }
-
-    private var providerStatusColor: Color {
-        switch thirdPartyDDCProvider {
-        case .betterDisplay:
-            if betterDisplayManager.isRunning { return .green }
-            if betterDisplayManager.isDetected { return .orange }
-            return .secondary
-        case .lunar:
-            if lunarManager.isConnected { return .green }
-            if lunarManager.isRunning { return .orange }
-            if lunarManager.isDetected { return .orange }
-            return .secondary
-        }
-    }
-
-    private var providerStatusDescription: String {
-        switch thirdPartyDDCProvider {
-        case .betterDisplay:
-            if !betterDisplayManager.isDetected {
-                return "Install [BetterDisplay](https://betterdisplay.pro) to control external display brightness (and optional volume) through VibeIsland's HUD."
-            }
-            if !betterDisplayManager.isRunning {
-                return "BetterDisplay is installed but not currently running. Launch BetterDisplay to enable integration."
-            }
-            return "BetterDisplay OSD events will be routed through VibeIsland's active HUD style. Brightness is always routed; volume is routed when external volume control listener is enabled below. Make sure BetterDisplay's OSD integration is enabled in Settings › Application › Integration."
-        case .lunar:
-            if !lunarManager.isDetected {
-                return "Install [Lunar](https://lunar.fyi) to control external display brightness, contrast, and optional volume through VibeIsland's HUD via DDC."
-            }
-            if !lunarManager.isRunning {
-                return "Lunar is installed but not currently running. Launch Lunar to enable integration."
-            }
-            if lunarManager.isConnected {
-                return "Connected to Lunar's DDC socket. Brightness and contrast adjustments are shown through VibeIsland's HUD; volume follows when external volume control listener is enabled below."
-            }
-            return "Lunar is running but the socket connection is not yet established. It will connect automatically."
-        }
-    }
-
-    private func refreshDetectionStatus() {
-        switch thirdPartyDDCProvider {
-        case .betterDisplay:
-            betterDisplayManager.refreshDetectionStatus()
-        case .lunar:
-            lunarManager.refreshDetectionStatus()
-        }
-    }
 
     var body: some View {
-        Group {
-            GeistSection(title: "Step size", footer: "Percent change per key press. Fine step applies when holding Shift+Option.") {
-                GeistStepperRow(title: "Volume step", value: $volumeStepPercent, range: 1...25, valueLabel: "\(volumeStepPercent)%")
-                    .disabled(enableExternalVolumeControlListener)
-                GeistStepperRow(title: "Volume fine step", value: $volumeFineStepPercent, range: 1...25, valueLabel: "\(volumeFineStepPercent)%")
-                    .disabled(enableExternalVolumeControlListener)
-                if enableExternalVolumeControlListener {
-                    GeistRow {
-                        Text("Disabled while external display volume integration is active.")
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                    }
-                }
-                GeistStepperRow(title: "Brightness step", value: $brightnessStepPercent, range: 1...25, valueLabel: "\(brightnessStepPercent)%")
-                    .disabled(enableThirdPartyDDCIntegration)
-                GeistStepperRow(title: "Brightness fine step", value: $brightnessFineStepPercent, range: 1...25, divider: enableThirdPartyDDCIntegration, valueLabel: "\(brightnessFineStepPercent)%")
-                    .disabled(enableThirdPartyDDCIntegration)
-                if enableThirdPartyDDCIntegration {
-                    GeistRow(divider: false) {
-                        Text("Disabled while external display brightness integration is active.")
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                    }
-                }
-            }
-
-            GeistSection(footer: ddcFooter) {
-                GeistToggleRow(title: "Enable third-party DDC app integration", isOn: $enableThirdPartyDDCIntegration, divider: enableThirdPartyDDCIntegration)
-                if enableThirdPartyDDCIntegration {
-                    GeistPickerRow(title: "Provider", selection: $thirdPartyDDCProvider) {
-                        ForEach(ThirdPartyDDCProvider.allCases) { provider in
-                            HStack {
-                                AppIconImage(
-                                    bundleIdentifiers: provider.bundleIdentifiers,
-                                    symbolFallback: "display",
-                                    symbolColor: .secondary
-                                )
-                                Text(provider.displayName)
-                            }
-                            .tag(provider)
-                        }
-                    }
-                    GeistToggleRow(title: "Enable external volume control listener", isOn: $enableExternalVolumeControlListener)
-                    GeistRow {
-                        Text(volumeListenerNote)
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    GeistLabeledRow(title: "Status") {
-                        Text(providerStatusText)
-                            .font(Geist.Typography.caption).foregroundStyle(providerStatusColor)
-                    }
-                    GeistRow {
-                        Text(providerStatusDescription)
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    GeistRow(divider: false) {
-                        Button {
-                            refreshDetectionStatus()
-                        } label: {
-                            Label("Refresh detection", systemImage: "arrow.clockwise").font(Geist.Typography.caption)
-                        }
-                        .buttonStyle(.link)
-                    }
-                } else {
-                    GeistRow(divider: false) {
-                        Text("Enable to route BetterDisplay or Lunar display adjustments through VibeIsland's active HUD style.")
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                    }
-                }
-            }
+        GeistSection(title: "Step size", footer: "Percent change per key press. Fine step applies when holding Shift+Option.") {
+            GeistStepperRow(title: "Volume step", value: $volumeStepPercent, range: 1...25, valueLabel: "\(volumeStepPercent)%")
+            GeistStepperRow(title: "Volume fine step", value: $volumeFineStepPercent, range: 1...25, valueLabel: "\(volumeFineStepPercent)%")
+            GeistStepperRow(title: "Brightness step", value: $brightnessStepPercent, range: 1...25, valueLabel: "\(brightnessStepPercent)%")
+            GeistStepperRow(title: "Brightness fine step", value: $brightnessFineStepPercent, range: 1...25, divider: false, valueLabel: "\(brightnessFineStepPercent)%")
         }
     }
 }
@@ -2086,7 +1940,6 @@ struct HUD: View {
     @Default(.enableVolumeHUD) var enableVolumeHUD
     @Default(.enableBrightnessHUD) var enableBrightnessHUD
     @Default(.enableKeyboardBacklightHUD) var enableKeyboardBacklightHUD
-    @Default(.enableThirdPartyDDCIntegration) var enableThirdPartyDDCIntegration
     @Default(.systemHUDSensitivity) var systemHUDSensitivity
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var accessibilityPermission = AccessibilityPermissionStore.shared
@@ -2111,7 +1964,7 @@ struct HUD: View {
 
     var body: some View {
         Group {
-            if !hasAccessibilityPermission && !enableThirdPartyDDCIntegration {
+            if !hasAccessibilityPermission {
                 SettingsPermissionCallout(
                     message: "Accessibility permission lets Dynamic Island replace the native volume, brightness, and keyboard HUDs.",
                     requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
@@ -2119,13 +1972,11 @@ struct HUD: View {
                 )
             }
 
-            if enableSystemHUD && !Defaults[.enableCustomOSD] && (hasAccessibilityPermission || enableThirdPartyDDCIntegration) {
+            if enableSystemHUD && !Defaults[.enableCustomOSD] && hasAccessibilityPermission {
                 GeistSection(title: "Controls", footer: "Choose which system controls should display HUD notifications.") {
                     GeistToggleRow(title: "Volume HUD", isOn: $enableVolumeHUD)
                     GeistToggleRow(title: "Brightness HUD", isOn: $enableBrightnessHUD)
                     GeistToggleRow(title: "Keyboard Backlight HUD", isOn: $enableKeyboardBacklightHUD, divider: false)
-                        .disabled(enableThirdPartyDDCIntegration)
-                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
                 }
             }
 
@@ -4104,7 +3955,6 @@ struct CustomOSDSettings: View {
     @Default(.enableOSDVolume) var enableOSDVolume
     @Default(.enableOSDBrightness) var enableOSDBrightness
     @Default(.enableOSDKeyboardBacklight) var enableOSDKeyboardBacklight
-    @Default(.enableThirdPartyDDCIntegration) var enableThirdPartyDDCIntegration
     @Default(.osdMaterial) var osdMaterial
     @Default(.osdLiquidGlassCustomizationMode) var osdLiquidGlassCustomizationMode
     @Default(.osdLiquidGlassVariant) var osdLiquidGlassVariant
@@ -4152,7 +4002,7 @@ struct CustomOSDSettings: View {
 
     var body: some View {
         Group {
-            if !hasAccessibilityPermission && !enableThirdPartyDDCIntegration {
+            if !hasAccessibilityPermission {
                 SettingsPermissionCallout(
                     message: "Accessibility permission is needed to intercept system controls for the Custom OSD.",
                     requestAction: { accessibilityPermission.requestAuthorizationPrompt() },
@@ -4160,13 +4010,11 @@ struct CustomOSDSettings: View {
                 )
             }
 
-            if hasAccessibilityPermission || enableThirdPartyDDCIntegration {
+            if hasAccessibilityPermission {
                 GeistSection(title: "Controls", footer: "Choose which system controls should display custom OSD windows.") {
                     GeistToggleRow(title: "Volume OSD", isOn: $enableOSDVolume)
                     GeistToggleRow(title: "Brightness OSD", isOn: $enableOSDBrightness)
                     GeistToggleRow(title: "Keyboard Backlight OSD", isOn: $enableOSDKeyboardBacklight, divider: false)
-                        .disabled(enableThirdPartyDDCIntegration)
-                        .help(enableThirdPartyDDCIntegration ? "Disabled while external display integration is active — brightness keys are handled by the external app." : "")
                 }
 
                 GeistSection(title: "Appearance", footer: materialFooter) {

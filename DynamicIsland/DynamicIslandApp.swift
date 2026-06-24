@@ -315,9 +315,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Stop AudioTap capture
         AudioTap.shared.stopCapture()
-
-        // Restore Lunar's native OSD if integration was active
-        LunarManager.shared.appWillTerminate()
     }
     
     private func cleanupWindows(shouldInvert: Bool = false) {
@@ -582,20 +579,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Defaults.Keys.migrateMusicAuxControls()
         Defaults.Keys.migrateMusicControlSlots()
         Defaults.Keys.migrateCapsLockTintMode()
-        Defaults.Keys.migrateThirdPartyDDCIntegration()
 
-        Defaults.publisher(.enableThirdPartyDDCIntegration, options: [])
-            .sink { _ in
-                Defaults.Keys.syncLegacyThirdPartyDDCKeys()
-            }
-            .store(in: &cancellables)
-
-        Defaults.publisher(.thirdPartyDDCProvider, options: [])
-            .sink { _ in
-                Defaults.Keys.syncLegacyThirdPartyDDCKeys()
-            }
-            .store(in: &cancellables)
-        
         // Initialize idle animations (load bundled + built-in face)
         idleAnimationManager.initializeDefaultAnimations()
 
@@ -611,12 +595,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup SystemHUD Manager
         SystemHUDManager.shared.setup(coordinator: coordinator)
 
-        // Setup BetterDisplay integration
-        BetterDisplayManager.shared.configure(coordinator: coordinator)
-
-        // Setup Lunar integration
-        LunarManager.shared.configure(coordinator: coordinator)
-        
         // Setup ScreenRecording Manager
         if Defaults[.enableScreenRecordingDetection] {
             ScreenRecordingManager.shared.startMonitoring()
