@@ -103,6 +103,18 @@ struct WeatherSnapshot: Equatable {
         let sunset: Date?
     }
 
+    /// Secondary current-conditions metrics (feels-like, humidity, wind, UV,
+    /// chance of rain). Surfaced behind the "Show weather details" setting.
+    struct ConditionsInfo: Equatable {
+        let feelsLike: Double?
+        let humidity: Int?
+        let windSpeed: Double?
+        let windUnit: String
+        let windDirection: Int?
+        let uvIndex: Double?
+        let precipitationProbability: Int?
+    }
+
     struct TemperatureInfo: Equatable {
         let current: Double
         let minimum: Double?
@@ -160,6 +172,7 @@ struct WeatherSnapshot: Equatable {
     let airQuality: AirQualityInfo?
     let temperatureInfo: TemperatureInfo?
     let sunCycle: SunCycleInfo?
+    let conditions: ConditionsInfo?
     let daily: [DailyForecast]
 }
 

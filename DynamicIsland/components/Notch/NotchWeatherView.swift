@@ -17,12 +17,15 @@
  */
 
 import SwiftUI
+import Defaults
 
 /// Open-notch tab showing current conditions: large icon + temperature,
-/// description, location, high/low, air quality and the next sun event.
+/// description, location, high/low, air quality, sun cycle and (optionally)
+/// extra detail metrics.
 struct NotchWeatherView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var weather = WeatherManager.shared
+    @Default(.weatherShowsDetails) private var showsDetails
 
     var body: some View {
         Group {
@@ -43,7 +46,7 @@ struct NotchWeatherView: View {
     // MARK: - Content
 
     private func content(_ snapshot: WeatherSnapshot) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             current(snapshot)
             if !snapshot.daily.isEmpty {
                 Divider().overlay(Color.white.opacity(0.12))
@@ -53,14 +56,29 @@ struct NotchWeatherView: View {
     }
 
     private func current(_ snapshot: WeatherSnapshot) -> some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 10) {
-                Image(systemName: snapshot.symbolName)
-                    .symbolRenderingMode(.multicolor)
-                    .font(.system(size: 34))
-                Text(temperatureDisplay(snapshot))
-                    .font(.system(size: 30, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: snapshot.symbolName)
+                        .symbolRenderingMode(.multicolor)
+                        .font(.system(size: 28))
+                    Text(temperatureDisplay(snapshot))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    if let temp = snapshot.temperatureInfo,
+                       let hi = temp.displayMaximum, let lo = temp.displayMinimum {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("H:\(hi)°").font(.system(size: 9, weight: .medium))
+                            Text("L:\(lo)°").font(.system(size: 9, weight: .medium))
+                        }
+                        .foregroundStyle(.white.opacity(0.6))
+                    }
+                }
+                if showsDetails, let feels = snapshot.conditions?.feelsLike {
+                    Text("Feels like \(Int(round(feels)))°")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -83,24 +101,48 @@ struct NotchWeatherView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let cycle = snapshot.sunCycle, cycle.sunrise != nil || cycle.sunset != nil {
-                sunCycleColumn(cycle)
-            }
+            detailsColumn(snapshot)
         }
     }
 
-    /// Sunrise/sunset stacked on the right so the row keeps its original height
-    /// (and the notch's bottom corners stay rounded).
-    private func sunCycleColumn(_ cycle: WeatherSnapshot.SunCycleInfo) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            if let sunrise = cycle.sunrise {
-                detailRow(icon: "sunrise.fill", text: sunTime(sunrise), tint: .orange)
+    /// Right side: sunrise/sunset, plus humidity/wind/UV/rain when "Show weather
+    /// details" is on. Capped at two rows so the row height (and the notch's
+    /// rounded bottom corners) match the other tabs.
+    @ViewBuilder
+    private func detailsColumn(_ snapshot: WeatherSnapshot) -> some View {
+        let cycle = snapshot.sunCycle
+        let conditions = showsDetails ? snapshot.conditions : nil
+        if cycle != nil || conditions != nil {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    if let sunrise = cycle?.sunrise {
+                        detailRow(icon: "sunrise.fill", text: sunTime(sunrise), tint: .orange)
+                    }
+                    if let sunset = cycle?.sunset {
+                        detailRow(icon: "sunset.fill", text: sunTime(sunset), tint: Color(red: 1.0, green: 0.55, blue: 0.3))
+                    }
+                }
+                if let c = conditions {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let humidity = c.humidity {
+                            detailRow(icon: "humidity.fill", text: "\(humidity)%", tint: .cyan)
+                        }
+                        if let wind = c.windSpeed {
+                            detailRow(icon: "wind", text: "\(Int(round(wind))) \(c.windUnit)")
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let uv = c.uvIndex {
+                            detailRow(icon: "sun.max.fill", text: "UV \(Int(round(uv)))", tint: .yellow)
+                        }
+                        if let pop = c.precipitationProbability {
+                            detailRow(icon: "umbrella.fill", text: "\(pop)%", tint: .blue)
+                        }
+                    }
+                }
             }
-            if let sunset = cycle.sunset {
-                detailRow(icon: "sunset.fill", text: sunTime(sunset), tint: Color(red: 1.0, green: 0.55, blue: 0.3))
-            }
+            .padding(.trailing, 4)
         }
-        .padding(.trailing, 4)
     }
 
     private func forecastRow(_ snapshot: WeatherSnapshot) -> some View {
