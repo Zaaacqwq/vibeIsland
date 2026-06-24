@@ -39,14 +39,14 @@ struct NotchWeatherView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .onAppear { Task { await weather.refresh(force: false) } }
     }
 
     // MARK: - Content
 
     private func content(_ snapshot: WeatherSnapshot) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             current(snapshot)
             if !snapshot.daily.isEmpty {
                 Divider().overlay(Color.white.opacity(0.12))
@@ -148,20 +148,22 @@ struct NotchWeatherView: View {
     private func forecastRow(_ snapshot: WeatherSnapshot) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(snapshot.daily.prefix(7).enumerated()), id: \.element.id) { index, day in
-                VStack(spacing: 4) {
+                VStack(spacing: 2) {
                     Text(weekdayLabel(day.date, isFirst: index == 0))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))
                     Image(systemName: day.symbolName)
                         .symbolRenderingMode(.multicolor)
-                        .font(.system(size: 15))
-                        .frame(height: 18)
-                    Text(tempLabel(day.high))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(tempLabel(day.low))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .font(.system(size: 14))
+                        .frame(height: 16)
+                    HStack(spacing: 4) {
+                        Text(tempLabel(day.high))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(tempLabel(day.low))
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
