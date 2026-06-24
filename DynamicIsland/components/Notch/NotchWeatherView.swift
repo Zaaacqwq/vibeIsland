@@ -80,8 +80,22 @@ struct NotchWeatherView: View {
                               text: "\(aq.scale.compactLabel) \(aq.index) · \(aq.category.displayName)",
                               tint: aqiColor(aq))
                 }
+                if let cycle = snapshot.sunCycle, cycle.sunrise != nil || cycle.sunset != nil {
+                    sunCycleRow(cycle)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func sunCycleRow(_ cycle: WeatherSnapshot.SunCycleInfo) -> some View {
+        HStack(spacing: 12) {
+            if let sunrise = cycle.sunrise {
+                detailRow(icon: "sunrise.fill", text: sunTime(sunrise), tint: .orange)
+            }
+            if let sunset = cycle.sunset {
+                detailRow(icon: "sunset.fill", text: sunTime(sunset), tint: Color(red: 1.0, green: 0.55, blue: 0.3))
+            }
         }
     }
 
@@ -179,20 +193,9 @@ struct NotchWeatherView: View {
         }
     }
 
-    private func nextSunEvent(_ cycle: WeatherSnapshot.SunCycleInfo?) -> (isSunrise: Bool, time: String)? {
-        guard let cycle else { return nil }
-        let now = Date()
+    private func sunTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        if let sunrise = cycle.sunrise, sunrise >= now {
-            return (true, formatter.string(from: sunrise))
-        }
-        if let sunset = cycle.sunset, sunset >= now {
-            return (false, formatter.string(from: sunset))
-        }
-        if let sunrise = cycle.sunrise {
-            return (true, formatter.string(from: sunrise))
-        }
-        return nil
+        return formatter.string(from: date)
     }
 }
