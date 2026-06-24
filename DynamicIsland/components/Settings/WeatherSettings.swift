@@ -25,6 +25,7 @@ struct WeatherSettings: View {
     @ObservedObject var weather = WeatherManager.shared
     @Default(.enableWeather) var enableWeather
     @Default(.weatherShowsAQI) var weatherShowsAQI
+    @Default(.weatherShowsDetails) var weatherShowsDetails
     @Default(.weatherProviderSource) var weatherProviderSource
 
     var body: some View {
@@ -56,15 +57,20 @@ struct WeatherSettings: View {
                     GeistToggleRow(
                         title: "Show air quality",
                         isOn: $weatherShowsAQI,
-                        divider: weatherShowsAQI && weatherProviderSource.supportsAirQuality
+                        divider: true
                     )
                     if weatherShowsAQI && weatherProviderSource.supportsAirQuality {
                         GeistPickerRow(title: "AQI scale", selection: Binding(
                             get: { Defaults[.weatherAQIScale] }, set: { Defaults[.weatherAQIScale] = $0 }
-                        ), divider: false) {
+                        ), divider: true) {
                             ForEach(WeatherAirQualityScale.allCases) { Text($0.displayName).tag($0) }
                         }
                     }
+                    GeistToggleRow(
+                        title: "Show weather details",
+                        isOn: $weatherShowsDetails,
+                        divider: false
+                    )
                 }
 
                 GeistSection(

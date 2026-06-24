@@ -97,6 +97,7 @@ actor WeatherProvider {
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
             sunCycle: nil,
+            conditions: nil,
             daily: []
         )
     }
@@ -110,13 +111,16 @@ actor WeatherProvider {
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "latitude", value: latitude),
             URLQueryItem(name: "longitude", value: longitude),
-            URLQueryItem(name: "current", value: "temperature_2m,weather_code,is_day,pressure_msl"),
-            URLQueryItem(name: "daily", value: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"),
+            URLQueryItem(name: "current", value: "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,pressure_msl,wind_speed_10m,wind_direction_10m,uv_index"),
+            URLQueryItem(name: "daily", value: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max"),
             URLQueryItem(name: "forecast_days", value: "7"),
             URLQueryItem(name: "timezone", value: "auto")
         ]
         if let parameter = unit.openMeteoTemperatureParameter {
             queryItems.append(URLQueryItem(name: "temperature_unit", value: parameter))
+        }
+        if !unit.usesMetricSystem {
+            queryItems.append(URLQueryItem(name: "wind_speed_unit", value: "mph"))
         }
         components?.queryItems = queryItems
         guard let url = components?.url else { throw WeatherProviderError.invalidURL }
@@ -154,6 +158,16 @@ actor WeatherProvider {
 
         let daily = buildDailyForecast(from: payload.daily, timezoneIdentifier: payload.timezone, offsetSeconds: payload.utcOffsetSeconds)
 
+        let conditions = WeatherSnapshot.ConditionsInfo(
+            feelsLike: current.apparentTemperature,
+            humidity: current.relativeHumidity2M.map { Int(round($0)) },
+            windSpeed: current.windSpeed10M,
+            windUnit: unit.usesMetricSystem ? "km/h" : "mph",
+            windDirection: current.windDirection10M.map { Int(round($0)) },
+            uvIndex: current.uvIndex,
+            precipitationProbability: payload.daily?.precipitationProbabilityMax?.first
+        )
+
         return WeatherSnapshot(
             temperatureText: temperatureText,
             symbolName: symbolName,
@@ -162,6 +176,7 @@ actor WeatherProvider {
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
             sunCycle: sunCycle,
+            conditions: conditions,
             daily: daily
         )
     }
@@ -317,8 +332,13 @@ private struct WTTRNearestArea: Decodable {
 private struct OpenMeteoForecastResponse: Decodable {
     struct Current: Decodable {
         let temperature2M: Double?
+        let apparentTemperature: Double?
+        let relativeHumidity2M: Double?
         let weatherCode: Int?
         let isDay: Int?
+        let windSpeed10M: Double?
+        let windDirection10M: Double?
+        let uvIndex: Double?
     }
     struct Daily: Decodable {
         let time: [String]?
@@ -327,6 +347,7 @@ private struct OpenMeteoForecastResponse: Decodable {
         let temperature2MMin: [Double]?
         let sunrise: [String]?
         let sunset: [String]?
+        let precipitationProbabilityMax: [Int]?
     }
     let current: Current?
     let daily: Daily?

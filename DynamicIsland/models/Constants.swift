@@ -955,6 +955,7 @@ extension Defaults.Keys {
     static let weatherTemperatureUnit = Key<WeatherTemperatureUnit>("weatherTemperatureUnit", default: .celsius)
     static let weatherShowsAQI = Key<Bool>("weatherShowsAQI", default: true)
     static let weatherAQIScale = Key<WeatherAirQualityScale>("weatherAQIScale", default: .us)
+    static let weatherShowsDetails = Key<Bool>("weatherShowsDetails", default: true)
     static let weatherRefreshInterval = Key<TimeInterval>("weatherRefreshInterval", default: 30 * 60)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)

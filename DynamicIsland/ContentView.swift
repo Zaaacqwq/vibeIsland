@@ -1473,6 +1473,7 @@ struct ContentView: View {
                 airQuality: nil,
                 temperatureInfo: .init(current: 20, minimum: 16, maximum: 24, unitSymbol: "°C"),
                 sunCycle: nil,
+                conditions: nil,
                 daily: []
             ))
         case .reminder, .extensionActivity:
