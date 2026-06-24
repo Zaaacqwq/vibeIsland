@@ -66,7 +66,7 @@ struct ContentView: View {
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
-    @Default(.enableHorizontalMusicGestures) var enableHorizontalMusicGestures
+    @Default(.enableHorizontalTabGestures) var enableHorizontalTabGestures
     @Default(.reminderPresentationStyle) var reminderPresentationStyle
     @Default(.timerShowsCountdown) var timerShowsCountdown
     @Default(.timerShowsProgress) var timerShowsProgress
@@ -554,11 +554,14 @@ struct ContentView: View {
                             .panGesture(direction: .down) { translation, phase in
                                 handleDownGesture(translation: translation, phase: phase)
                             }
-                            .panGesture(direction: .left, ignoreMomentum: true) { translation, phase in
-                                handleTabSwitchGesture(forward: true, translation: translation, phase: phase)
-                            }
-                            .panGesture(direction: .right, ignoreMomentum: true) { translation, phase in
-                                handleTabSwitchGesture(forward: false, translation: translation, phase: phase)
+                            .conditionalModifier(enableHorizontalTabGestures) { view in
+                                view
+                                    .panGesture(direction: .left, ignoreMomentum: true) { translation, phase in
+                                        handleTabSwitchGesture(forward: true, translation: translation, phase: phase)
+                                    }
+                                    .panGesture(direction: .right, ignoreMomentum: true) { translation, phase in
+                                        handleTabSwitchGesture(forward: false, translation: translation, phase: phase)
+                                    }
                             }
                     }
             }

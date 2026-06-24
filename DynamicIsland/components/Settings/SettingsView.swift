@@ -937,8 +937,7 @@ struct GeneralSettings: View {
     @Default(.enableGestures) var enableGestures
     @Default(.openNotchOnHover) var openNotchOnHover
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
-    @Default(.enableHorizontalMusicGestures) var enableHorizontalMusicGestures
-    @Default(.musicGestureBehavior) var musicGestureBehavior
+    @Default(.enableHorizontalTabGestures) var enableHorizontalTabGestures
     @Default(.reverseSwipeGestures) var reverseSwipeGestures
     @Default(.reverseScrollGestures) var reverseScrollGestures
     @Default(.externalDisplayStyle) var externalDisplayStyle
@@ -1071,17 +1070,8 @@ struct GeneralSettings: View {
             GeistToggleRow(title: "Enable gestures", isOn: $enableGestures, divider: enableGestures)
                 .disabled(!openNotchOnHover)
             if enableGestures {
-                GeistToggleRow(title: "Media change with horizontal gestures", isOn: $enableHorizontalMusicGestures)
-                if enableHorizontalMusicGestures {
-                    GeistSegmentedRow(title: "Gesture skip behavior", selection: $musicGestureBehavior) {
-                        ForEach(MusicSkipBehavior.allCases) { Text($0.displayName).tag($0) }
-                    }
-                    GeistRow {
-                        Text(musicGestureBehavior.description)
-                            .font(Geist.Typography.caption)
-                            .foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                GeistToggleRow(title: "Tab change with horizontal gestures", isOn: $enableHorizontalTabGestures)
+                if enableHorizontalTabGestures {
                     GeistToggleRow(title: "Reverse swipe gestures", isOn: geistBinding(.reverseSwipeGestures))
                 }
                 GeistToggleRow(title: "Close gesture", isOn: geistBinding(.closeGestureEnabled))

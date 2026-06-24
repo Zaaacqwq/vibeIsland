@@ -613,7 +613,6 @@ class MusicManager: ObservableObject {
 
     @Published var isTransitioning: Bool = false
     private var transitionWorkItem: DispatchWorkItem?
-    private var skipGestureToken: Int = 0
 
     // MARK: - Initialization
     init() {
@@ -1326,36 +1325,6 @@ class MusicManager: ObservableObject {
 
         let target = min(max(0, current + offset), duration)
         seek(to: target)
-    }
-
-    @MainActor
-    func handleSkipGesture(direction: SkipDirection) {
-        guard Defaults[.enableHorizontalMusicGestures] else { return }
-        guard !isPlayerIdle || bundleIdentifier != nil else { return }
-
-        let behavior = Defaults[.musicGestureBehavior]
-
-        switch behavior {
-        case .track:
-            if direction == .forward {
-                lastFlipDirection = .forward
-                nextTrack()
-            } else {
-                lastFlipDirection = .backward
-                previousTrack()
-            }
-        case .tenSecond:
-            let interval = Self.skipGestureSeekInterval
-            let offset = direction == .forward ? interval : -interval
-            seek(by: offset)
-        }
-
-        skipGestureToken = skipGestureToken &+ 1
-        skipGesturePulse = SkipGesturePulse(
-            token: skipGestureToken,
-            direction: direction,
-            behavior: behavior
-        )
     }
 
     func openMusicApp() {
