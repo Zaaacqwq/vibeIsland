@@ -90,17 +90,13 @@ struct DoNotDisturbLiveActivity: View {
         max(vm.effectiveClosedNotchHeight - 10, 20)
     }
 
-    /// Both wings share one width so the black center stays centered on the
-    /// physical notch and the label never slides under the notch cover.
+    /// Persistent mode shows only the icon, so both wings collapse to the small
+    /// minimal width (tight footprint). The label only appears in the transient
+    /// toast, where symmetric wings keep the black centred on the notch.
     private var wingWidth: CGFloat {
         guard isExpanded || showInactiveIcon else { return 0 }
         guard shouldShowLabel else { return minimalWingWidth }
-
-        if focusToastMode {
-            return max(labelIntrinsicWidth + 26, minimalWingWidth)
-        }
-
-        return max(desiredLabelWidth, minimalWingWidth)
+        return max(labelIntrinsicWidth + 26, minimalWingWidth)
     }
 
     private var iconWingWidth: CGFloat { wingWidth }
@@ -141,8 +137,11 @@ struct DoNotDisturbLiveActivity: View {
         return labelIntrinsicWidth + 20
     }
 
+    /// The closed-notch indicator is icon-only in persistent mode (a wide label
+    /// next to the centred notch overlaps the menu bar). The focus name is shown
+    /// only in the transient toast.
     private var shouldShowLabel: Bool {
-        focusToastMode ? (isExpanded && !labelText.isEmpty) : (showLabelSetting && isExpanded && !labelText.isEmpty)
+        focusToastMode && isExpanded && !labelText.isEmpty
     }
 
     private var labelIntrinsicWidth: CGFloat {
@@ -184,23 +183,23 @@ struct DoNotDisturbLiveActivity: View {
     }
 
     private var labelText: String {
-        if focusToastMode {
-            return manager.isDoNotDisturbActive ? "On" : "Off"
-        }
+        // Persistent mode is icon-only.
+        guard focusToastMode else { return "" }
+
+        guard manager.isDoNotDisturbActive else { return "Off" }
+
+        // "Show Focus Label" on → toast shows the focus name; off → just "On".
+        guard showLabelSetting else { return "On" }
 
         let trimmed = manager.currentFocusModeName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if showLabelSetting {
-            if !trimmed.isEmpty {
-                return trimmed
-            } else if focusMode == .doNotDisturb {
-                return "Do Not Disturb"
-            } else {
-                let fallback = focusMode.displayName
-                return fallback.isEmpty ? "Focus" : fallback
-            }
+        if !trimmed.isEmpty {
+            return trimmed
+        } else if focusMode == .doNotDisturb {
+            return "Do Not Disturb"
+        } else {
+            let fallback = focusMode.displayName
+            return fallback.isEmpty ? "Focus" : fallback
         }
-
-        return ""
     }
 
     private var accessibilityDescription: String {
@@ -282,7 +281,7 @@ struct DoNotDisturbLiveActivity: View {
 
     private var labelWing: some View {
         Color.clear
-            // Hug the inner edge so the label sits next to the notch.
+            // Leading so the (transient toast) label sits next to the notch.
             .overlay(alignment: .leading) {
                 if shouldShowLabel {
                     Group {
