@@ -38,6 +38,12 @@ final class DoNotDisturbManager: ObservableObject {
     /// for the "Off" dismissal animation to play out.
     @Published private(set) var isFocusToastDismissing: Bool = false
 
+    /// Briefly `true` after focus turns ON (or the mode switches) while toast
+    /// mode is enabled. In toast mode the closed-notch indicator is mounted
+    /// only during this window, so Focus shows a brief toast and then releases
+    /// the slot instead of persisting as a live activity.
+    @Published private(set) var isFocusToastShowing: Bool = false
+
     private let notificationCenter = DistributedNotificationCenter.default()
     private let metadataExtractionQueue = DispatchQueue(label: "com.dynamicisland.focus.metadata", qos: .userInitiated)
     private let pollingQueue = DispatchQueue(label: "com.dynamicisland.focus.polling", qos: .utility)
@@ -63,6 +69,14 @@ final class DoNotDisturbManager: ObservableObject {
 
     /// Task that resets `isFocusToastDismissing` after the OFF toast animation.
     private var toastDismissTask: Task<Void, Never>?
+
+    /// Task that resets `isFocusToastShowing` after the ON toast lingers and
+    /// collapses (display window + collapse animation).
+    private var toastShowTask: Task<Void, Never>?
+
+    /// How long the ON toast stays mounted: the view's active-display linger
+    /// (~1.8s) plus its collapse animation, so the unmount is clean.
+    private static let toastShowDuration: TimeInterval = 2.2
 
     private init() {
         focusLogStream.onMetadataUpdate = { [weak self] identifier, name in
@@ -121,6 +135,7 @@ final class DoNotDisturbManager: ObservableObject {
         metadataClearTask?.cancel()
         metadataClearTask = nil
         cancelFocusToastDismiss()
+        cancelFocusToastShow()
         isMonitoring = false
 
         DispatchQueue.main.async {
@@ -246,6 +261,7 @@ final class DoNotDisturbManager: ObservableObject {
             // If Focus remains active and the mode switches (e.g., DND -> Sleep), trigger an ON toast for the new mode.
             if isActive == nil, previousActive == true, identifierChanged {
                 self.focusToastTrigger = UUID()
+                self.beginFocusToastShowIfNeeded()
             }
 
             if identifierChanged || nameChanged || shouldToggleActive {
@@ -264,12 +280,14 @@ final class DoNotDisturbManager: ObservableObject {
                 self.currentFocusModeIdentifier = previousIdentifier
                 self.currentFocusModeName = previousName
                 self.scheduleMetadataClear()
+                self.cancelFocusToastShow()
                 self.beginFocusToastDismissIfNeeded()
             } else {
                 // Focus turned ON — cancel any pending metadata clear and toast dismiss.
                 self.metadataClearTask?.cancel()
                 self.metadataClearTask = nil
                 self.cancelFocusToastDismiss()
+                self.beginFocusToastShowIfNeeded()
             }
 
             // Start or stop periodic verification based on new state.
@@ -302,6 +320,7 @@ final class DoNotDisturbManager: ObservableObject {
                         self.isDoNotDisturbActive = false
                     }
                     self.scheduleMetadataClear()
+                    self.cancelFocusToastShow()
                     self.beginFocusToastDismissIfNeeded()
                     debugPrint("[DoNotDisturbManager] State verification: focus no longer active, resetting.")
                     break
@@ -369,6 +388,30 @@ final class DoNotDisturbManager: ObservableObject {
         toastDismissTask?.cancel()
         toastDismissTask = nil
         isFocusToastDismissing = false
+    }
+
+    /// Mounts the ON toast for a brief window when toast mode is enabled, then
+    /// releases the closed-notch slot. No-op in persistent mode (the indicator
+    /// stays mounted via `isDoNotDisturbActive` there).
+    private func beginFocusToastShowIfNeeded() {
+        guard Defaults[.focusIndicatorNonPersistent] else { return }
+
+        toastShowTask?.cancel()
+        isFocusToastShowing = true
+
+        toastShowTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.toastShowDuration))
+            guard !Task.isCancelled, let self else { return }
+            withAnimation(.smooth(duration: 0.25)) {
+                self.isFocusToastShowing = false
+            }
+        }
+    }
+
+    private func cancelFocusToastShow() {
+        toastShowTask?.cancel()
+        toastShowTask = nil
+        isFocusToastShowing = false
     }
 
     private func handleLogMetadataUpdate(identifier: String?, name: String?) {
