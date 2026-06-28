@@ -88,6 +88,12 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var usage: ClaudeUsageSnapshot?
     @Published private(set) var statusLineInstalled = false
 
+    /// Codex rate-limit usage (primary 5h / secondary weekly windows). Unlike
+    /// Claude, Codex records `rate_limits` straight into its session rollouts, so
+    /// no install step is needed — we read the most recent rollout under
+    /// `~/.codex/sessions`. `nil` until a rollout with rate limits is found.
+    @Published private(set) var codexUsage: CodexUsageSnapshot?
+
     /// The single session currently demanding attention (permission/answer),
     /// if any — drives the closed-pill live activity.
     var attentionSession: AgentSession? {
@@ -427,9 +433,11 @@ final class AgentMonitorManager: ObservableObject {
         Task.detached(priority: .utility) {
             let aliveTTYs = Self.ttysHostingAgents()
             let usage = try? ClaudeUsageLoader.load()
+            let codexUsage = try? CodexUsageLoader.load()
             await MainActor.run {
                 self.applyLiveness(aliveTTYs: aliveTTYs)
                 if let usage { self.usage = usage }
+                if let codexUsage { self.codexUsage = codexUsage }
             }
         }
     }
