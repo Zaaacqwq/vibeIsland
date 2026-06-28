@@ -1026,7 +1026,13 @@ struct ContentView: View {
                           }
                       }
                       .id(coordinator.currentView)
-                      .transition(useModernCloseAnimation ? tabSwitchTransition : Self.blurFadeTransition)
+                      // Tab switching always uses the directional horizontal slide
+                      // (driven by `tabSwitchForward`). `useModernCloseAnimation`
+                      // only governs the notch frame open/close spring (see
+                      // `configuredMainLayout`), not the content transition.
+                      // Per-tab views must NOT attach their own root `.transition`
+                      // or it overrides this slide (blur / vertical / opacity-in-place).
+                      .transition(tabSwitchTransition)
                   }
               }
               .zIndex(1)

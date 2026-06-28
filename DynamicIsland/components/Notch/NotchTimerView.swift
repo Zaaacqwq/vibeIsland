@@ -70,7 +70,8 @@ struct NotchTimerView: View {
                     .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
-                    .transition(.opacity.combined(with: .blurReplace))
+                    // No root `.transition`: the tab switcher owns the directional
+                    // slide; a blur transition here would override it.
                     .onAppear { syncCustomDuration(with: customTimerDuration) }
                     .onChange(of: customTimerDuration) { _, newValue in syncCustomDuration(with: newValue) }
                     .onChange(of: customHours) { _, _ in updateStoredCustomDuration() }
