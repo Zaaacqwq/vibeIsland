@@ -138,6 +138,38 @@ struct AgentsSettings: View {
                     }
                 }
 
+                GeistSection(
+                    title: "Codex usage",
+                    footer: "Read directly from your latest Codex rollout under ~/.codex/sessions — no setup required. Updates after each Codex turn."
+                ) {
+                    if let codexUsage = agentMonitor.codexUsage, !codexUsage.isEmpty {
+                        ForEach(codexUsage.windows) { window in
+                            GeistRow { codexUsageRow(window: window) }
+                        }
+                        if let plan = codexUsage.planType {
+                            GeistRow(divider: codexUsage.capturedAt != nil) {
+                                HStack {
+                                    Text("Plan")
+                                    Spacer()
+                                    Text(plan.capitalized).foregroundStyle(Geist.Colors.mute)
+                                }
+                                .font(Geist.Typography.body)
+                            }
+                        }
+                        if let capturedAt = codexUsage.capturedAt {
+                            GeistRow(divider: false) {
+                                Text("Updated \(relativeTime(capturedAt)) · refreshes on each Codex turn")
+                                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                            }
+                        }
+                    } else {
+                        GeistRow(divider: false) {
+                            Text("No Codex usage found yet. Run `codex` in a terminal to populate it.")
+                                .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                        }
+                    }
+                }
+
                 if let error = agentMonitor.lastErrorMessage {
                     GeistSection {
                         GeistRow(divider: false) {
@@ -168,6 +200,21 @@ struct AgentsSettings: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
                 Text(label)
+                Spacer()
+                Text("\(window.roundedUsedPercentage)%")
+                    .foregroundStyle(window.usedPercentage >= 80 ? .orange : .secondary)
+                    .monospacedDigit()
+            }
+            ProgressView(value: min(max(window.usedPercentage / 100, 0), 1))
+                .tint(window.usedPercentage >= 80 ? .orange : .accentColor)
+        }
+    }
+
+    @ViewBuilder
+    private func codexUsageRow(window: CodexUsageWindow) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text("\(window.label) limit")
                 Spacer()
                 Text("\(window.roundedUsedPercentage)%")
                     .foregroundStyle(window.usedPercentage >= 80 ? .orange : .secondary)
