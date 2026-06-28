@@ -32,6 +32,7 @@ struct NotchAgentsView: View {
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
     private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
+    private let codexColor = Color(red: 16.0 / 255.0, green: 163.0 / 255.0, blue: 127.0 / 255.0)
 
     // Suppress the notch's scroll-to-close gesture while hovering the list, so
     // scrolling pages through sessions instead of closing the notch.
@@ -39,7 +40,13 @@ struct NotchAgentsView: View {
     @State private var isSuppressingScroll = false
 
     var body: some View {
-        Group {
+        // A real ZStack (not a transparent Group) so the WHOLE Agents tab is the
+        // unit the ContentView tab-switcher slides in/out — the parent directional
+        // slide owns enter/exit. The inner `.opacity` transitions then only fire
+        // for the internal approve/ask-overlay ↔ list crossfade (driven by
+        // `activeInputSession`), not on tab switches. A root `.transition` here
+        // would otherwise override the slide and make Agents fade in place.
+        ZStack(alignment: .top) {
             if showsInputOverlay, let active = agentMonitor.activeInputSession {
                 // The approve/ask overlay lives inside the Agents tab so it sits
                 // at the normal tab height (content scrolls) — no notch-height
@@ -79,8 +86,19 @@ struct NotchAgentsView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             Spacer()
-            if let usage = agentMonitor.usage, !usage.isEmpty {
-                usageBadges(usage)
+            let claudeUsage = agentMonitor.usage
+            let codexUsage = agentMonitor.codexUsage
+            let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
+            let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
+            if hasClaude || hasCodex {
+                HStack(spacing: 10) {
+                    if let claudeUsage, hasClaude {
+                        claudeUsageBadges(claudeUsage)
+                    }
+                    if let codexUsage, hasCodex {
+                        codexUsageBadges(codexUsage)
+                    }
+                }
             } else if !agentMonitor.isBridgeReady {
                 Text("Connecting…")
                     .font(.caption2)
@@ -90,27 +108,48 @@ struct NotchAgentsView: View {
     }
 
     @ViewBuilder
-    private func usageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        HStack(spacing: 6) {
+    private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 9))
+                .foregroundStyle(claudeColor)
+                .help("Claude usage")
             if let five = usage.fiveHour {
-                usageBadge(title: "5h", window: five)
+                usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
             }
             if let week = usage.sevenDay {
-                usageBadge(title: "7d", window: week)
+                usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
             }
         }
     }
 
-    private func usageBadge(title: String, window: ClaudeUsageWindow) -> some View {
-        let warn = window.usedPercentage >= 80
-        return Text("\(title) \(window.roundedUsedPercentage)%")
+    @ViewBuilder
+    private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(codexColor)
+                .help("Codex usage")
+            ForEach(usage.windows) { window in
+                usageBadge(
+                    title: window.label,
+                    percent: window.roundedUsedPercentage,
+                    warn: window.usedPercentage >= 80,
+                    help: "Codex \(window.label) limit used"
+                )
+            }
+        }
+    }
+
+    private func usageBadge(title: String, percent: Int, warn: Bool, help: String) -> some View {
+        Text("\(title) \(percent)%")
             .font(.system(size: 10, weight: .medium, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(warn ? .orange : .gray)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Capsule().fill(Color.white.opacity(0.07)))
-            .help("Claude \(title == "5h" ? "5-hour" : "7-day") limit used")
+            .help(help)
     }
 
     @ViewBuilder
