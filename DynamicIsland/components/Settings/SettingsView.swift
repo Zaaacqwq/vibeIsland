@@ -25,7 +25,6 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
     case productivity
     case utilities
     case developer
-    case integrations
     case info
 
     var id: String { rawValue }
@@ -39,7 +38,6 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
         case .productivity:     return String(localized: "Productivity")
         case .utilities:        return String(localized: "Utilities")
         case .developer:        return String(localized: "Developer")
-        case .integrations:     return String(localized: "Integrations")
         case .info:             return nil
         }
     }
@@ -51,7 +49,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case appearance
     case media
     case devices
-    case extensions
     case timer
     case calendar
     case hudAndOSD
@@ -77,7 +74,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .shelf,
              .downloads, .shortcuts:                                         return .utilities
         case .agents, .debug:                             return .developer
-        case .extensions:                                                    return .integrations
         case .about:                                                         return .info
         }
     }
@@ -89,7 +85,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return String(localized: "Appearance")
         case .media: return String(localized: "Media")
         case .devices: return String(localized: "Devices")
-        case .extensions: return String(localized: "Extensions")
         case .timer: return String(localized: "Timer")
         case .calendar: return String(localized: "Calendar")
         case .hudAndOSD: return String(localized: "Controls")
@@ -112,7 +107,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "paintpalette"
         case .media: return "play.laptopcomputer"
         case .devices: return "headphones"
-        case .extensions: return "puzzlepiece.extension"
         case .timer: return "timer"
         case .calendar: return "calendar"
         case .hudAndOSD: return "dial.medium.fill"
@@ -135,7 +129,6 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return .purple
         case .media: return .green
         case .devices: return Color(red: 0.1, green: 0.11, blue: 0.12)
-        case .extensions: return Color(red: 0.557, green: 0.353, blue: 0.957)
         case .timer: return .red
         case .calendar: return .cyan
         case .hudAndOSD: return .indigo
@@ -436,17 +429,6 @@ struct SettingsView: View {
                         Capsule()
                             .fill(Color.blue)
                     )
-            } else if tab == .extensions {
-                Spacer()
-                Text("BETA")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue)
-                    )
             }
         }
         .padding(.vertical, 4)
@@ -478,8 +460,6 @@ struct SettingsView: View {
             // Developer
             .agents,
             .debug,
-            // Integrations
-            .extensions,
             // Info
             .about
         ]
@@ -796,12 +776,6 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
             SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
-            // Extensions
-            SettingsSearchEntry(tab: .extensions, title: "Enable third-party extensions", keywords: ["extensions", "authorization", "third party"], highlightID: SettingsTab.extensions.highlightID(for: "Enable third-party extensions")),
-            SettingsSearchEntry(tab: .extensions, title: "Allow extension live activities", keywords: ["extensions", "live activities", "permissions"], highlightID: SettingsTab.extensions.highlightID(for: "Allow extension live activities")),
-            SettingsSearchEntry(tab: .extensions, title: "Enable extension diagnostics logging", keywords: ["extensions", "diagnostics", "logging"], highlightID: SettingsTab.extensions.highlightID(for: "Enable extension diagnostics logging")),
-            SettingsSearchEntry(tab: .extensions, title: "Manage app permissions", keywords: ["extensions", "permissions", "apps"], highlightID: SettingsTab.extensions.highlightID(for: "App permissions list")),
-
             // Shortcuts
             SettingsSearchEntry(tab: .shortcuts, title: "Enable global keyboard shortcuts", keywords: ["keyboard", "shortcut"], highlightID: SettingsTab.shortcuts.highlightID(for: "Enable global keyboard shortcuts")),
 
@@ -854,10 +828,6 @@ struct SettingsView: View {
         case .devices:
             SettingsForm(tab: .devices) {
                 DevicesSettingsView()
-            }
-        case .extensions:
-            SettingsForm(tab: .extensions) {
-                ExtensionsSettingsView()
             }
         case .timer:
             SettingsForm(tab: .timer) {

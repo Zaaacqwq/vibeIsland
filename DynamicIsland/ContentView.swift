@@ -27,7 +27,6 @@ import Foundation
 import KeyboardShortcuts
 import SwiftUI
 import SwiftUIIntrospect
-import AtollExtensionKit
 #if canImport(AppKit)
 import AppKit
 #elseif canImport(UIKit)
@@ -57,8 +56,6 @@ struct ContentView: View {
     @ObservedObject var privacyManager = PrivacyIndicatorManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
     @ObservedObject var capsLockManager = CapsLockManager.shared
-    @ObservedObject var extensionLiveActivityManager = ExtensionLiveActivityManager.shared
-    @ObservedObject var extensionNotchExperienceManager = ExtensionNotchExperienceManager.shared
     @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
@@ -89,7 +86,6 @@ struct ContentView: View {
     @Default(.showDoNotDisturbIndicator) var showDoNotDisturbIndicator
     @Default(.enableScreenRecordingDetection) var enableScreenRecordingDetection
     @Default(.enableCapsLockIndicator) var enableCapsLockIndicator
-    @Default(.enableExtensionLiveActivities) var enableExtensionLiveActivities
     @Default(.showStandardMediaControls) var showStandardMediaControls
     @Default(.externalDisplayStyle) var externalDisplayStyle
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
@@ -166,19 +162,6 @@ struct ContentView: View {
 
 
 
-        if coordinator.currentView == .extensionExperience {
-            if let preferredHeight = extensionTabPreferredHeight(baseSize: baseSize) {
-                return CGSize(width: baseSize.width, height: preferredHeight)
-            }
-            return baseSize
-        }
-
-        if enableMinimalisticUI,
-           coordinator.currentView == .home,
-           let preferredHeight = extensionMinimalisticPreferredHeight(baseSize: baseSize) {
-            return CGSize(width: baseSize.width, height: preferredHeight)
-        }
-        
         return baseSize
     }
     
@@ -852,7 +835,7 @@ struct ContentView: View {
                             styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) }
                         )
                         .id(batteryModel.activeTemporaryHUDToken)
-                      } else if isSneakPeekVisibleOnCurrentScreen && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && !coordinator.sneakPeek.type.isExtensionPayload && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                      } else if isSneakPeekVisibleOnCurrentScreen && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(
                                   coordinator.sneakPeek.type == .capsLock
@@ -879,7 +862,7 @@ struct ContentView: View {
                        }
                       
                       if isSneakPeekVisibleOnCurrentScreen {
-                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && (coordinator.sneakPeek.type != .notification) && !coordinator.sneakPeek.type.isExtensionPayload && !Defaults[.inlineHUD] && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && (coordinator.sneakPeek.type != .notification) && !Defaults[.inlineHUD] && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                               SystemEventIndicatorModifier(eventType: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, sendEventBack: { _ in
                                   //
                               })
@@ -953,35 +936,6 @@ struct ContentView: View {
                                   .padding(.bottom, 10)
                               }
                           }
-                          // Extension live activity sneak peek
-                          else if case let .extensionLiveActivity(bundleID, activityID) = coordinator.sneakPeek.type {
-                              if !vm.hideOnClosed && activeSneakPeekStyle == .standard {
-                                  let payload = extensionLiveActivityManager.payload(bundleIdentifier: bundleID, activityID: activityID)
-                                  let descriptor = payload?.descriptor
-                                  let accent = (descriptor?.accentColor.swiftUIColor ?? coordinator.sneakPeek.accentColor ?? .gray)
-                                      .ensureMinimumBrightness(factor: 0.7)
-                                  GeometryReader { geo in
-                                      HStack(spacing: 6) {
-                                          RoundedRectangle(cornerRadius: 2)
-                                              .fill(accent)
-                                              .frame(width: 8, height: 12)
-                                          MarqueeText(
-                                              .constant(
-                                                  extensionSneakPeekText(
-                                                      preferredTitle: coordinator.sneakPeek.title,
-                                                      preferredSubtitle: coordinator.sneakPeek.subtitle,
-                                                      descriptor: descriptor
-                                                  )
-                                              ),
-                                              textColor: accent,
-                                              minDuration: 1,
-                                              frameWidth: max(0, geo.size.width - 14)
-                                          )
-                                      }
-                                  }
-                                  .padding(.bottom, 10)
-                              }
-                          }
                       }
                   }
               }
@@ -1017,12 +971,6 @@ struct ContentView: View {
                             case .weather:
                                 NotchWeatherView()
                                     .environmentObject(vm)
-                            case .extensionExperience:
-                                if let payload = currentExtensionTabPayload() {
-                                    ExtensionNotchExperienceTabView(payload: payload)
-                                } else {
-                                    NotchHomeView(albumArtNamespace: albumArtNamespace)
-                                }
                           }
                       }
                       .id(coordinator.currentView)
@@ -1076,19 +1024,6 @@ struct ContentView: View {
         } else {
             return "\(title) • \(String(format: String(localized: "in %lld"), (minutes))) \(String(format: String(localized: "min plural"))) • \(timeString)"
         }
-    }
-
-    private func extensionSneakPeekText(preferredTitle: String, preferredSubtitle: String?, descriptor: AtollLiveActivityDescriptor?) -> String {
-        let trimmedPreferredTitle = preferredTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let descriptorTitle = descriptor?.title.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Extension"
-        let title = trimmedPreferredTitle.isEmpty ? descriptorTitle : trimmedPreferredTitle
-
-        let trimmedPreferredSubtitle = preferredSubtitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let descriptorSubtitle = descriptor?.subtitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let subtitle = !trimmedPreferredSubtitle.isEmpty ? trimmedPreferredSubtitle : descriptorSubtitle
-
-        guard !subtitle.isEmpty else { return title }
-        return "\(title) • \(subtitle)"
     }
 
     private let reminderTimeFormatter: DateFormatter = {
@@ -1168,17 +1103,6 @@ struct ContentView: View {
             PrivacyLiveActivity()
         case .agent:
             AgentLiveActivity(isHovering: isHovering)
-        case .extensionPayload(let payload):
-            let layout = extensionStandaloneLayout(
-                for: payload,
-                notchHeight: vm.effectiveClosedNotchHeight,
-                isHovering: isHovering
-            )
-            ExtensionLiveActivityStandaloneView(
-                payload: payload,
-                layout: layout,
-                isHovering: isHovering
-            )
         case .shelf:
             ShelfInlineLiveActivity()
                 .transition(.opacity.animation(.smooth(duration: 0.25)))
@@ -1463,10 +1387,6 @@ struct ContentView: View {
             candidates.append(.focus(mode))
         }
 
-        if let extensionPayload = resolvedExtensionStandalonePayload() {
-            candidates.append(.extensionPayload(extensionPayload))
-        }
-
         if Defaults[.enableWeather], let snapshot = weatherManager.snapshot {
             candidates.append(.weather(snapshot))
         }
@@ -1507,7 +1427,7 @@ struct ContentView: View {
                 conditions: nil,
                 daily: []
             ))
-        case .reminder, .extensionActivity:
+        case .reminder:
             // Need live payloads; not previewable with sample data.
             return nil
         }
@@ -1556,9 +1476,6 @@ struct ContentView: View {
             return baseWidth
         case .privacy:
             return baseWidth
-        case .extensionPayload(let payload):
-            let maxWidth = baseWidth + centerBaseWidth * 0.6
-            return ExtensionLayoutMetrics.trailingWidth(for: payload, baseWidth: baseWidth, maxWidth: maxWidth)
         case .shelf:
             return baseWidth
         case .agent:
@@ -1702,8 +1619,6 @@ struct ContentView: View {
                             .frame(width: 9, height: 9)
                     }
                 }
-            case .extensionPayload(let payload):
-                ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: width)
             case .shelf(let count):
                 Text("\(count)")
                     .font(.system(.callout, design: .rounded, weight: .bold))
@@ -1793,12 +1708,6 @@ struct ContentView: View {
                     Image(systemName: "capslock.fill")
                         .font(.system(size: badgeSize * 0.5, weight: .semibold))
                         .foregroundStyle(capsLockTintMode.color)
-                case .extensionPayload(let payload):
-                    ExtensionBadgeIconView(
-                        descriptor: payload.descriptor.leadingIcon,
-                        accent: payload.descriptor.accentColor.swiftUIColor,
-                        size: badgeSize
-                    )
                 case .shelf:
                     Image(systemName: "tray.and.arrow.down.fill")
                         .font(.system(size: badgeSize * 0.50, weight: .semibold))
@@ -1873,8 +1782,6 @@ struct ContentView: View {
             compactActivityWing(.localSend, side: .right, notchHeight: notchHeight, width: trailingWidth)
         case .privacy:
             compactActivityWing(.privacy, side: .right, notchHeight: notchHeight, width: trailingWidth)
-        case .extensionPayload(let payload):
-            ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth)
         case .shelf(let count):
             // File count badge: bold white number, like a minimal pill
             Text("\(count)")
@@ -1963,129 +1870,6 @@ struct ContentView: View {
         return remaining > 0 && remaining <= window
     }
 
-    private func resolvedExtensionStandalonePayload() -> ExtensionLiveActivityPayload? {
-        guard Defaults[.enableThirdPartyExtensions] else { return nil }
-        let candidates = extensionLiveActivityManager.sortedActivities()
-        guard let payload = candidates.first else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "no active extension payloads",
-                pendingCount: 0
-            )
-            ExtensionRoutingDiagnostics.shared.reset(.standalone)
-            return nil
-        }
-
-        guard enableExtensionLiveActivities else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "feature toggle disabled",
-                pendingCount: candidates.count
-            )
-            return nil
-        }
-
-        guard vm.notchState == .closed else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "notch is \(vm.notchState)",
-                pendingCount: candidates.count
-            )
-            return nil
-        }
-
-        guard !vm.hideOnClosed else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "hideOnClosed engaged (fullscreen)",
-                pendingCount: candidates.count
-            )
-            return nil
-        }
-
-        guard vm.effectiveClosedNotchHeight > 0 else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "effective notch height is \(vm.effectiveClosedNotchHeight)",
-                pendingCount: candidates.count
-            )
-            return nil
-        }
-
-        guard !isCurrentScreenExpansionVisible else {
-            ExtensionRoutingDiagnostics.shared.logSuppression(
-                .standalone,
-                reason: "expanding view \(String(describing: currentScreenExpansionType ?? coordinator.expandingView.type)) visible",
-                pendingCount: candidates.count
-            )
-            return nil
-        }
-
-        ExtensionRoutingDiagnostics.shared.logDisplay(.standalone, payload: payload)
-        return payload
-    }
-
-    private func extensionStandaloneLayout(for payload: ExtensionLiveActivityPayload, notchHeight: CGFloat, isHovering: Bool) -> ExtensionStandaloneLayout {
-        let outerHeight = notchHeight
-        let contentHeight = max(0, notchHeight - (isHovering ? 0 : 12))
-        let leadingWidth = max(contentHeight, 44)
-        let centerWidth: CGFloat = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
-        let trailingWidth = ExtensionLayoutMetrics.trailingWidth(
-            for: payload,
-            baseWidth: leadingWidth,
-            maxWidth: leadingWidth + centerWidth * 0.6
-        )
-        let totalWidth = leadingWidth + centerWidth + trailingWidth
-        return ExtensionStandaloneLayout(
-            totalWidth: totalWidth,
-            outerHeight: outerHeight,
-            contentHeight: contentHeight,
-            leadingWidth: leadingWidth,
-            centerWidth: centerWidth,
-            trailingWidth: trailingWidth
-        )
-    }
-
-    @MainActor
-    private final class ExtensionRoutingDiagnostics {
-        static let shared = ExtensionRoutingDiagnostics()
-
-        enum Channel: Hashable {
-            case music
-            case standalone
-
-            var label: String {
-                switch self {
-                case .music:
-                    return "music pairing"
-                case .standalone:
-                    return "standalone notch"
-                }
-            }
-        }
-
-        private var lastMessages: [Channel: String] = [:]
-
-        func logSuppression(_ channel: Channel, reason: String, pendingCount: Int) {
-            log("Extension \(channel.label) suppressed: \(reason) (pending: \(pendingCount))", channel: channel)
-        }
-
-        func logDisplay(_ channel: Channel, payload: ExtensionLiveActivityPayload) {
-            log("Extension \(channel.label) showing \(payload.descriptor.id) from \(payload.bundleIdentifier)", channel: channel)
-        }
-
-        func reset(_ channel: Channel) {
-            lastMessages.removeValue(forKey: channel)
-        }
-
-        private func log(_ message: String, channel: Channel) {
-            guard Defaults[.extensionDiagnosticsLoggingEnabled] else { return }
-            guard lastMessages[channel] != message else { return }
-            lastMessages[channel] = message
-            Logger.log(message, category: .extensions)
-        }
-    }
-    
     @ViewBuilder
     var dragDetector: some View {
         if Defaults[.dynamicShelf] && !Defaults[.enableMinimalisticUI] {
@@ -2354,72 +2138,6 @@ struct ContentView: View {
             haptics.toggle()
             lastHapticTime = now
         }
-    }
-    
-    private func currentExtensionTabPayload() -> ExtensionNotchExperiencePayload? {
-        guard Defaults[.enableThirdPartyExtensions],
-              Defaults[.enableExtensionNotchExperiences],
-              Defaults[.enableExtensionNotchTabs] else {
-            return nil
-        }
-        if let selectedID = coordinator.selectedExtensionExperienceID,
-           let payload = extensionNotchExperienceManager.payload(experienceID: selectedID) {
-            return payload
-        }
-        return extensionNotchExperienceManager.highestPriorityTabPayload()
-    }
-
-    private func extensionTabPreferredHeight(baseSize: CGSize) -> CGFloat? {
-        guard let preferred = currentExtensionTabPayload()?.descriptor.tab?.preferredHeight else {
-            return nil
-        }
-        let minHeight = baseSize.height
-        let maxHeight = baseSize.height + statsAdditionalRowHeight
-        return min(max(preferred, minHeight), maxHeight)
-    }
-
-    // Estimate the height required for minimalistic overrides (notably web content) and clamp it to the notch bounds.
-    private func extensionMinimalisticPreferredHeight(baseSize: CGSize) -> CGFloat? {
-        guard let configuration = extensionNotchExperienceManager.minimalisticReplacementPayload()?.descriptor.minimalistic else {
-            return nil
-        }
-
-        let minHeight = baseSize.height
-        let maxHeight = baseSize.height + statsAdditionalRowHeight
-
-        var contentHeight: CGFloat = 0
-        var blockCount = 0
-
-        if configuration.headline != nil {
-            contentHeight += 24
-            blockCount += 1
-        }
-
-        if configuration.subtitle != nil {
-            contentHeight += 20
-            blockCount += 1
-        }
-
-        if !configuration.sections.isEmpty {
-            let sectionEstimate: CGFloat = 98
-            contentHeight += CGFloat(configuration.sections.count) * sectionEstimate
-            blockCount += configuration.sections.count
-        }
-
-        if let webDescriptor = configuration.webContent {
-            contentHeight += webDescriptor.preferredHeight
-            blockCount += 1
-        }
-
-        guard blockCount > 0 else { return nil }
-
-        let spacingAllowance = CGFloat(max(blockCount - 1, 0)) * 16
-        let topPadding: CGFloat = 10
-        let bottomPadding: CGFloat = configuration.webContent == nil ? 10 : 0
-        let estimatedHeight = contentHeight + spacingAllowance + topPadding + bottomPadding
-
-        let clampedHeight = min(max(estimatedHeight, minHeight), maxHeight)
-        return clampedHeight > minHeight ? clampedHeight : nil
     }
     
     // MARK: - Gesture Handling
@@ -2794,11 +2512,6 @@ struct ContentView: View {
         guard isSneakPeekVisibleOnCurrentScreen else { return false }
         let style = resolvedSneakPeekStyle()
         
-        // Check for extension sneak peek
-        if case .extensionLiveActivity = coordinator.sneakPeek.type {
-            return vm.notchState == .closed && style == .standard
-        }
-        
         // Original logic for other types
         let isMusicSneak = coordinator.sneakPeek.type == .music && vm.notchState == .closed && !vm.hideOnClosed && style == .standard
         let isTimerSneak = coordinator.sneakPeek.type == .timer && !vm.hideOnClosed && style == .standard
@@ -2809,9 +2522,6 @@ struct ContentView: View {
     }
 
     private func resolvedSneakPeekStyle() -> SneakPeekStyle {
-        if case .extensionLiveActivity = coordinator.sneakPeek.type {
-            return .standard
-        }
         return coordinator.sneakPeek.styleOverride ?? Defaults[.sneakPeekStyles]
     }
 }
@@ -2831,7 +2541,6 @@ private enum ClosedNotchActivityCandidate: Equatable {
     case download
     case localSend
     case privacy
-    case extensionPayload(ExtensionLiveActivityPayload)
     case shelf(count: Int)
     case agent(HaloState)
     case weather(WeatherSnapshot)
@@ -2858,8 +2567,6 @@ private enum ClosedNotchActivityCandidate: Equatable {
             return "local-send"
         case .privacy:
             return "privacy"
-        case .extensionPayload(let payload):
-            return "extension-\(payload.id)"
         case .shelf(let count):
             return "shelf-\(count)"
         case .weather:
@@ -2889,8 +2596,6 @@ private enum ClosedNotchActivityCandidate: Equatable {
             return .localSend
         case .privacy:
             return .privacy
-        case .extensionPayload:
-            return .extensionActivity
         case .shelf:
             return .shelf
         case .weather:

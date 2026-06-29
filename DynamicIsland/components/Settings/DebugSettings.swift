@@ -35,7 +35,7 @@ struct DebugSettings: View {
         GeistSettingsPage(title: "Debug", subtitle: "Preview activity combinations and inspect the notch layout.") {
             GeistSection(
                 title: "Preview activities",
-                footer: "Only the two highest-priority activities show at once (see Live Activities → Closed Notch Priority). Reminder and extension activities can't be previewed with sample data."
+                footer: "Only the two highest-priority activities show at once (see Live Activities → Closed Notch Priority). Reminder activities can't be previewed with sample data."
             ) {
                 ForEach(Array(previewableActivities.enumerated()), id: \.element) { index, kind in
                     GeistToggleRow(

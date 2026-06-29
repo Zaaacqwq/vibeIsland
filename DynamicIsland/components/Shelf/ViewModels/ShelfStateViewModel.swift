@@ -52,25 +52,19 @@ final class ShelfStateViewModel: ObservableObject {
         var merged = items
         // Deduplicate by identityKey while preserving order (existing first)
         var seen: Set<String> = Set(merged.map { $0.identityKey })
-        var addedIDs: [String] = []
         for it in newItems {
             let key = it.identityKey
             if !seen.contains(key) {
                 merged.append(it)
                 seen.insert(key)
-                addedIDs.append(it.id.uuidString)
             }
         }
         items = merged
-        if !addedIDs.isEmpty {
-            ExtensionRPCServer.shared.notifyShelfItemsChanged(itemIDs: addedIDs, action: "added")
-        }
     }
 
     func remove(_ item: ShelfItem) {
         item.cleanupStoredData()
         items.removeAll { $0.id == item.id }
-        ExtensionRPCServer.shared.notifyShelfItemsChanged(itemIDs: [item.id.uuidString], action: "removed")
     }
 
     func updateBookmark(for item: ShelfItem, bookmark: Data) {

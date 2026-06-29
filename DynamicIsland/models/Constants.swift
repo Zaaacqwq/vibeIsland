@@ -137,118 +137,6 @@ enum AnimationSource: Codable, Hashable, Equatable {
     }
 }
 
-// MARK: - Extension Authorization Models
-
-enum ExtensionPermissionScope: String, CaseIterable, Codable, Defaults.Serializable {
-    case liveActivities
-    case notchExperiences
-    case fileSharing
-
-    var displayName: String {
-        switch self {
-        case .liveActivities: return "Live Activities"
-        case .notchExperiences: return "Notch Experiences"
-        case .fileSharing: return "File Sharing"
-        }
-    }
-}
-
-enum ExtensionAuthorizationStatus: String, CaseIterable, Codable, Defaults.Serializable {
-    case pending
-    case authorized
-    case denied
-    case revoked
-
-    var isActive: Bool {
-        switch self {
-        case .authorized: return true
-        case .pending, .denied, .revoked: return false
-        }
-    }
-}
-
-struct ExtensionAuthorizationEntry: Codable, Defaults.Serializable, Identifiable, Hashable {
-    let bundleIdentifier: String
-    var appName: String
-    var status: ExtensionAuthorizationStatus
-    var allowedScopes: Set<ExtensionPermissionScope>
-    var requestedAt: Date
-    var grantedAt: Date?
-    var lastActivityAt: Date?
-    var lastDeniedReason: String?
-    var notes: String?
-
-    var id: String { bundleIdentifier }
-
-    init(
-        bundleIdentifier: String,
-        appName: String,
-        status: ExtensionAuthorizationStatus,
-        allowedScopes: Set<ExtensionPermissionScope> = Set(ExtensionPermissionScope.allCases),
-        requestedAt: Date = .now,
-        grantedAt: Date? = nil,
-        lastActivityAt: Date? = nil,
-        lastDeniedReason: String? = nil,
-        notes: String? = nil
-    ) {
-        self.bundleIdentifier = bundleIdentifier
-        self.appName = appName
-        self.status = status
-        self.allowedScopes = allowedScopes
-        self.requestedAt = requestedAt
-        self.grantedAt = grantedAt
-        self.lastActivityAt = lastActivityAt
-        self.lastDeniedReason = lastDeniedReason
-        self.notes = notes
-    }
-
-    var isAuthorized: Bool { status.isActive }
-}
-
-struct ExtensionRateLimitRecord: Codable, Defaults.Serializable, Hashable, Identifiable {
-    let bundleIdentifier: String
-    var activityTimestamps: [Date]
-    var widgetTimestamps: [Date]
-    var notchExperienceTimestamps: [Date]
-
-    var id: String { bundleIdentifier }
-
-    init(
-        bundleIdentifier: String,
-        activityTimestamps: [Date] = [],
-        widgetTimestamps: [Date] = [],
-        notchExperienceTimestamps: [Date] = []
-    ) {
-        self.bundleIdentifier = bundleIdentifier
-        self.activityTimestamps = activityTimestamps
-        self.widgetTimestamps = widgetTimestamps
-        self.notchExperienceTimestamps = notchExperienceTimestamps
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case bundleIdentifier
-        case activityTimestamps
-        case widgetTimestamps
-        case notchExperienceTimestamps
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        bundleIdentifier = try container.decode(String.self, forKey: .bundleIdentifier)
-        activityTimestamps = try container.decodeIfPresent([Date].self, forKey: .activityTimestamps) ?? []
-        widgetTimestamps = try container.decodeIfPresent([Date].self, forKey: .widgetTimestamps) ?? []
-        notchExperienceTimestamps = try container.decodeIfPresent([Date].self, forKey: .notchExperienceTimestamps) ?? []
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(bundleIdentifier, forKey: .bundleIdentifier)
-        try container.encode(activityTimestamps, forKey: .activityTimestamps)
-        try container.encode(widgetTimestamps, forKey: .widgetTimestamps)
-        try container.encode(notchExperienceTimestamps, forKey: .notchExperienceTimestamps)
-    }
-}
-
 enum CalendarSelectionState: Codable, Defaults.Serializable {
     case all
     case selected(Set<String>)
@@ -848,19 +736,6 @@ extension Defaults.Keys {
     // MARK: Clipboard Feature
     static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 3)
     
-    // MARK: Third-Party Extensions
-    static let enableThirdPartyExtensions = Key<Bool>("enableThirdPartyExtensions", default: true)
-    static let enableExtensionLiveActivities = Key<Bool>("enableExtensionLiveActivities", default: true)
-    static let enableExtensionNotchExperiences = Key<Bool>("enableExtensionNotchExperiences", default: true)
-    static let enableExtensionNotchTabs = Key<Bool>("enableExtensionNotchTabs", default: true)
-    static let enableExtensionNotchMinimalisticOverrides = Key<Bool>("enableExtensionNotchMinimalisticOverrides", default: true)
-    static let enableExtensionNotchInteractiveWebViews = Key<Bool>("enableExtensionNotchInteractiveWebViews", default: true)
-    static let extensionAuthorizationEntries = Key<[ExtensionAuthorizationEntry]>("extensionAuthorizationEntries", default: [])
-    static let extensionRateLimitRecords = Key<[ExtensionRateLimitRecord]>("extensionRateLimitRecords", default: [])
-    static let extensionDiagnosticsLoggingEnabled = Key<Bool>("extensionDiagnosticsLoggingEnabled", default: true)
-    static let extensionLiveActivityCapacity = Key<Int>("extensionLiveActivityCapacity", default: 4)
-    static let extensionNotchExperienceCapacity = Key<Int>("extensionNotchExperienceCapacity", default: 2)
-    static let enableExtensionFileSharing = Key<Bool>("enableExtensionFileSharing", default: true)
     static let closedNotchActivityPriorityOrder = Key<[ClosedNotchActivityKind]>(
         "closedNotchActivityPriorityOrder",
         default: ClosedNotchActivityKind.defaultPriorityOrder

@@ -2,15 +2,6 @@
   "originHash" : "d05fd8c8292418b6563db3202a99d4ef453b0f70d83d4d4cf879984c14452017",
   "pins" : [
     {
-      "identity" : "atollextensionkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Ebullioscopic/AtollExtensionKit",
-      "state" : {
-        "branch" : "main",
-        "revision" : "e2d30afedbbcc259bec7eeb1bea0757e52f4ca01"
-      }
-    },
-    {
       "identity" : "defaults",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sindresorhus/Defaults",

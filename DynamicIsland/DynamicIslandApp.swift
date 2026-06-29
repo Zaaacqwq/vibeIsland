@@ -179,8 +179,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let downloadManager = DownloadManager.shared  // NEW: Chromium downloads detection
     let mediaControlsStateCoordinator = MediaControlsStateCoordinator.shared
     let systemTimerBridge = SystemTimerBridge.shared
-    let extensionXPCServiceHost = ExtensionXPCServiceHost.shared
-    let extensionRPCServer = ExtensionRPCServer.shared
     var closeNotchWorkItem: DispatchWorkItem?
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
@@ -299,21 +297,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        let userInfo: [String: Any] = [
-            VibeIslandDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
-        ]
-        DistributedNotificationCenter.default().postNotificationName(
-            VibeIslandDistributedNotifications.didBecomeIdle,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
-        )
-
         // Cancel any pending window size updates
         windowSizeUpdateWorkItem?.cancel()
         NotificationCenter.default.removeObserver(self)
-        extensionXPCServiceHost.stop()
-        extensionRPCServer.stop()
         
         // Stop AudioTap capture
         AudioTap.shared.stopCapture()
@@ -570,19 +556,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let userInfo: [String: Any] = [
-            VibeIslandDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
-        ]
-        DistributedNotificationCenter.default().postNotificationName(
-            VibeIslandDistributedNotifications.didBecomeActive,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
-        )
-
-        extensionXPCServiceHost.start()
-        extensionRPCServer.start()
-        
         // Migrate legacy progress bar settings
         Defaults.Keys.migrateProgressBarStyle()
         Defaults.Keys.migrateMusicAuxControls()
