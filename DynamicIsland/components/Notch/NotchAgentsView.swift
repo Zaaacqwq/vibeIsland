@@ -64,7 +64,16 @@ struct NotchAgentsView: View {
                 .padding(.vertical, 8)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Fill the height ONLY as the full Agents tab (so the empty-state moon
+        // centers nicely). When embedded in the Home tab (showsInputOverlay ==
+        // false) do NOT fill: the empty state's Spacers would otherwise expand
+        // into maxHeight:.infinity and inflate Home taller than every other tab.
+        // Without a max, the panel defers to the music player's height instead.
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: showsInputOverlay ? CGFloat.infinity : nil,
+            alignment: .top
+        )
         .contentShape(Rectangle())
         .onHover { updateScrollSuppression(for: $0) }
         .onAppear { agentMonitor.refreshHookStatus() }
