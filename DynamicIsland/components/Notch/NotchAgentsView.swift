@@ -40,13 +40,14 @@ struct NotchAgentsView: View {
     @State private var isSuppressingScroll = false
 
     var body: some View {
-        // A real ZStack (not a transparent Group) so the WHOLE Agents tab is the
-        // unit the ContentView tab-switcher slides in/out — the parent directional
-        // slide owns enter/exit. The inner `.opacity` transitions then only fire
-        // for the internal approve/ask-overlay ↔ list crossfade (driven by
-        // `activeInputSession`), not on tab switches. A root `.transition` here
-        // would otherwise override the slide and make Agents fade in place.
-        ZStack(alignment: .top) {
+        // Stays a `Group` (not a ZStack): a ZStack with the maxHeight:.infinity
+        // frame below fills greedily, which made the Agents panel embedded in the
+        // Home tab balloon to the full notch height. The list branch carries NO
+        // root `.transition`, so when this tab switches the ContentView slide owns
+        // enter/exit (Agents slides like every other tab). The `.transition(.opacity)`
+        // stays on the approve/ask overlay only, so it still crossfades over the
+        // list when `activeInputSession` toggles — an internal swap, not a tab switch.
+        Group {
             if showsInputOverlay, let active = agentMonitor.activeInputSession {
                 // The approve/ask overlay lives inside the Agents tab so it sits
                 // at the normal tab height (content scrolls) — no notch-height
@@ -61,7 +62,6 @@ struct NotchAgentsView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
