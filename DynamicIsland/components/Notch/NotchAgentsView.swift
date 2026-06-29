@@ -179,7 +179,12 @@ struct NotchAgentsView: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Spacer()
+            // Only stretch to vertically center the moon in the full Agents tab.
+            // In the Home embed (showsInputOverlay == false) these Spacers would
+            // expand to fill the HStack's proposed height and balloon Home taller
+            // than the other tabs whenever there are no sessions — so omit them
+            // and let the panel take its natural (compact) height there.
+            if showsInputOverlay { Spacer() }
             switch agentMonitor.hookStatus {
             case .installed, .unknown:
                 Image(systemName: "moon.zzz")
@@ -214,7 +219,7 @@ struct NotchAgentsView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Spacer()
+            if showsInputOverlay { Spacer() }
         }
         .frame(maxWidth: .infinity)
     }
