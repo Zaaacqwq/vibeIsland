@@ -57,6 +57,10 @@ struct DynamicNotchApp: App {
 
                     let configuration = NSWorkspace.OpenConfiguration()
                     configuration.createsNewApplicationInstance = true
+                    // Tell the freshly-spawned instance to skip the single-instance
+                    // guard: it is launched intentionally while this (old) instance
+                    // is still alive, so the guard would otherwise terminate it.
+                    configuration.arguments = [SingleInstanceGuard.restartArgument]
 
                     workspace.openApplication(at: appURL, configuration: configuration)
                 }
@@ -558,6 +562,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Bail out early if another copy is already running. macOS can launch
+        // VibeIsland twice on reboot — once from the login item and once from
+        // "Reopen windows when logging back in" — and without this guard both
+        // survive. See SingleInstanceGuard for the restart-button exemption.
+        if SingleInstanceGuard.shouldTerminateForExistingInstance() {
+            return
+        }
+
         let userInfo: [String: Any] = [
             VibeIslandDistributedNotifications.UserInfoKey.sourcePID: NSNumber(value: ProcessInfo.processInfo.processIdentifier)
         ]
