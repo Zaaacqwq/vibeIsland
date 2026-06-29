@@ -291,8 +291,20 @@ struct MusicControlsView: View {
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 6
 
+    /// Whether a non-empty lyrics line is currently rendered under the artist.
+    /// When present it adds an extra text row (~16pt) to the song-info block,
+    /// which would push the home tab past the standard open-notch height and
+    /// overflow into the shadow padding. We compensate by tightening the
+    /// surrounding vertical spacing in this case so home stays the same height
+    /// as the other tabs.
+    private var hasLyricsLine: Bool {
+        enableLyrics
+            && !musicManager.currentLyrics
+                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: hasLyricsLine ? 0 : 8) {
             songInfoAndSlider
             if shouldShowControlHUDRow {
                 controlHUDRow
@@ -315,7 +327,7 @@ struct MusicControlsView: View {
                 musicSlider
             }
         }
-        .padding(.top, 10)
+        .padding(.top, hasLyricsLine ? 4 : 10)
         .padding(.leading, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -395,7 +407,7 @@ struct MusicControlsView: View {
                 guard !musicManager.isLiveStream else { return }
                 MusicManager.shared.seek(to: newValue)
             }
-            .padding(.top, 5)
+            .padding(.top, hasLyricsLine ? 1 : 5)
             .frame(height: 36)
         }
     }
