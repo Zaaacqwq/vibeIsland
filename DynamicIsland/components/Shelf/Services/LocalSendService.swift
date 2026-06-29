@@ -129,7 +129,7 @@ final class LocalSendService: NSObject, ObservableObject {
                 }
             }
         } catch {
-            Logger.log("LocalSend discovery start failed: \(error.localizedDescription)", category: .extensions)
+            Logger.log("LocalSend discovery start failed: \(error.localizedDescription)", category: .network)
         }
     }
 
@@ -632,7 +632,7 @@ final class LocalSendService: NSObject, ObservableObject {
             listener.stateUpdateHandler = { state in
                 if case let .failed(error) = state {
                     Task { @MainActor [weak self] in
-                        Logger.log("LocalSend register listener failed: \(error.localizedDescription)", category: .extensions)
+                        Logger.log("LocalSend register listener failed: \(error.localizedDescription)", category: .network)
                         self?.registerListener = nil
                     }
                 }
@@ -647,7 +647,7 @@ final class LocalSendService: NSObject, ObservableObject {
             listener.start(queue: .global(qos: .utility))
             registerListener = listener
         } catch {
-            Logger.log("LocalSend register listener start failed: \(error.localizedDescription)", category: .extensions)
+            Logger.log("LocalSend register listener start failed: \(error.localizedDescription)", category: .network)
         }
     }
 
@@ -906,7 +906,7 @@ final class LocalSendService: NSObject, ObservableObject {
                 return try await prepareUpload(payload: payload, baseURL: baseURL)
             } catch {
                 lastError = error
-                Logger.log("LocalSend prepare-upload failed via \(baseURL): \(error.localizedDescription)", category: .extensions)
+                Logger.log("LocalSend prepare-upload failed via \(baseURL): \(error.localizedDescription)", category: .network)
                 if !shouldRetryAcrossSchemes(error) {
                     throw error
                 }
@@ -964,7 +964,7 @@ final class LocalSendService: NSObject, ObservableObject {
                 return
             } catch {
                 lastError = error
-                Logger.log("LocalSend upload failed via \(baseURL) for \(file.name): \(error.localizedDescription)", category: .extensions)
+                Logger.log("LocalSend upload failed via \(baseURL) for \(file.name): \(error.localizedDescription)", category: .network)
                 if !shouldRetryAcrossSchemes(error) {
                     throw error
                 }

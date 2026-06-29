@@ -34,7 +34,6 @@ enum LogCategory: String {
     case warning = "⚠️"
     case success = "✅"
     case debug = "🔍"
-    case extensions = "🧩"
 
     var osCategoryName: String {
         switch self {
@@ -47,7 +46,6 @@ enum LogCategory: String {
         case .warning: return "warning"
         case .success: return "success"
         case .debug: return "debug"
-        case .extensions: return "extensions"
         }
     }
 }
@@ -136,4 +134,4 @@ struct ViewLifecycleTracker: ViewModifier {
                 Logger.trackMemory()
             }
     }
-} 
+}

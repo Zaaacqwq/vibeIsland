@@ -29,7 +29,7 @@ public enum Style {
     case floating
 }
 
-/// Controls how Atoll renders on external and non-notched displays.
+/// Controls how VibeIsland renders on external and non-notched displays.
 /// - `notch`: Standard notch shape (concave top corners blending into the screen edge).
 /// - `dynamicIsland`: Pill-shaped island with continuously rounded corners,
 ///   inspired by DynamicNotchKit's floating style. Only applies to screens
@@ -78,7 +78,6 @@ public enum NotchViews {
     case calendar
     case notifications
     case weather
-    case extensionExperience
 }
 
 enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
@@ -92,7 +91,6 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
     case privacy
     case shelf
     case focus
-    case extensionActivity
     case weather
 
     enum SidePreference {
@@ -114,8 +112,7 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         .privacy,
         .shelf,
         .focus,
-        .weather,
-        .extensionActivity
+        .weather
     ]
 
     var displayName: String {
@@ -130,7 +127,6 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         case .privacy: return String(localized: "Privacy")
         case .shelf: return String(localized: "Shelf")
         case .focus: return String(localized: "Focus")
-        case .extensionActivity: return String(localized: "Extensions")
         case .weather: return String(localized: "Weather")
         }
     }
@@ -147,7 +143,6 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
         case .privacy: return "camera.metering.center.weighted"
         case .shelf: return "tray.and.arrow.down.fill"
         case .focus: return "moon.fill"
-        case .extensionActivity: return "puzzlepiece.extension"
         case .weather: return "cloud.sun.fill"
         }
     }
@@ -189,7 +184,6 @@ enum SettingsEnum {
     case mediaPlayback
     case hud
     case shelf
-    case extensions
 }
 
 enum DownloadIndicatorStyle: String, Defaults.Serializable {
