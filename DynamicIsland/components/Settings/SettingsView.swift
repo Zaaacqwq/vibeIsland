@@ -1889,7 +1889,13 @@ private struct DevicesSettingsView: View {
                 GeistToggleRow(title: "Show Bluetooth device connections", isOn: geistBinding(.showBluetoothDeviceConnections))
                 GeistToggleRow(title: "Use circular battery indicator", isOn: geistBinding(.useCircularBluetoothBatteryIndicator))
                 GeistToggleRow(title: "Show battery percentage text in HUD", isOn: geistBinding(.showBluetoothBatteryPercentageText))
-                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee), divider: false)
+                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee))
+                GeistRow(divider: false) {
+                    Button { BluetoothAudioManager.shared.triggerTestDeviceConnectedHUD() } label: {
+                        Label("Test connection HUD", systemImage: "airpods.pro")
+                    }
+                    .buttonStyle(.geist)
+                }
             }
 
             GeistSection(title: "Battery Indicator Styling", footer: batteryFooter) {

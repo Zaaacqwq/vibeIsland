@@ -1687,7 +1687,37 @@ class BluetoothAudioManager: ObservableObject {
             )
         }
     }
-    
+
+    // MARK: - Testing
+
+    /// Forces a sample device-connected HUD so the Bluetooth connection animation
+    /// can be previewed from Settings without physically reconnecting a device.
+    /// Bypasses the `showBluetoothDeviceConnections` preference (the toggle gates
+    /// real connections, not this on-demand preview).
+    func triggerTestDeviceConnectedHUD() {
+        let sample = BluetoothAudioDevice(
+            name: "AirPods Pro",
+            address: "00:00:00:00:00:00",
+            batteryLevel: 80,
+            deviceType: .airpodsPro
+        )
+
+        HUDSuppressionCoordinator.shared.suppressVolumeHUD(for: 1.5)
+
+        Task { @MainActor in
+            // The HUD reads the device name from `lastConnectedDevice`, so set it
+            // before presenting the sneak peek.
+            self.lastConnectedDevice = sample
+            self.coordinator.toggleSneakPeek(
+                status: true,
+                type: .bluetoothAudio,
+                duration: 2.5,
+                value: CGFloat(sample.batteryLevel ?? 0) / 100.0,
+                icon: sample.deviceType.sfSymbol
+            )
+        }
+    }
+
     // MARK: - Cleanup
     
     private func cleanup() {
