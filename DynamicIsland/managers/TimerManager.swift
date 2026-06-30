@@ -269,6 +269,57 @@ class TimerManager: ObservableObject {
         }
     }
 
+    /// Hand off the read-only Clock mirror to a fully user-controllable local
+    /// timer, continuing from the current remaining time. Used when the Clock app
+    /// (and its data feed) goes away, so the timer doesn't freeze — afterwards it
+    /// behaves like a normal manual timer (stop / pause / resume all work).
+    func adoptExternalAsManual() {
+        guard activeSource == .external, isTimerActive else { return }
+
+        let wasPaused = isPaused
+        timerInstance?.invalidate()
+        timerInstance = nil
+
+        // Keep remainingTime / totalDuration / elapsedTime / timerName /
+        // isFinished / isOvertime exactly as mirrored; only ownership changes.
+        activeSource = .manual
+        activePresetId = nil
+        lastUpdated = Date()
+
+        if wasPaused {
+            isPaused = true            // stay paused; user can resume from the notch
+        } else {
+            isPaused = false
+            scheduleManualCountdown()  // keep counting down locally
+        }
+    }
+
+    /// Shared 1s countdown tick used by the manual timer. Mirrors the inline
+    /// scheduling in `startTimer`/`resumeTimer`.
+    private func scheduleManualCountdown() {
+        timerInstance?.invalidate()
+        timerInstance = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                guard !self.isPaused else { return }
+                if self.remainingTime > 0 {
+                    self.remainingTime -= 1
+                    self.elapsedTime = self.totalDuration - self.remainingTime
+                    self.lastUpdated = Date()
+                } else if self.remainingTime == 0 {
+                    self.isFinished = true
+                    self.isOvertime = true
+                    self.playTimerSound()
+                    self.remainingTime = -1
+                    self.lastUpdated = Date()
+                } else {
+                    self.remainingTime -= 1
+                    self.lastUpdated = Date()
+                }
+            }
+        }
+    }
+
     func adoptExternalTimer(name: String, totalDuration: TimeInterval, remaining: TimeInterval, isPaused: Bool) {
         guard activeSource != .manual else { return }
 
