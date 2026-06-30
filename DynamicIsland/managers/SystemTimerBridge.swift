@@ -93,6 +93,10 @@ final class SystemTimerBridge {
     private var fileDescriptor: CInt = -1
     private var fileMonitor: DispatchSourceFileSystemObject?
     private var ticker: DispatchSourceTimer?
+    /// 1s poll that hands the read-only mirror off to a local timer once the Clock
+    /// app quits (so the timer stays controllable instead of freezing).
+    private var handoffWatch: DispatchSourceTimer?
+    private let clockBundleIdentifier = "com.apple.clock"
     private var defaultsCancellable: AnyCancellable?
 
     private var didWarnAboutAccessibility = false
@@ -153,6 +157,9 @@ final class SystemTimerBridge {
                 self.logDebug("Log stream active but Accessibility not trusted; AX fallback disabled")
                 self.postAccessibilityWarningIfNeeded()
             }
+
+            // Hand off to a local timer if the Clock app is quit mid-timer.
+            self.setupHandoffWatch()
         }
     }
 
@@ -169,6 +176,9 @@ final class SystemTimerBridge {
 
             self.ticker?.cancel()
             self.ticker = nil
+
+            self.handoffWatch?.cancel()
+            self.handoffWatch = nil
 
             self.fileMonitor?.cancel()
             self.fileMonitor = nil
@@ -209,6 +219,37 @@ final class SystemTimerBridge {
         timer.resume()
         ticker = timer
         logInfo("Accessibility ticker active")
+    }
+
+    /// Starts the 1s poll that watches for the Clock app quitting while we're
+    /// mirroring its timer.
+    private func setupHandoffWatch() {
+        guard handoffWatch == nil else { return }
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + 1, repeating: .seconds(1), leeway: .milliseconds(200))
+        timer.setEventHandler { [weak self] in
+            self?.handoffTick()
+        }
+        timer.resume()
+        handoffWatch = timer
+        logInfo("Clock-quit handoff watch active")
+    }
+
+    private func handoffTick() {
+        guard Defaults[.mirrorSystemTimer] else { return }
+        DispatchQueue.main.async {
+            // Only relevant while a Clock timer is being mirrored read-only.
+            guard TimerManager.shared.isExternalTimerActive else { return }
+            let clockRunning = !NSRunningApplication
+                .runningApplications(withBundleIdentifier: self.clockBundleIdentifier)
+                .isEmpty
+            guard !clockRunning else { return }
+
+            // Clock is gone — its data feed is dead, so hand the mirror off to a
+            // local timer the user can stop/pause/resume from the notch.
+            self.logInfo("Clock app gone while mirroring; handing off to a local timer")
+            TimerManager.shared.adoptExternalAsManual()
+        }
     }
 
     @discardableResult
