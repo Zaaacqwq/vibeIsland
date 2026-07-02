@@ -87,20 +87,25 @@ struct NotchAgentsView: View {
         vm.setScrollGestureSuppression(hovering, token: scrollSuppressionToken)
     }
 
+    /// Home-embed has no tab pill of its own (the shared header only shows
+    /// "Home" as active), so it needs its own mono "AGENTS" eyebrow. The full
+    /// Agents tab is already identified by the shared header's active tab
+    /// pill, so its own content starts straight with the usage badges.
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(claudeColor)
-            Text("Agents")
-                .font(.headline)
-                .foregroundStyle(.white)
+            if !showsInputOverlay {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13))
+                    .foregroundStyle(NotchDesign.Colors.accent)
+                NotchMonoEyebrow(text: "Agents")
+            }
             Spacer()
             let claudeUsage = agentMonitor.usage
             let codexUsage = agentMonitor.codexUsage
             let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
             let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
             if hasClaude || hasCodex {
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     if let claudeUsage, hasClaude {
                         claudeUsageBadges(claudeUsage)
                     }
@@ -110,54 +115,41 @@ struct NotchAgentsView: View {
                 }
             } else if !agentMonitor.isBridgeReady {
                 Text("Connecting…")
-                    .font(.caption2)
-                    .foregroundStyle(.gray)
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
             }
         }
     }
 
     @ViewBuilder
     private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "sparkle")
-                .font(.system(size: 9))
-                .foregroundStyle(claudeColor)
-                .help("Claude usage")
-            if let five = usage.fiveHour {
-                usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
-            }
-            if let week = usage.sevenDay {
-                usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
-            }
+        if let five = usage.fiveHour {
+            usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
+        }
+        if let week = usage.sevenDay {
+            usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
         }
     }
 
     @ViewBuilder
     private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "chevron.left.forwardslash.chevron.right")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(codexColor)
-                .help("Codex usage")
-            ForEach(usage.windows) { window in
-                usageBadge(
-                    title: window.label,
-                    percent: window.roundedUsedPercentage,
-                    warn: window.usedPercentage >= 80,
-                    help: "Codex \(window.label) limit used"
-                )
-            }
+        ForEach(usage.windows) { window in
+            usageBadge(
+                title: window.label,
+                percent: window.roundedUsedPercentage,
+                warn: window.usedPercentage >= 80,
+                help: "Codex \(window.label) limit used"
+            )
         }
     }
 
     private func usageBadge(title: String, percent: Int, warn: Bool, help: String) -> some View {
         Text("\(title) \(percent)%")
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(warn ? .orange : .gray)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.white.opacity(0.07)))
+            .font(NotchDesign.Typography.mono(10, weight: .medium))
+            .foregroundStyle(warn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(warn ? NotchDesign.Colors.warning.opacity(0.1) : Color.white.opacity(0.06)))
             .help(help)
     }
 
@@ -167,9 +159,9 @@ struct NotchAgentsView: View {
             emptyState
         } else {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 6) {
+                VStack(spacing: showsInputOverlay ? 9 : 8) {
                     ForEach(agentMonitor.sessions) { session in
-                        AgentSessionRow(session: session, accent: claudeColor)
+                        AgentSessionRow(session: session, accent: claudeColor, compact: !showsInputOverlay)
                     }
                 }
             }
@@ -188,34 +180,34 @@ struct NotchAgentsView: View {
             switch agentMonitor.hookStatus {
             case .installed, .unknown:
                 Image(systemName: "moon.zzz")
-                    .font(.title2)
-                    .foregroundStyle(.gray)
-                Text("No active Claude sessions")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                Text("Start `claude` in a terminal to see it here.")
-                    .font(.caption2)
-                    .foregroundStyle(.gray.opacity(0.7))
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
+                Text("No active sessions")
+                    .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
+                Text("$ claude")
+                    .font(NotchDesign.Typography.mono(12))
+                    .foregroundStyle(NotchDesign.Colors.textFaint)
             case .notInstalled:
                 Image(systemName: "wrench.and.screwdriver")
-                    .font(.title2)
-                    .foregroundStyle(claudeColor)
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(NotchDesign.Colors.accent)
                 Text("Set up Claude Code")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text("Install hooks so VibeIsland can track your Claude sessions.")
-                    .font(.caption2)
+                    .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
+                Text("Install hooks so VibeIsland can track your sessions.")
+                    .font(NotchDesign.Typography.voice(12))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                 Button {
                     agentMonitor.installHooks()
                 } label: {
                     Text("Install hooks")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(claudeColor.opacity(0.85)))
-                        .foregroundStyle(.white)
+                        .font(NotchDesign.Typography.voice(12, weight: .semibold))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(Capsule().fill(NotchDesign.Colors.accent))
+                        .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
             }
@@ -226,23 +218,41 @@ struct NotchAgentsView: View {
 }
 
 /// A single session row: status glyph, title/summary, and contextual actions.
+/// `compact` is the Home-embed sizing (smaller ring/type, sunken `#0b0b0b`
+/// fill nested inside the outer `#141414` card); the full Agents tab uses the
+/// larger sizing directly on the card fill (no outer wrapper there).
 private struct AgentSessionRow: View {
     let session: AgentSession
     let accent: Color
+    var compact: Bool = true
     @ObservedObject private var agentMonitor = AgentMonitorManager.shared
+
+    private var ringSize: CGFloat { compact ? 14 : 16 }
+    private var titleFont: Font { NotchDesign.Typography.voice(compact ? 12 : 14, weight: .medium) }
+    private var statusFont: Font { NotchDesign.Typography.mono(compact ? 10 : 11) }
+    private var rowPadding: EdgeInsets { compact ? EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10) : EdgeInsets(top: 12, leading: 13, bottom: 12, trailing: 13) }
+    private var rowRadius: CGFloat { compact ? NotchDesign.Radius.sm : NotchDesign.Radius.md }
+    private var rowFill: Color { compact ? NotchDesign.Colors.sunken : NotchDesign.Colors.cardFill }
+    private var rowGap: CGFloat { compact ? 9 : 11 }
+
+    private var isAwaitingPermission: Bool { session.permissionRequest != nil }
+
+    private var borderColor: Color {
+        isAwaitingPermission ? NotchDesign.Colors.warning.opacity(compact ? 0.22 : 0.28) : NotchDesign.Colors.hairline
+    }
 
     var body: some View {
         let halo = agentMonitor.haloState(for: session)
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                HaloRingView(state: halo, size: 18)
-                VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: rowGap) {
+                HaloRingView(state: halo, size: ringSize)
+                VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                     Text(session.title.isEmpty ? "Claude session" : session.title)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white)
+                        .font(titleFont)
+                        .foregroundStyle(NotchDesign.Colors.textPrimary)
                         .lineLimit(1)
                     Text(halo.label)
-                        .font(.system(size: 9))
+                        .font(statusFont)
                         .foregroundStyle(halo.color)
                 }
                 Spacer()
@@ -263,7 +273,7 @@ private struct AgentSessionRow: View {
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(.gray)
+                            .foregroundStyle(NotchDesign.Colors.textTertiary)
                     }
                     .buttonStyle(.plain)
                     .help("Jump back to the external terminal")
@@ -277,8 +287,12 @@ private struct AgentSessionRow: View {
                 questionActions(question, sessionID: session.id)
             }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
+        .padding(rowPadding)
+        .background(rowFill, in: RoundedRectangle(cornerRadius: rowRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: rowRadius, style: .continuous)
+                .strokeBorder(borderColor, lineWidth: 1)
+        }
     }
 
     @ViewBuilder
@@ -286,31 +300,34 @@ private struct AgentSessionRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if !permission.summary.isEmpty {
                 Text(permission.summary)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.gray)
+                    .font(statusFont)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(2)
             }
-            HStack(spacing: 6) {
+            HStack(spacing: compact ? 6 : 8) {
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: true)
                 } label: {
                     Text(permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.green.opacity(0.8)))
-                        .foregroundStyle(.white)
+                        .padding(.vertical, compact ? 6 : 8)
+                        .background(NotchDesign.Colors.success, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                        .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: false)
                 } label: {
                     Text(permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.red.opacity(0.7)))
-                        .foregroundStyle(.white)
+                        .padding(.vertical, compact ? 6 : 8)
+                        .background {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .strokeBorder(NotchDesign.Colors.danger.opacity(0.4), lineWidth: 1)
+                        }
+                        .foregroundStyle(NotchDesign.Colors.danger)
                 }
                 .buttonStyle(.plain)
             }
@@ -322,8 +339,8 @@ private struct AgentSessionRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if !prompt.title.isEmpty {
                 Text(prompt.title)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.gray)
+                    .font(statusFont)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(2)
             }
             if let options = prompt.questions.first?.options, !options.isEmpty {
@@ -351,25 +368,29 @@ private struct AgentSessionRow: View {
 
     private func optionButton(index: Int, label: String, allowsFreeform: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 9) {
                 Text("\(index + 1)")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 15, height: 15)
-                    .background(Circle().fill(Color.white.opacity(0.15)))
+                    .font(NotchDesign.Typography.voice(10, weight: .bold))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white)
+                    .font(NotchDesign.Typography.voice(12, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
                     .lineLimit(1)
                 if allowsFreeform {
-                    Image(systemName: "pencil").font(.system(size: 9)).foregroundStyle(.white.opacity(0.7))
+                    Image(systemName: "pencil").font(.system(size: 9)).foregroundStyle(NotchDesign.Colors.textSecondary)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Capsule().fill(Color.white.opacity(0.10)))
+            .background(NotchDesign.Colors.sunken, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(NotchDesign.Colors.hairline, lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
     }

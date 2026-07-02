@@ -69,15 +69,10 @@ struct DynamicIslandHeader: View {
                                 showTimerPopover.toggle()
                             }
                         }) {
-                            Capsule()
-                                .fill(.black)
+                            Image(systemName: "timer")
+                                .foregroundColor(NotchDesign.Colors.textTertiary)
                                 .frame(width: 30, height: 30)
-                                .overlay {
-                                    Image(systemName: "timer")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .imageScale(.medium)
-                                }
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                         .popover(isPresented: $showTimerPopover, arrowEdge: .bottom) {
@@ -97,15 +92,10 @@ struct DynamicIslandHeader: View {
                         Button(action: {
                             SettingsWindowController.shared.showWindow()
                         }) {
-                            Capsule()
-                                .fill(.black)
+                            Image(systemName: "gear")
+                                .foregroundColor(NotchDesign.Colors.textTertiary)
                                 .frame(width: 30, height: 30)
-                                .overlay {
-                                    Image(systemName: "gear")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .imageScale(.medium)
-                                }
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

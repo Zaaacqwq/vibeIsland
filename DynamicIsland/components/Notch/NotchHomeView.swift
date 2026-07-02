@@ -307,10 +307,10 @@ struct MusicControlsView: View {
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .center, spacing: 8) {
+                HStack(alignment: .center, spacing: 11) {
                     AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                        .frame(width: 38, height: 38)
-                    songInfo(width: max(0, geo.size.width - 46))
+                        .frame(width: 44, height: 44)
+                    songInfo(width: max(0, geo.size.width - 55))
                 }
                 musicSlider
             }
@@ -321,25 +321,24 @@ struct MusicControlsView: View {
     }
 
     private func songInfo(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 2) {
             MusicTitleMarqueeView(
                 text: musicManager.songTitle,
                 isExplicit: musicManager.isCurrentTrackExplicit,
-                font: .headline,
+                font: NotchDesign.Typography.voice(15, weight: .semibold),
                 nsFont: .headline,
-                textColor: .white,
+                textColor: NotchDesign.Colors.textPrimary,
                 frameWidth: width,
                 badgeHeight: 14
             )
             MarqueeText(
                 $musicManager.artistName,
-                font: .headline,
+                font: NotchDesign.Typography.voice(13, weight: .medium),
                 nsFont: .headline,
                 textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                    .ensureMinimumBrightness(factor: 0.6) : .gray,
+                    .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
                 frameWidth: width
             )
-            .fontWeight(.medium)
             // Lyrics shown under the author name (same font size as author) when enabled in settings
             if enableLyrics {
                 let transition = AnyTransition.asymmetric(
@@ -401,7 +400,7 @@ struct MusicControlsView: View {
     }
 
     private var playbackControls: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 20) {
             ForEach(Array(displayedSlots.enumerated()), id: \.offset) { _, slot in
                 slotView(for: slot)
             }
@@ -542,7 +541,7 @@ struct MusicControlsView: View {
     private var repeatIconColor: Color {
         switch musicManager.repeatMode {
         case .off:
-            return .white
+            return NotchDesign.Colors.textFaint
         case .all, .one:
             return brandAccentColor
         }
@@ -574,7 +573,10 @@ struct MusicControlsView: View {
         case .playPause:
             HoverButton(
                 icon: musicManager.isPlaying ? (musicManager.isLiveStream ? "stop.fill" : "pause.fill") : "play.fill",
-                scale: .large
+                scale: .large,
+                filled: true,
+                filledSize: 34,
+                filledIconSize: 15
             ) {
                 MusicManager.shared.togglePlay()
             }
@@ -613,7 +615,7 @@ struct MusicControlsView: View {
         case .shuffle:
             HoverButton(
                 icon: "shuffle",
-                iconColor: musicManager.isShuffled ? brandAccentColor : .white,
+                iconColor: musicManager.isShuffled ? brandAccentColor : NotchDesign.Colors.textFaint,
                 scale: .medium
             ) {
                 MusicManager.shared.toggleShuffle()
@@ -711,7 +713,7 @@ struct NotchHomeView: View {
     }
 
     private var mainContent: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(alignment: .top, spacing: 14) {
             if Defaults[.enableMinimalisticUI] {
                 MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
             } else {
@@ -722,6 +724,8 @@ struct NotchHomeView: View {
                 if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .notchCard(radius: NotchDesign.Radius.lg)
                 }
 
                 if Defaults[.enableAgentMonitoring] {
@@ -730,6 +734,8 @@ struct NotchHomeView: View {
                     NotchAgentsView(showsInputOverlay: false)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .environmentObject(vm)
+                        .padding(14)
+                        .notchCard(radius: NotchDesign.Radius.lg)
                 } else if Defaults[.showCalendar] {
                     Group {
                         if shouldShowMusicPlayer {
@@ -746,8 +752,10 @@ struct NotchHomeView: View {
                         vm.setScrollGestureSuppression(false, token: calendarScrollSuppressionToken)
                     }
                     .environmentObject(vm)
+                    .padding(14)
+                    .notchCard(radius: NotchDesign.Radius.lg)
                 }
-                
+
             }
         }
         // No root `.transition` here either — ContentView owns open/close (top-down
@@ -828,9 +836,8 @@ struct MusicSliderView: View {
                 Spacer()
                 Text(trailingTimeText)
             }
-            .fontWeight(.medium)
             .foregroundColor(timeLabelColor)
-            .font(.caption)
+            .font(NotchDesign.Typography.mono(10))
         }
     }
 
@@ -910,7 +917,7 @@ struct MusicSliderView: View {
     private var timeLabelColor: Color {
         Defaults[.playerColorTinting]
             ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6)
-            : .gray
+            : NotchDesign.Colors.textFaint
     }
 
     private var trailingTimeText: String {
@@ -970,7 +977,7 @@ struct CustomSlider: View {
             ZStack(alignment: .leading) {
                 // Background track
                 Rectangle()
-                    .fill(.gray.opacity(0.3))
+                    .fill(Color.white.opacity(0.12))
                     .frame(height: trackHeight)
 
                 // Filled track

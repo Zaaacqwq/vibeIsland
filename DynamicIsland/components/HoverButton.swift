@@ -30,8 +30,13 @@ struct HoverButton: View {
     var contentTransition: ContentTransition = .symbolEffect
     var externalTriggerToken: Int? = nil
     var externalTriggerEffect: PressEffect? = nil
+    /// The notch design's "hero" transport button: a solid white circle with
+    /// a black glyph, used for play/pause on Home (34pt) and Media (46pt).
+    var filled: Bool = false
+    var filledSize: CGFloat = 34
+    var filledIconSize: CGFloat = 15
     var action: () -> Void
-    
+
     @State private var isHovering = false
     @State private var pressOffset: CGFloat = 0
     @State private var wiggleAngle: Double = 0
@@ -39,8 +44,8 @@ struct HoverButton: View {
     @State private var lastExternalTriggerToken: Int?
 
     var body: some View {
-        let size = CGFloat(scale == .large ? 40 : 30)
-        
+        let size = filled ? filledSize : CGFloat(scale == .large ? 40 : 30)
+
         Button(action: {
             triggerPressEffect()
             action()
@@ -51,13 +56,13 @@ struct HoverButton: View {
                 .frame(width: size, height: size)
                 .overlay {
                     Capsule()
-                        .fill(isHovering ? Color.gray.opacity(0.2) : .clear)
+                        .fill(filled ? Color.white : (isHovering ? Color.gray.opacity(0.2) : .clear))
                         .frame(width: size, height: size)
                         .overlay {
                             let baseImage = Image(systemName: icon)
-                                .foregroundColor(iconColor)
+                                .foregroundColor(filled ? .black : iconColor)
                                 .contentTransition(contentTransition)
-                                .font(scale == .large ? .largeTitle : .body)
+                                .font(filled ? .system(size: filledIconSize, weight: .semibold) : (scale == .large ? .largeTitle : .body))
 
                             if case .wiggle = pressEffect {
                                 if #available(macOS 15.0, *) {

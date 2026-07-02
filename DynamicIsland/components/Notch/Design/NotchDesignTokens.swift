@@ -32,8 +32,11 @@ enum NotchDesign {
         static let cardFill = Color(nsColor: NSColor(geistHex: "#141414"))
         static let cardFillAlt = Color(nsColor: NSColor(geistHex: "#151515"))
         static let cardFillRaised = Color(nsColor: NSColor(geistHex: "#1e1e1e"))
+        /// Sunken/inset fill for a row nested inside a card (e.g. an Agents
+        /// session row inside the Home media/agents `#141414` card).
+        static let sunken = Color(nsColor: NSColor(geistHex: "#0b0b0b"))
 
-        static let hairline = Color.white.opacity(0.07)
+        static let hairline = Color.white.opacity(0.06)
         static let hairlineStrong = Color.white.opacity(0.09)
 
         /// The app's user-configurable accent (Settings > Appearance), not a
@@ -47,6 +50,9 @@ enum NotchDesign {
 
         static let textPrimary = Color(nsColor: NSColor(geistHex: "#EDEDED"))
         static let textSecondary = Color(nsColor: NSColor(geistHex: "#9A9A9A"))
+        /// De-emphasized numeric labels (slider times, muted controls) — sits
+        /// between secondary and tertiary in the mockup's ramp.
+        static let textFaint = Color(nsColor: NSColor(geistHex: "#7A7A7A"))
         static let textTertiary = Color(nsColor: NSColor(geistHex: "#6E6E6E"))
     }
 
