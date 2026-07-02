@@ -125,9 +125,11 @@ struct NotchAgentsView: View {
     private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
         HStack(spacing: 4) {
             Image("claude-icon")
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 12, height: 12)
+                .frame(width: 11, height: 11)
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
                 .help("Claude usage")
             if let five = usage.fiveHour {
                 usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
@@ -142,9 +144,11 @@ struct NotchAgentsView: View {
     private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
         HStack(spacing: 4) {
             Image("codex-icon")
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 12, height: 12)
+                .frame(width: 11, height: 11)
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
                 .help("Codex usage")
             ForEach(usage.windows) { window in
                 usageBadge(
