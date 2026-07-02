@@ -997,6 +997,16 @@ struct ContentView: View {
                           // attach their own root `.transition` or it overrides this
                           // slide (blur / vertical / opacity-in-place).
                           .transition(tabSwitchTransition)
+                          // Measure the active tab's real content height so the open
+                          // notch sizes to it instead of a fixed constant (standard
+                          // mode only — minimalistic has its own dynamic sizing).
+                          // Reported height is guarded/clamped in the view model, so
+                          // a measurement hiccup here can't runaway-resize the window.
+                          .modifier(MeasureSizeModifier())
+                          .onPreferenceChange(SizePreferenceKey.self) { size in
+                              guard size.height > 0 else { return }
+                              vm.reportMeasuredContentHeight(size.height + max(24, vm.effectiveClosedNotchHeight))
+                          }
                       }
                       .transition(notchOpenTransition)
                   }

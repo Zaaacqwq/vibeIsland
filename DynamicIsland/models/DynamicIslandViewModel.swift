@@ -92,6 +92,25 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var notchSize: CGSize = getClosedNotchSize()
     @Published var closedNotchSize: CGSize = getClosedNotchSize()
 
+    /// Actual rendered height of the open panel's header + current tab
+    /// content (standard/non-minimalistic mode only), reported by
+    /// `ContentView` via a background `GeometryReader`. Replaces the old
+    /// fixed 200pt constant so each tab's real content — not a guessed
+    /// number — drives the open notch height.
+    ///
+    /// Guarded against feedback/thrash: only updates while open, only on a
+    /// >1.5pt real change (floating-point layout jitter otherwise re-triggers
+    /// this on every tiny recompute), and clamped to a sane range so a
+    /// measurement bug can't runaway-grow the actual NSWindow.
+    @Published private(set) var measuredOpenContentHeight: CGFloat = 200
+
+    func reportMeasuredContentHeight(_ height: CGFloat) {
+        guard notchState == .open, !Defaults[.enableMinimalisticUI] else { return }
+        let clamped = max(160, min(320, height))
+        guard abs(measuredOpenContentHeight - clamped) > 1.5 else { return }
+        measuredOpenContentHeight = clamped
+    }
+
     /// The exact width of the physical notch cutout (no coverage margin), used
     /// to size the black notch cover so it never overhangs the real notch.
     /// `closedNotchSize.width` carries an extra +4 coverage margin; on displays
@@ -241,6 +260,28 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
                 }
             }
             .store(in: &cancellables)
+
+        $measuredOpenContentHeight
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                guard self.notchState == .open else { return }
+                guard !Defaults[.enableMinimalisticUI] else { return }
+                let updatedTarget = self.calculateDynamicNotchSize()
+                guard self.notchSize != updatedTarget else { return }
+                withAnimation(.smooth) {
+                    self.notchSize = updatedTarget
+                }
+                if let delegate = AppDelegate.shared {
+                    delegate.ensureWindowSize(
+                        addShadowPadding(to: updatedTarget, isMinimalistic: false),
+                        animated: true,
+                        force: false
+                    )
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func handleMinimalisticTimerHeightChange() {
@@ -336,7 +377,12 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     }
     
     private func calculateDynamicNotchSize() -> CGSize {
-        Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
+        if Defaults[.enableMinimalisticUI] {
+            return minimalisticOpenNotchSize
+        }
+        var size = openNotchSize
+        size.height = measuredOpenContentHeight
+        return size
     }
 
     func close() {
