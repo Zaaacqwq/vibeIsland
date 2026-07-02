@@ -87,9 +87,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         isAutoCloseSuppressed = false
     }
 
-    private func focusClipboardTabIfNeeded() {}
-    
-
     @Published var screen: String?
 
     @Published var notchSize: CGSize = getClosedNotchSize()
@@ -336,7 +333,6 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
 
         // Force music information update when notch is opened
         MusicManager.shared.forceUpdate()
-        focusClipboardTabIfNeeded()
     }
     
     private func calculateDynamicNotchSize() -> CGSize {

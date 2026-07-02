@@ -45,35 +45,11 @@ struct HUDsTip: Tip {
     }
 }
 
-struct CBTip: Tip {
-    var title: Text {
-        Text("Boost your productivity with Clipboard Manager")
-    }
-    
-    
-    var message: Text? {
-        Text("Easily copy, store, and manage your most-used content. Upgrade now for advanced features like multi-item storage and quick access!")
-    }
-    
-    
-    var image: Image? {
-        AppIcon(for: "dynamicisland.DynamicIsland")
-    }
-    
-    var actions: [Action] {
-        Action {
-            Text("More")
-        }
-    }
-}
-
 struct TipsView: View {
     var hudTip = HUDsTip()
-    var cbTip = CBTip()
     var body: some View {
         VStack {
             TipView(hudTip)
-            TipView(cbTip)
         }
         .task {
             try? Tips.configure([

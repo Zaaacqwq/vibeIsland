@@ -694,9 +694,6 @@ extension Defaults.Keys {
     static let showBluetoothBatteryPercentageText = Key<Bool>("showBluetoothBatteryPercentageText", default: false)
     static let showBluetoothDeviceNameMarquee = Key<Bool>("showBluetoothDeviceNameMarquee", default: false)
 
-    // MARK: Stats Feature
-    
-    
     // MARK: Timer Feature
     static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
     static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
@@ -719,8 +716,7 @@ extension Defaults.Keys {
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
     
-    // MARK: Clipboard Feature
-    
+    // MARK: Closed Notch Live Activities
     static let closedNotchActivityPriorityOrder = Key<[ClosedNotchActivityKind]>(
         "closedNotchActivityPriorityOrder",
         default: ClosedNotchActivityKind.defaultPriorityOrder

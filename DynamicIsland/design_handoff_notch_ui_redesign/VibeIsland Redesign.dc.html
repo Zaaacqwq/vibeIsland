@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#050505;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  [data-ico]>svg{width:100%;height:100%;display:block;stroke-width:1.75px}
+  [data-ico-thin]>svg{width:100%;height:100%;display:block;stroke-width:1.4px}
+  @keyframes vpulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @keyframes veq{0%{height:20%}100%{height:90%}}
+</style>
+</helmet>
+
+<div style="--accent:{{accent}};--glow-op:{{glowOp}};--grid-op:{{gridOp}};width:1600px;margin:0 auto;position:relative;background:#050505;font-family:Geist,system-ui,sans-serif;color:#ededed;overflow:hidden">
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="spk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs></svg>
+
+  <!-- atmospheric glow (the one brand-gradient moment) -->
+  <div style="position:absolute;top:-340px;left:50%;transform:translateX(-50%);width:1500px;height:800px;opacity:var(--glow-op,1);pointer-events:none;filter:blur(90px);background:radial-gradient(38% 60% at 22% 40%,rgba(0,124,240,.20),transparent 70%),radial-gradient(40% 60% at 50% 30%,rgba(121,40,202,.18),transparent 70%),radial-gradient(38% 60% at 78% 45%,rgba(255,0,128,.16),transparent 70%),radial-gradient(30% 50% at 90% 60%,rgba(249,203,40,.12),transparent 70%)"></div>
+  <!-- dotted grid -->
+  <div style="position:absolute;inset:0;opacity:var(--grid-op,1);pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:34px 34px;-webkit-mask-image:linear-gradient(#000,transparent 78%)"></div>
+
+  <div style="position:relative;padding:96px 120px 110px">
+
+    <!-- ══════════ HEADER ══════════ -->
+    <div style="max-width:900px">
+      <div data-ico style="display:flex;align-items:center;gap:10px;color:#8a8a8a">
+        <span style="width:9px;height:9px;border-radius:3px;background:var(--accent,#d97742)"></span>
+        <span style="font:500 12px/1 'Geist Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#8a8a8a">VibeIsland — UI / UX Redesign</span>
+      </div>
+      <h1 style="margin-top:26px;font:600 58px/1.02 Geist,sans-serif;letter-spacing:-.035em;color:#fafafa">One island.<br>Every surface, one system.</h1>
+      <p style="margin-top:24px;max-width:720px;font:400 18px/1.6 Geist,sans-serif;color:#9a9a9a">The notch's tabs used to read like seven different apps. This redesign gives every surface — the collapsed pill, home, media, agents, stats, clipboard, color — a single ink-and-hairline language: <span style="color:#dcdcdc">Geist</span> for voice, <span style="color:#dcdcdc;font-family:'Geist Mono',monospace">Geist Mono</span> for the technical layer, one restrained accent, and data that never shouts louder than the content.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:32px">
+        <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8a8a;padding:8px 12px;border:1px solid rgba(255,255,255,.1);border-radius:100px">Geist + Geist Mono</span>
+        <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8a8a;padding:8px 12px;border:1px solid rgba(255,255,255,.1);border-radius:100px">Ink + hairline surfaces</span>
+        <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8a8a;padding:8px 12px;border:1px solid rgba(255,255,255,.1);border-radius:100px">One accent</span>
+        <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8a8a;padding:8px 12px;border:1px solid rgba(255,255,255,.1);border-radius:100px">Mono labels everywhere</span>
+      </div>
+    </div>
+
+    <!-- ══════════ SYSTEM STRIP ══════════ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:64px">
+      <!-- surfaces -->
+      <div style="background:#111;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
+        <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e">Surface ladder</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:28px;border-radius:7px;background:#000;border:1px solid rgba(255,255,255,.08)"></span><span style="font:400 12px/1 'Geist Mono',monospace;color:#c9c9c9">#000000</span><span style="font:400 12px/1 Geist;color:#6e6e6e;margin-left:auto">Notch</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:28px;border-radius:7px;background:#0a0a0a;border:1px solid rgba(255,255,255,.08)"></span><span style="font:400 12px/1 'Geist Mono',monospace;color:#c9c9c9">#0a0a0a</span><span style="font:400 12px/1 Geist;color:#6e6e6e;margin-left:auto">Canvas</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:28px;border-radius:7px;background:#151515;border:1px solid rgba(255,255,255,.08)"></span><span style="font:400 12px/1 'Geist Mono',monospace;color:#c9c9c9">#151515</span><span style="font:400 12px/1 Geist;color:#6e6e6e;margin-left:auto">Card</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:28px;border-radius:7px;background:#1e1e1e;border:1px solid rgba(255,255,255,.08)"></span><span style="font:400 12px/1 'Geist Mono',monospace;color:#c9c9c9">#1e1e1e</span><span style="font:400 12px/1 Geist;color:#6e6e6e;margin-left:auto">Raised</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:28px;border-radius:7px;background:linear-gradient(90deg,rgba(255,255,255,.14),rgba(255,255,255,.04))"></span><span style="font:400 12px/1 'Geist Mono',monospace;color:#c9c9c9">.08 α</span><span style="font:400 12px/1 Geist;color:#6e6e6e;margin-left:auto">Hairline</span></div>
+        </div>
+      </div>
+      <!-- type -->
+      <div style="background:#111;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px">
+        <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e">Type</div>
+        <div style="display:flex;align-items:flex-end;gap:20px;margin-top:16px">
+          <div><div style="font:600 52px/1 Geist;letter-spacing:-.04em;color:#fafafa">Aa</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:8px;letter-spacing:.08em">GEIST · 600</div></div>
+          <div><div style="font:400 52px/1 'Geist Mono',monospace;color:#fafafa">Aa</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:8px;letter-spacing:.08em">GEIST MONO</div></div>
+        </div>
+        <div style="height:1px;background:rgba(255,255,255,.07);margin:18px 0"></div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="font:600 17px/1 Geist;letter-spacing:-.02em;color:#ededed">Now playing — title</div>
+          <div style="font:400 13px/1 'Geist Mono',monospace;color:#9a9a9a">5H 42%&nbsp;&nbsp;·&nbsp;&nbsp;7D 18%&nbsp;&nbsp;·&nbsp;&nbsp;cpu 14.2%</div>
+        </div>
+      </div>
+      <!-- signature -->
+      <div style="background:#111;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;display:flex;flex-direction:column">
+        <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e">The signature</div>
+        <div style="margin-top:20px;background:#0a0a0a;border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:2px;background:var(--accent,#d97742)"></span><span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a">Every card opens here</span></div>
+          <div style="font:600 20px/1.1 Geist;letter-spacing:-.02em;color:#ededed;margin-top:12px">A mono label, then the content.</div>
+        </div>
+        <p style="margin-top:auto;padding-top:18px;font:400 13px/1.5 Geist;color:#8a8a8a">Repeat that one rule on all seven tabs and the app stops feeling assembled from parts.</p>
+      </div>
+    </div>
+
+    <!-- ══════════ 01 · COLLAPSED NOTCH ══════════ -->
+    <div style="margin-top:112px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">01</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Collapsed notch</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:420px;text-align:right">Idle, and three live activities — content wraps the physical notch, left and right.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:48px 40px">
+        <div style="display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start;justify-content:center">
+
+          <!-- idle -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+            <div style="width:210px;height:34px;border-radius:0 0 18px 18px;background:#000;box-shadow:0 8px 24px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:space-between;padding:0 18px">
+              <span style="width:38px;height:6px;border-radius:100px;background:rgba(255,255,255,.14)"></span>
+              <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">Idle</span>
+          </div>
+
+          <!-- now playing -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+            <div style="height:38px;border-radius:0 0 20px 20px;background:#000;box-shadow:0 8px 24px rgba(0,0,0,.6);display:flex;align-items:center;gap:150px;padding:0 12px">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:22px;height:22px;border-radius:6px;background:repeating-linear-gradient(135deg,#2a2a2a 0 5px,#1c1c1c 5px 10px)"></span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:2.5px;height:16px">
+                <span style="width:2.5px;background:var(--accent,#d97742);height:60%;animation:veq .5s -.1s ease-in-out infinite alternate"></span>
+                <span style="width:2.5px;background:var(--accent,#d97742);height:90%;animation:veq .5s -.4s ease-in-out infinite alternate"></span>
+                <span style="width:2.5px;background:var(--accent,#d97742);height:40%;animation:veq .5s -.2s ease-in-out infinite alternate"></span>
+                <span style="width:2.5px;background:var(--accent,#d97742);height:75%;animation:veq .5s -.5s ease-in-out infinite alternate"></span>
+              </div>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">Now playing</span>
+          </div>
+
+          <!-- agent permission -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+            <div style="height:38px;border-radius:0 0 20px 20px;background:#000;box-shadow:0 8px 24px rgba(0,0,0,.6);display:flex;align-items:center;gap:130px;padding:0 14px">
+              <div data-ico style="width:15px;height:15px;color:var(--accent,#d97742)"><i data-lucide="sparkles"></i></div>
+              <div style="display:flex;align-items:center;gap:7px">
+                <span style="font:500 12px/1 'Geist Mono',monospace;color:#e6e6e6">Allow edit?</span>
+                <span style="width:6px;height:6px;border-radius:50%;background:#e0a83e;animation:vpulse 1.6s ease-in-out infinite"></span>
+              </div>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">Agent · permission</span>
+          </div>
+
+          <!-- timer -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+            <div style="height:38px;border-radius:0 0 20px 20px;background:#000;box-shadow:0 8px 24px rgba(0,0,0,.6);display:flex;align-items:center;gap:120px;padding:0 16px">
+              <div data-ico style="width:14px;height:14px;color:#bdbdbd"><i data-lucide="timer"></i></div>
+              <span style="font:500 13px/1 'Geist Mono',monospace;color:#ededed;letter-spacing:.02em">12:45</span>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">Timer</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 02 · HOME ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">02</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Home</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:440px;text-align:right">The open notch: media on the left, agents on the right — one header, one card grammar.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:flex;justify-content:center">
+        <!-- ─ open notch panel ─ -->
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 14px 16px">
+          <!-- camera dot -->
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <!-- header -->
+          <div style="display:flex;align-items:center;height:46px;gap:8px">
+            <div style="display:flex;align-items:center;gap:4px">
+              <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+                <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="house"></i></div>
+                <span style="font:500 12px/1 Geist;color:#fff">Home</span>
+              </div>
+              <div data-ico style="width:30px;height:30px;color:#6e6e6e;display:flex;align-items:center;justify-content:center"><span data-ico style="width:14px;height:14px"><i data-lucide="inbox"></i></span></div>
+              <div data-ico style="width:30px;height:30px;color:#6e6e6e;display:flex;align-items:center;justify-content:center"><span data-ico style="width:14px;height:14px"><i data-lucide="timer"></i></span></div>
+              <div data-ico style="width:30px;height:30px;color:#6e6e6e;display:flex;align-items:center;justify-content:center"><span data-ico style="width:14px;height:14px"><i data-lucide="sparkles"></i></span></div>
+              <div data-ico style="width:30px;height:30px;color:#6e6e6e;display:flex;align-items:center;justify-content:center"><span data-ico style="width:14px;height:14px"><i data-lucide="calendar"></i></span></div>
+            </div>
+            <div style="width:170px"></div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#bdbdbd">84%</span><div data-ico style="width:22px;height:14px;color:#8a8a8a"><i data-lucide="battery-medium"></i></div></div>
+              <div data-ico style="width:15px;height:15px;color:#6e6e6e"><i data-lucide="settings"></i></div>
+            </div>
+          </div>
+
+          <!-- body: media | agents -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+            <!-- media panel -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px">
+              <div style="display:flex;gap:11px;align-items:center">
+                <span style="width:44px;height:44px;border-radius:9px;background:repeating-linear-gradient(135deg,#2c2c2c 0 6px,#1e1e1e 6px 12px);flex:none;position:relative">
+                  <span data-ico style="position:absolute;right:-5px;bottom:-5px;width:17px;height:17px;color:#111;background:#3fb27f;border-radius:5px;display:flex;align-items:center;justify-content:center;padding:3px"><i data-lucide="music"></i></span>
+                </span>
+                <div style="min-width:0">
+                  <div style="font:600 15px/1.1 Geist;color:#f2f2f2;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Borderline</div>
+                  <div style="font:500 13px/1.2 Geist;color:#8f8f8f;margin-top:2px">Tame Impala</div>
+                </div>
+              </div>
+              <!-- slider -->
+              <div style="margin-top:14px">
+                <div style="height:4px;border-radius:100px;background:rgba(255,255,255,.12);position:relative">
+                  <div style="position:absolute;left:0;top:0;bottom:0;width:34%;border-radius:100px;background:#ededed"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:7px">
+                  <span style="font:400 10px/1 'Geist Mono',monospace;color:#7a7a7a">0:14</span>
+                  <span style="font:400 10px/1 'Geist Mono',monospace;color:#7a7a7a">-3:43</span>
+                </div>
+              </div>
+              <!-- controls -->
+              <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:14px;color:#cfcfcf">
+                <div data-ico style="width:14px;height:14px;color:#7a7a7a"><i data-lucide="shuffle"></i></div>
+                <div data-ico style="width:17px;height:17px"><i data-lucide="skip-back"></i></div>
+                <div style="width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><div data-ico style="width:15px;height:15px;color:#000"><i data-lucide="pause"></i></div></div>
+                <div data-ico style="width:17px;height:17px"><i data-lucide="skip-forward"></i></div>
+                <div data-ico style="width:14px;height:14px;color:#7a7a7a"><i data-lucide="repeat"></i></div>
+              </div>
+            </div>
+
+            <!-- agents panel -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:7px">
+                <div data-ico style="width:13px;height:13px;color:var(--accent,#d97742)"><i data-lucide="sparkles"></i></div>
+                <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a">Agents</span>
+                <div style="margin-left:auto;display:flex;gap:6px">
+                  <span style="font:500 10px/1 'Geist Mono',monospace;color:#9a9a9a;padding:4px 7px;background:rgba(255,255,255,.06);border-radius:100px">5h 42%</span>
+                  <span style="font:500 10px/1 'Geist Mono',monospace;color:#9a9a9a;padding:4px 7px;background:rgba(255,255,255,.06);border-radius:100px">7d 18%</span>
+                </div>
+              </div>
+              <!-- session row: running -->
+              <div style="margin-top:12px;background:#0b0b0b;border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:9px 10px;display:flex;align-items:center;gap:9px">
+                <span style="width:14px;height:14px;border-radius:50%;border:2px solid rgba(63,178,127,.35);border-top-color:#3fb27f;flex:none"></span>
+                <div style="min-width:0;flex:1">
+                  <div style="font:500 12px/1.1 Geist;color:#ededed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">refactor auth flow</div>
+                  <div style="font:400 10px/1 'Geist Mono',monospace;color:#3fb27f;margin-top:3px">running · 2m</div>
+                </div>
+                <div data-ico style="width:15px;height:15px;color:#6e6e6e"><i data-lucide="corner-up-left"></i></div>
+              </div>
+              <!-- session row: waiting -->
+              <div style="margin-top:8px;background:#0b0b0b;border:1px solid rgba(224,168,62,.22);border-radius:10px;padding:9px 10px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:#e0a83e;flex:none;animation:vpulse 1.6s ease-in-out infinite;margin:2px"></span>
+                  <div style="min-width:0;flex:1">
+                    <div style="font:500 12px/1.1 Geist;color:#ededed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">write migration</div>
+                    <div style="font:400 10px/1 'Geist Mono',monospace;color:#e0a83e;margin-top:3px">needs permission</div>
+                  </div>
+                  <div data-ico style="width:15px;height:15px;color:var(--accent,#d97742)"><i data-lucide="maximize-2"></i></div>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:9px">
+                  <div style="flex:1;text-align:center;font:600 11px/1 Geist;color:#0a0a0a;background:#3fb27f;border-radius:7px;padding:6px 0">Allow</div>
+                  <div style="flex:1;text-align:center;font:600 11px/1 Geist;color:#e5645f;background:transparent;border:1px solid rgba(229,100,95,.4);border-radius:7px;padding:6px 0">Deny</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 03 · MEDIA ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">03</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Media player</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:440px;text-align:right">Full-width playback. The progress fill is plain white — the album stays the only color.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:flex;justify-content:center">
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 22px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <!-- header -->
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="house"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Home</span>
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#bdbdbd">84%</span><div data-ico style="width:22px;height:14px;color:#8a8a8a"><i data-lucide="battery-medium"></i></div></div>
+          </div>
+          <!-- content -->
+          <div style="display:flex;gap:22px;align-items:center;margin-top:10px">
+            <span style="width:118px;height:118px;border-radius:16px;background:repeating-linear-gradient(135deg,#303030 0 8px,#202020 8px 16px);flex:none;position:relative">
+              <span data-ico style="position:absolute;right:-7px;bottom:-7px;width:26px;height:26px;color:#111;background:#3fb27f;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:5px"><i data-lucide="music"></i></span>
+            </span>
+            <div style="flex:1;min-width:0">
+              <div style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a">Now playing</div>
+              <div style="font:600 30px/1.05 Geist;letter-spacing:-.03em;color:#fafafa;margin-top:9px">505</div>
+              <div style="font:500 16px/1.2 Geist;color:#9a9a9a;margin-top:4px">Arctic Monkeys · Favourite Worst Nightmare</div>
+              <!-- slider -->
+              <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+                <span style="font:400 11px/1 'Geist Mono',monospace;color:#7a7a7a">3:29</span>
+                <div style="flex:1;height:5px;border-radius:100px;background:rgba(255,255,255,.12);position:relative">
+                  <div style="position:absolute;left:0;top:0;bottom:0;width:82%;border-radius:100px;background:#ededed"></div>
+                  <div style="position:absolute;left:82%;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:#fff"></div>
+                </div>
+                <span style="font:400 11px/1 'Geist Mono',monospace;color:#7a7a7a">4:13</span>
+              </div>
+            </div>
+          </div>
+          <!-- controls -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:34px;margin-top:22px;color:#dcdcdc">
+            <div data-ico style="width:17px;height:17px;color:#7a7a7a"><i data-lucide="shuffle"></i></div>
+            <div data-ico style="width:22px;height:22px"><i data-lucide="skip-back"></i></div>
+            <div style="width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><div data-ico style="width:19px;height:19px;color:#000"><i data-lucide="play"></i></div></div>
+            <div data-ico style="width:22px;height:22px"><i data-lucide="skip-forward"></i></div>
+            <div data-ico style="width:17px;height:17px;color:var(--accent,#d97742)"><i data-lucide="repeat"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 04 · AGENTS ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">04</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Agents</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:460px;text-align:right">Every Claude Code session as a status row — approve, answer, or jump back to the terminal inline.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Active sessions</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <div style="display:flex;justify-content:center">
+        <!-- full agents panel -->
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 16px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:var(--accent,#d97742)"><i data-lucide="sparkles"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Agents</span>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#9a9a9a;padding:5px 8px;background:rgba(255,255,255,.06);border-radius:100px">claude · 5h 42%</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#e0a83e;padding:5px 8px;background:rgba(224,168,62,.1);border-radius:100px">7d 82%</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">
+            <!-- running -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px 13px;display:flex;align-items:center;gap:11px">
+              <span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(63,178,127,.3);border-top-color:#3fb27f;flex:none"></span>
+              <div style="flex:1;min-width:0">
+                <div style="font:500 14px/1.1 Geist;color:#ededed">refactor auth flow</div>
+                <div style="font:400 11px/1 'Geist Mono',monospace;color:#3fb27f;margin-top:4px">running · editing 3 files · 2m</div>
+              </div>
+              <div data-ico style="width:17px;height:17px;color:#6e6e6e"><i data-lucide="corner-up-left"></i></div>
+            </div>
+            <!-- permission -->
+            <div style="background:#141414;border:1px solid rgba(224,168,62,.28);border-radius:12px;padding:12px 13px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:12px;height:12px;border-radius:50%;background:#e0a83e;flex:none;animation:vpulse 1.6s ease-in-out infinite;margin:2px"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font:500 14px/1.1 Geist;color:#ededed">write migration</div>
+                  <div style="font:400 11px/1 'Geist Mono',monospace;color:#e0a83e;margin-top:4px">wants to run · rails db:migrate</div>
+                </div>
+                <div data-ico style="width:17px;height:17px;color:var(--accent,#d97742)"><i data-lucide="maximize-2"></i></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:11px">
+                <div style="flex:1;text-align:center;font:600 12px/1 Geist;color:#0a0a0a;background:#3fb27f;border-radius:8px;padding:8px 0">Allow</div>
+                <div style="flex:1;text-align:center;font:600 12px/1 Geist;color:#e5645f;border:1px solid rgba(229,100,95,.4);border-radius:8px;padding:8px 0">Deny</div>
+              </div>
+            </div>
+            <!-- question -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px 13px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div data-ico style="width:16px;height:16px;color:var(--accent,#d97742);flex:none"><i data-lucide="message-circle-question"></i></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font:500 14px/1.1 Geist;color:#ededed">design tokens</div>
+                  <div style="font:400 11px/1 'Geist Mono',monospace;color:#9a9a9a;margin-top:4px">which package manager?</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:11px">
+                <div style="display:flex;align-items:center;gap:9px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:7px 9px"><span style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);font:700 10px/16px Geist;text-align:center;color:#cfcfcf">1</span><span style="font:500 12px/1 Geist;color:#ededed">pnpm</span></div>
+                <div style="display:flex;align-items:center;gap:9px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:7px 9px"><span style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);font:700 10px/16px Geist;text-align:center;color:#cfcfcf">2</span><span style="font:500 12px/1 Geist;color:#ededed">npm</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;margin:36px 0 22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Other states</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <!-- empty states -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <div>
+            <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e;margin-bottom:12px">State · not set up</div>
+            <div style="background:#000;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:26px 22px;text-align:center">
+              <div data-ico style="width:24px;height:24px;color:var(--accent,#d97742);margin:0 auto"><i data-lucide="wrench"></i></div>
+              <div style="font:600 15px/1.2 Geist;color:#ededed;margin-top:12px">Set up Claude Code</div>
+              <div style="font:400 12px/1.5 Geist;color:#8a8a8a;margin-top:6px">Install hooks so VibeIsland can track your sessions.</div>
+              <div style="display:inline-block;margin-top:14px;font:600 12px/1 Geist;color:#0a0a0a;background:var(--accent,#d97742);border-radius:100px;padding:9px 18px">Install hooks</div>
+            </div>
+          </div>
+          <div>
+            <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e;margin-bottom:12px">State · idle</div>
+            <div style="background:#000;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:26px 22px;text-align:center">
+              <div data-ico style="width:24px;height:24px;color:#6e6e6e;margin:0 auto"><i data-lucide="moon"></i></div>
+              <div style="font:600 15px/1.2 Geist;color:#cfcfcf;margin-top:12px">No active sessions</div>
+              <div style="font:400 12px/1.4 'Geist Mono',monospace;color:#7a7a7a;margin-top:8px">$ claude</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 05 · STATS ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">05</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">System stats</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:470px;text-align:right">The rainbow graphs are gone. Every sparkline is monochrome; color returns only to flag a threshold.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:flex;justify-content:center">
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <!-- header -->
+          <div style="display:flex;align-items:center;gap:10px;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px"><div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="activity"></i></div><span style="font:500 12px/1 Geist;color:#fff">System</span></div>
+            <span style="display:flex;align-items:center;gap:6px;margin-left:2px"><span style="width:6px;height:6px;border-radius:50%;background:#3fb27f;animation:vpulse 1.6s ease-in-out infinite"></span><span style="font:400 11px/1 'Geist Mono',monospace;color:#3fb27f">Live</span></span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <span style="font:500 11px/1 Geist;color:#cfcfcf;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:6px 12px">Pause</span>
+              <span style="font:500 11px/1 Geist;color:#6e6e6e;border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:6px 12px">Clear</span>
+            </div>
+          </div>
+          <!-- top row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px">
+            <!-- CPU -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px"><div data-ico-thin style="width:14px;height:14px;color:#8a8a8a"><i data-lucide="cpu"></i></div><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">CPU</span></div>
+              <div style="font:600 26px/1 Geist;color:#fafafa;letter-spacing:-.02em;margin-top:12px">14.2<span style="font-size:15px;color:#8a8a8a">%</span></div>
+              <svg viewBox="0 0 200 44" preserveAspectRatio="none" style="width:100%;height:40px;display:block;margin-top:10px">
+                <polygon points="0,44 0,34 24,36 48,30 72,31 96,24 120,29 144,20 168,25 192,19 200,21 200,44" fill="url(#spk)"/>
+                <polyline points="0,34 24,36 48,30 72,31 96,24 120,29 144,20 168,25 192,19 200,21" fill="none" stroke="#ededed" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <!-- Memory -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px"><div data-ico-thin style="width:14px;height:14px;color:#8a8a8a"><i data-lucide="memory-stick"></i></div><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">Memory</span></div>
+              <div style="font:600 26px/1 Geist;color:#e0a83e;letter-spacing:-.02em;margin-top:12px">99.5<span style="font-size:15px;opacity:.7">%</span></div>
+              <svg viewBox="0 0 200 44" preserveAspectRatio="none" style="width:100%;height:40px;display:block;margin-top:10px">
+                <polygon points="0,44 0,9 24,11 48,8 72,10 96,7 120,9 144,8 168,10 192,7 200,9 200,44" fill="url(#spk)"/>
+                <polyline points="0,9 24,11 48,8 72,10 96,7 120,9 144,8 168,10 192,7 200,9" fill="none" stroke="#e0a83e" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <!-- GPU -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px"><div data-ico-thin style="width:14px;height:14px;color:#8a8a8a"><i data-lucide="monitor"></i></div><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">GPU</span></div>
+              <div style="font:600 26px/1 Geist;color:#fafafa;letter-spacing:-.02em;margin-top:12px">17.3<span style="font-size:15px;color:#8a8a8a">%</span></div>
+              <svg viewBox="0 0 200 44" preserveAspectRatio="none" style="width:100%;height:40px;display:block;margin-top:10px">
+                <polygon points="0,44 0,40 20,20 40,44 60,14 80,10 100,40 120,18 140,34 160,12 180,30 200,20 200,44" fill="url(#spk)"/>
+                <polyline points="0,40 20,20 40,44 60,14 80,10 100,40 120,18 140,34 160,12 180,30 200,20" fill="none" stroke="#ededed" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <!-- bottom row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <!-- Network -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px"><div data-ico-thin style="width:14px;height:14px;color:#8a8a8a"><i data-lucide="globe"></i></div><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">Network</span><span style="margin-left:auto;font:400 11px/1 'Geist Mono',monospace;color:#9a9a9a">↓ 2.4 &nbsp; ↑ 0.3 MB/s</span></div>
+              <svg viewBox="0 0 400 40" preserveAspectRatio="none" style="width:100%;height:38px;display:block;margin-top:12px">
+                <polyline points="0,28 30,20 60,30 90,12 120,26 150,18 180,28 210,16 240,24 270,14 300,26 330,20 360,28 400,22" fill="none" stroke="#ededed" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+                <polyline points="0,34 30,32 60,35 90,30 120,34 150,31 180,35 210,30 240,33 270,31 300,34 330,32 360,35 400,33" fill="none" stroke="#666" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <!-- Disk -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px"><div data-ico-thin style="width:14px;height:14px;color:#8a8a8a"><i data-lucide="hard-drive"></i></div><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">Disk</span><span style="margin-left:auto;font:400 11px/1 'Geist Mono',monospace;color:#9a9a9a">R 44.3 &nbsp; W 0.0 MB/s</span></div>
+              <svg viewBox="0 0 400 40" preserveAspectRatio="none" style="width:100%;height:38px;display:block;margin-top:12px">
+                <polyline points="0,30 30,22 60,10 90,26 120,20 150,28 180,18 210,24 240,14 270,26 300,20 330,28 360,22 400,24" fill="none" stroke="#ededed" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+                <polyline points="0,36 30,36 60,35 90,36 120,36 150,35 180,36 210,36 240,35 270,36 300,36 330,35 360,36 400,36" fill="none" stroke="#666" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 06 · CLIPBOARD + COLOR ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">06</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Clipboard &amp; Color</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:470px;text-align:right">Utility popovers share the exact card, segmented control, and mono value styling.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+
+        <!-- clipboard -->
+        <div style="background:#000;border:1px solid rgba(255,255,255,.07);border-radius:16px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);padding:18px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div data-ico style="width:15px;height:15px;color:#cfcfcf"><i data-lucide="clipboard"></i></div>
+            <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a">Clipboard</span>
+            <div data-ico style="margin-left:auto;width:15px;height:15px;color:#6e6e6e"><i data-lucide="trash-2"></i></div>
+          </div>
+          <!-- segmented -->
+          <div style="display:flex;gap:4px;margin-top:16px;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:4px">
+            <div style="flex:1;text-align:center;font:500 12px/1 Geist;color:#0a0a0a;background:#ededed;border-radius:7px;padding:8px 0">History <span style="font-family:'Geist Mono',monospace;opacity:.6">8</span></div>
+            <div style="flex:1;text-align:center;font:500 12px/1 Geist;color:#9a9a9a;padding:8px 0">Favorites <span style="font-family:'Geist Mono',monospace;opacity:.7">3</span></div>
+          </div>
+          <!-- search -->
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:9px 12px">
+            <div data-ico style="width:13px;height:13px;color:#6e6e6e"><i data-lucide="search"></i></div>
+            <span style="font:400 12px/1 Geist;color:#6e6e6e">Search clipboard…</span>
+          </div>
+          <!-- list -->
+          <div style="display:flex;flex-direction:column;margin-top:10px">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.05)">
+              <div data-ico style="width:15px;height:15px;color:#8a8a8a"><i data-lucide="image"></i></div>
+              <div style="flex:1;min-width:0"><div style="font:500 13px/1.2 Geist;color:#ededed">Screenshot.png</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">image · 10 KB</div></div>
+              <span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">8m</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.05)">
+              <div data-ico style="width:15px;height:15px;color:#8a8a8a"><i data-lucide="file-text"></i></div>
+              <div style="flex:1;min-width:0"><div style="font:400 12px/1.2 'Geist Mono',monospace;color:#ededed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">transform: rotate(90deg);</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">text</div></div>
+              <span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">17h</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.05)">
+              <div data-ico style="width:15px;height:15px;color:#8a8a8a"><i data-lucide="link"></i></div>
+              <div style="flex:1;min-width:0"><div style="font:400 12px/1.2 'Geist Mono',monospace;color:#6ea8f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">github.com/vibeisland/app</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">url</div></div>
+              <span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">1d</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 4px">
+              <div data-ico style="width:15px;height:15px;color:#8a8a8a"><i data-lucide="file-text"></i></div>
+              <div style="flex:1;min-width:0"><div style="font:400 12px/1.2 'Geist Mono',monospace;color:#ededed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">y = f(w1x1 + w2x2 + b)</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">text</div></div>
+              <span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">1d</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- color picker -->
+        <div style="background:#000;border:1px solid rgba(255,255,255,.07);border-radius:16px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);padding:18px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div data-ico style="width:15px;height:15px;color:#cfcfcf"><i data-lucide="pipette"></i></div>
+            <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a">Color</span>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font:600 11px/1 Geist;color:#0a0a0a;background:#ededed;border-radius:100px;padding:7px 13px"><div data-ico style="width:12px;height:12px;color:#0a0a0a"><i data-lucide="plus"></i></div>Pick</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+            <!-- recents -->
+            <div>
+              <div style="font:400 10px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e;margin-bottom:10px">Recent · 30</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:8px 9px"><span style="width:24px;height:24px;border-radius:6px;background:#392017"></span><div><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">#392017</div><div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">5d</div></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 9px"><span style="width:24px;height:24px;border-radius:6px;background:#7e7ffa"></span><div><div style="font:500 12px/1 'Geist Mono',monospace;color:#cfcfcf">#7E7FFA</div><div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">7d</div></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 9px"><span style="width:24px;height:24px;border-radius:6px;background:#dc7d80"></span><div><div style="font:500 12px/1 'Geist Mono',monospace;color:#cfcfcf">#DC7D80</div><div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">8d</div></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 9px"><span style="width:24px;height:24px;border-radius:6px;background:#ffca17"></span><div><div style="font:500 12px/1 'Geist Mono',monospace;color:#cfcfcf">#FFCA17</div><div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">9d</div></div></div>
+              </div>
+            </div>
+            <!-- detail -->
+            <div>
+              <div style="font:400 10px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e;margin-bottom:10px">Formats</div>
+              <div style="height:64px;border-radius:10px;background:#392017;border:1px solid rgba(255,255,255,.08)"></div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+                <div style="display:flex;justify-content:space-between"><span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">HEX</span><span style="font:500 11px/1 'Geist Mono',monospace;color:#ededed">#392017</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">RGB</span><span style="font:500 11px/1 'Geist Mono',monospace;color:#ededed">57, 32, 23</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">HSL</span><span style="font:500 11px/1 'Geist Mono',monospace;color:#ededed">17, 42%, 16%</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">HSV</span><span style="font:500 11px/1 'Geist Mono',monospace;color:#ededed">17, 60%, 22%</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e">SwiftUI</span><span style="font:500 11px/1 'Geist Mono',monospace;color:#ededed">Color(…)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 07 · TIMER ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">07</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Timer</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:460px;text-align:right">Two forms, one system: the wide notch tab, and the narrow menu-bar popover — same digits, presets, and ring.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Form A · Notch tab</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <div style="display:flex;justify-content:center">
+        <!-- idle composer panel -->
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 16px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="timer"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Timer</span>
+            </div>
+            <span style="margin-left:auto;font:500 10px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e">Set duration</span>
+          </div>
+          <!-- duration fields -->
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px">
+            <div style="text-align:center"><div style="width:64px;height:52px;border-radius:11px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font:600 26px/1 'Geist Mono',monospace;color:#fafafa">00</div><div style="font:400 10px/1 Geist;color:#6e6e6e;margin-top:6px">Hours</div></div>
+            <span style="font:600 22px/1 'Geist Mono',monospace;color:#5a5a5a;margin-bottom:16px">:</span>
+            <div style="text-align:center"><div style="width:64px;height:52px;border-radius:11px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font:600 26px/1 'Geist Mono',monospace;color:#fafafa">25</div><div style="font:400 10px/1 Geist;color:#6e6e6e;margin-top:6px">Minutes</div></div>
+            <span style="font:600 22px/1 'Geist Mono',monospace;color:#5a5a5a;margin-bottom:16px">:</span>
+            <div style="text-align:center"><div style="width:64px;height:52px;border-radius:11px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font:600 26px/1 'Geist Mono',monospace;color:#fafafa">00</div><div style="font:400 10px/1 Geist;color:#6e6e6e;margin-top:6px">Seconds</div></div>
+            <div style="margin-left:auto;display:flex;flex-direction:column;gap:8px;align-self:stretch;padding-top:0">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-width:118px;background:#3fb27f;border-radius:11px;padding:0 18px;font:600 14px/1 Geist;color:#0a0a0a"><div data-ico style="width:13px;height:13px;color:#0a0a0a"><i data-lucide="play"></i></div>Start</div>
+              <div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);border-radius:11px;padding:9px 0"><div data-ico style="width:15px;height:15px;color:#cfcfcf"><i data-lucide="rotate-ccw"></i></div></div>
+            </div>
+          </div>
+          <!-- chip row -->
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:9px;background:rgba(63,178,127,.14);border:1px solid rgba(63,178,127,.4);border-radius:100px;padding:6px 12px"><span style="width:18px;height:18px;border-radius:50%;background:#3fb27f;display:flex;align-items:center;justify-content:center"><span data-ico style="width:9px;height:9px;color:#0a0a0a"><i data-lucide="play"></i></span></span><span style="font:500 12px/1 Geist;color:#ededed">Focus</span><span style="font:400 11px/1 'Geist Mono',monospace;color:#8a8a8a">25:00</span></div>
+            <div style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:100px;padding:6px 12px"><span style="width:18px;height:18px;border-radius:50%;background:#6ea8f5;display:flex;align-items:center;justify-content:center"><span data-ico style="width:9px;height:9px;color:#0a0a0a"><i data-lucide="play"></i></span></span><span style="font:500 12px/1 Geist;color:#ededed">Break</span><span style="font:400 11px/1 'Geist Mono',monospace;color:#8a8a8a">05:00</span></div>
+            <span style="width:1px;height:20px;background:rgba(255,255,255,.1);margin:0 2px"></span>
+            <span style="font:600 12px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:7px 12px">+1m</span>
+            <span style="font:600 12px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:7px 12px">+5m</span>
+            <span style="font:600 12px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:7px 12px">+10m</span>
+          </div>
+        </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;margin:36px 0 22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Other states</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <!-- active state -->
+        <div style="max-width:280px;margin:0 auto">
+          <div style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6e6e6e;margin-bottom:12px;text-align:center">State · running</div>
+          <div style="background:#000;border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center">
+            <div style="position:relative;width:130px;height:130px">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="7"/>
+                <circle cx="50" cy="50" r="44" fill="none" stroke="var(--accent,#d97742)" stroke-width="7" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="105"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font:600 30px/1 'Geist Mono',monospace;color:#fafafa;letter-spacing:-.01em">18:24</span></div>
+            </div>
+            <div style="font:600 15px/1 Geist;color:#ededed;margin-top:16px">Focus</div>
+            <span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent,#d97742);background:rgba(217,119,66,.14);border-radius:100px;padding:5px 10px;margin-top:8px">Running</span>
+            <div style="display:flex;gap:10px;margin-top:18px">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(217,119,66,.28);display:flex;align-items:center;justify-content:center"><div data-ico style="width:16px;height:16px;color:#fff"><i data-lucide="pause"></i></div></div>
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center"><div data-ico style="width:15px;height:15px;color:#cfcfcf"><i data-lucide="x"></i></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;margin:36px 0 22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Form B · Menu-bar popover</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+          <span style="font:400 11px/1 'Geist Mono',monospace;color:#6e6e6e">300&nbsp;pt wide · appears beside the notch</span>
+        </div>
+        <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center">
+
+          <!-- popover · setup -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+            <div style="width:300px;background:rgba(22,22,24,.92);border:1px solid rgba(255,255,255,.09);border-radius:14px;box-shadow:0 24px 60px -18px rgba(0,0,0,.9);padding:16px">
+              <!-- header -->
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><div data-ico style="width:17px;height:17px;color:#e6e6e6"><i data-lucide="timer"></i></div></div>
+                <div><div style="font:600 14px/1 Geist;color:#f2f2f2">Timer</div><div style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">Ready</div></div>
+              </div>
+              <!-- custom timer card -->
+              <div style="margin-top:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px">
+                <div style="font:600 13px/1 Geist;color:#ededed">Custom Timer</div>
+                <div style="display:flex;gap:6px;margin-top:12px">
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:7px 9px"><div><div style="font:500 8.5px/1 Geist;color:#8a8a8a">Hours</div><div style="font:600 13px/1 'Geist Mono',monospace;color:#fafafa;margin-top:4px">0</div></div><div style="display:flex;flex-direction:column;gap:3px;color:#6e6e6e"><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-up"></i></div><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-down"></i></div></div></div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:7px 9px"><div><div style="font:500 8.5px/1 Geist;color:#8a8a8a">Minutes</div><div style="font:600 13px/1 'Geist Mono',monospace;color:#fafafa;margin-top:4px">10</div></div><div style="display:flex;flex-direction:column;gap:3px;color:#6e6e6e"><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-up"></i></div><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-down"></i></div></div></div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:7px 9px"><div><div style="font:500 8.5px/1 Geist;color:#8a8a8a">Seconds</div><div style="font:600 13px/1 'Geist Mono',monospace;color:#fafafa;margin-top:4px">0</div></div><div style="display:flex;flex-direction:column;gap:3px;color:#6e6e6e"><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-up"></i></div><div data-ico style="width:11px;height:11px"><i data-lucide="chevron-down"></i></div></div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:10px">
+                  <span style="font:500 11px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px">+1m</span>
+                  <span style="font:500 11px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px">+5m</span>
+                  <span style="font:500 11px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px">+10m</span>
+                  <span style="font:500 11px/1 Geist;color:#cfcfcf;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px">+30m</span>
+                  <span style="margin-left:auto;width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center"><span data-ico style="width:12px;height:12px;color:#8a8a8a"><i data-lucide="rotate-ccw"></i></span></span>
+                </div>
+                <div style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:12px">10 min</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;background:var(--accent,#d97742);border-radius:8px;padding:9px 0;font:600 12px/1 Geist;color:#0a0a0a"><div data-ico style="width:12px;height:12px;color:#0a0a0a"><i data-lucide="play"></i></div>Start Custom Timer</div>
+              </div>
+              <div style="height:1px;background:rgba(255,255,255,.09);margin:14px -4px"></div>
+              <!-- presets -->
+              <div style="font:600 12px/1 Geist;color:#cfcfcf;padding-left:2px">Presets</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#d97742;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Focus</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">25:00</div></div><span data-ico style="width:11px;height:11px;color:#6e6e6e"><i data-lucide="play"></i></span></div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#6ea8f5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Break</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">05:00</div></div><span data-ico style="width:11px;height:11px;color:#6e6e6e"><i data-lucide="play"></i></span></div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#3fb27f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Tea steep</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">03:30</div></div><span data-ico style="width:11px;height:11px;color:#6e6e6e"><i data-lucide="play"></i></span></div>
+              </div>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">State · setup</span>
+          </div>
+
+          <!-- popover · running -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+            <div style="width:300px;background:rgba(22,22,24,.92);border:1px solid rgba(255,255,255,.09);border-radius:14px;box-shadow:0 24px 60px -18px rgba(0,0,0,.9);padding:16px">
+              <!-- header -->
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:32px;height:32px;border-radius:9px;background:rgba(217,119,66,.16);display:flex;align-items:center;justify-content:center"><div data-ico style="width:17px;height:17px;color:var(--accent,#d97742)"><i data-lucide="timer"></i></div></div>
+                <div><div style="font:600 14px/1 Geist;color:#f2f2f2">Timer</div><div style="font:500 11px/1 'Geist Mono',monospace;color:var(--accent,#d97742);margin-top:4px">Running</div></div>
+              </div>
+              <!-- active card -->
+              <div style="margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px">
+                <div style="font:600 14px/1 Geist;color:#f2f2f2">Focus</div>
+                <div style="font:700 30px/1 'Geist Mono',monospace;color:#fafafa;letter-spacing:-.01em;margin-top:8px">18:24</div>
+                <div style="height:5px;border-radius:100px;background:rgba(255,255,255,.12);margin-top:14px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:100px;background:var(--accent,#d97742)"></div></div>
+                <div style="display:flex;gap:8px;margin-top:14px">
+                  <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 0;font:600 12px/1 Geist;color:#ededed"><div data-ico style="width:12px;height:12px;color:#ededed"><i data-lucide="pause"></i></div>Pause</div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#e5645f;border-radius:8px;padding:8px 0;font:600 12px/1 Geist;color:#0a0a0a"><div data-ico style="width:12px;height:12px;color:#0a0a0a"><i data-lucide="square"></i></div>Stop</div>
+                </div>
+              </div>
+              <div style="height:1px;background:rgba(255,255,255,.09);margin:14px -4px"></div>
+              <!-- presets, active highlighted -->
+              <div style="font:600 12px/1 Geist;color:#cfcfcf;padding-left:2px">Presets</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(217,119,66,.18);border:1px solid rgba(217,119,66,.35);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#d97742;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Focus</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#c99;margin-top:4px">25:00</div></div><span style="width:22px;height:22px;border-radius:50%;background:rgba(217,119,66,.25);display:flex;align-items:center;justify-content:center"><span data-ico style="width:11px;height:11px;color:var(--accent,#d97742)"><i data-lucide="check"></i></span></span></div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#6ea8f5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Break</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">05:00</div></div><span data-ico style="width:11px;height:11px;color:#6e6e6e"><i data-lucide="play"></i></span></div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border-radius:9px;padding:9px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#3fb27f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></span><div style="flex:1"><div style="font:500 12px/1 Geist;color:#ededed">Tea steep</div><div style="font:500 10px/1 'Geist Mono',monospace;color:#8a8a8a;margin-top:4px">03:30</div></div><span data-ico style="width:11px;height:11px;color:#6e6e6e"><i data-lucide="play"></i></span></div>
+              </div>
+            </div>
+            <span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e6e">State · running</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 08 · WEATHER ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">08</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Weather</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:460px;text-align:right">Temperature is the hero in Geist; icons stay monochrome so the forecast never turns into confetti.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:flex;justify-content:center">
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="cloud-sun"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Weather</span>
+            </div>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font:400 11px/1 'Geist Mono',monospace;color:#8a8a8a"><span data-ico style="width:11px;height:11px"><i data-lucide="map-pin"></i></span>San Francisco</span>
+          </div>
+          <!-- current -->
+          <div style="display:flex;align-items:center;gap:26px;margin-top:8px">
+            <div data-ico-thin style="width:56px;height:56px;color:#e6e6e6;flex:none"><i data-lucide="cloud-sun"></i></div>
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font:600 56px/1 Geist;letter-spacing:-.04em;color:#fafafa">18°</div>
+              <div style="padding-top:6px"><div style="font:500 12px/1.3 'Geist Mono',monospace;color:#9a9a9a">H 21°</div><div style="font:500 12px/1.3 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">L 12°</div></div>
+            </div>
+            <div style="border-left:1px solid rgba(255,255,255,.08);padding-left:22px">
+              <div style="font:500 15px/1.2 Geist;color:#ededed">Partly cloudy</div>
+              <div style="font:400 12px/1.2 Geist;color:#8a8a8a;margin-top:4px">Feels like 17°</div>
+            </div>
+            <div style="margin-left:auto;display:grid;grid-template-columns:auto auto;gap:8px 20px">
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 'Geist Mono',monospace;color:#9a9a9a"><span data-ico style="width:13px;height:13px;color:#7a7a7a"><i data-lucide="sunrise"></i></span>6:42</span>
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 'Geist Mono',monospace;color:#9a9a9a"><span data-ico style="width:13px;height:13px;color:#7a7a7a"><i data-lucide="droplets"></i></span>64%</span>
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 'Geist Mono',monospace;color:#9a9a9a"><span data-ico style="width:13px;height:13px;color:#7a7a7a"><i data-lucide="sunset"></i></span>19:58</span>
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 'Geist Mono',monospace;color:#9a9a9a"><span data-ico style="width:13px;height:13px;color:#7a7a7a"><i data-lucide="wind"></i></span>11 km/h</span>
+            </div>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.08);margin:16px 0 14px"></div>
+          <!-- 7-day -->
+          <div style="display:grid;grid-template-columns:repeat(7,1fr)">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#cfcfcf">TODAY</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="cloud-sun"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">21°<span style="color:#6e6e6e">&nbsp;12°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">TUE</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="sun"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">24°<span style="color:#6e6e6e">&nbsp;13°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">WED</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="cloud"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">20°<span style="color:#6e6e6e">&nbsp;12°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">THU</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="cloud-rain"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">17°<span style="color:#6e6e6e">&nbsp;11°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">FRI</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="cloud-drizzle"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">16°<span style="color:#6e6e6e">&nbsp;10°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">SAT</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="cloud-sun"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">19°<span style="color:#6e6e6e">&nbsp;11°</span></div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><span style="font:500 11px/1 'Geist Mono',monospace;color:#8a8a8a">SUN</span><span data-ico-thin style="width:20px;height:20px;color:#c9c9c9"><i data-lucide="sun"></i></span><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">23°<span style="color:#6e6e6e">&nbsp;13°</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 09 · SHELF ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">09</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Shelf</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:460px;text-align:right">A drop zone and a share tile — the dashed border is the one place a stroke does the talking.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px;display:flex;justify-content:center">
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="inbox"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Shelf</span>
+            </div>
+            <span style="margin-left:auto;font:400 11px/1 'Geist Mono',monospace;color:#8a8a8a">3 items · 14.2 MB</span>
+          </div>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:14px;margin-top:6px">
+            <!-- share tile -->
+            <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 12px">
+              <div style="width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div data-ico-thin style="width:22px;height:22px;color:#cfcfcf"><i data-lucide="share"></i></div></div>
+              <div style="text-align:center"><div style="font:500 12px/1.2 Geist;color:#ededed">Quick Share</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:5px">AirDrop</div></div>
+            </div>
+            <!-- drop panel -->
+            <div style="border:1.5px dashed rgba(255,255,255,.14);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:10px">
+                <div style="flex:1;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:11px">
+                  <div style="width:100%;height:52px;border-radius:8px;background:repeating-linear-gradient(135deg,#2a2a2a 0 6px,#1e1e1e 6px 12px);display:flex;align-items:center;justify-content:center"><div data-ico style="width:18px;height:18px;color:#8a8a8a"><i data-lucide="image"></i></div></div>
+                  <div style="font:500 11px/1.2 Geist;color:#ededed;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">mockup-hero.png</div>
+                  <div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:4px">PNG · 8.1 MB</div>
+                </div>
+                <div style="flex:1;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:11px">
+                  <div style="width:100%;height:52px;border-radius:8px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center"><div data-ico style="width:18px;height:18px;color:#8a8a8a"><i data-lucide="file-text"></i></div></div>
+                  <div style="font:500 11px/1.2 Geist;color:#ededed;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">brief.pdf</div>
+                  <div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:4px">PDF · 240 KB</div>
+                </div>
+                <div style="flex:1;background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:11px">
+                  <div style="width:100%;height:52px;border-radius:8px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center"><div data-ico style="width:18px;height:18px;color:#8a8a8a"><i data-lucide="file-archive"></i></div></div>
+                  <div style="font:500 11px/1.2 Geist;color:#ededed;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">assets.zip</div>
+                  <div style="font:400 9px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:4px">ZIP · 5.9 MB</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:6px"><div data-ico style="width:13px;height:13px;color:#6e6e6e"><i data-lucide="plus"></i></div><span style="font:400 11px/1 'Geist Mono',monospace;letter-spacing:.06em;color:#6e6e6e">Drop files to stash them here</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ 10 · CALENDAR ══════════ -->
+    <div style="margin-top:96px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font:400 13px/1 'Geist Mono',monospace;color:#5a5a5a">10</span>
+        <h2 style="font:600 26px/1 Geist;letter-spacing:-.025em;color:#fafafa">Calendar</h2>
+        <span style="margin-left:auto;font:400 14px/1 Geist;color:#8a8a8a;max-width:460px;text-align:right">Two modes toggled from the header — week for the day's agenda, month for the overview; same accent for today, same event grammar.</span>
+      </div>
+
+      <div style="margin-top:36px;background:#0b0b0b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:40px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Mode A · Week</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <div style="display:flex;justify-content:center">
+        <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 18px">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+          <div style="display:flex;align-items:center;height:46px">
+            <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+              <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="calendar"></i></div>
+              <span style="font:500 12px/1 Geist;color:#fff">Calendar</span>
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px"><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a">July 2026</span><div style="display:flex;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px"><span style="font:500 10px/1 Geist;color:#0a0a0a;background:#ededed;border-radius:6px;padding:5px 9px">Week</span><span style="font:500 10px/1 Geist;color:#9a9a9a;padding:5px 9px">Month</span></div></div>
+          </div>
+          <!-- week strip -->
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e">MON</span><span style="font:500 16px/1 Geist;color:#9a9a9a">14</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e">TUE</span><span style="font:500 16px/1 Geist;color:#9a9a9a">15</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px;background:var(--accent,#d97742)"><span style="font:600 10px/1 'Geist Mono',monospace;color:rgba(0,0,0,.6)">WED</span><span style="font:600 16px/1 Geist;color:#0a0a0a">16</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e">THU</span><span style="font:500 16px/1 Geist;color:#ededed">17</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e">FRI</span><span style="font:500 16px/1 Geist;color:#ededed">18</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#5a5a5a">SAT</span><span style="font:500 16px/1 Geist;color:#7a7a7a">19</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 0;border-radius:11px"><span style="font:500 10px/1 'Geist Mono',monospace;color:#5a5a5a">SUN</span><span style="font:500 16px/1 Geist;color:#7a7a7a">20</span></div>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0 12px"></div>
+          <!-- events -->
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 4px">
+              <div style="width:52px;text-align:right"><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">09:30</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">10:00</div></div>
+              <span style="width:3px;height:34px;border-radius:100px;background:var(--accent,#d97742)"></span>
+              <div><div style="font:500 13px/1.2 Geist;color:#ededed">Design standup</div><div style="font:400 11px/1 Geist;color:#8a8a8a;margin-top:3px">Zoom · Product</div></div>
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 4px">
+              <div style="width:52px;text-align:right"><div style="font:500 12px/1 'Geist Mono',monospace;color:#ededed">13:00</div><div style="font:400 10px/1 'Geist Mono',monospace;color:#6e6e6e;margin-top:3px">14:00</div></div>
+              <span style="width:3px;height:34px;border-radius:100px;background:#6ea8f5"></span>
+              <div><div style="font:500 13px/1.2 Geist;color:#ededed">Redesign review — VibeIsland</div><div style="font:400 11px/1 Geist;color:#8a8a8a;margin-top:3px">Meeting room 4</div></div>
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 4px">
+              <div style="width:52px;text-align:right"><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.06em;color:#6e6e6e">ALL-DAY</span></div>
+              <span style="width:3px;height:34px;border-radius:100px;background:#3fb27f"></span>
+              <div><div style="font:500 13px/1.2 Geist;color:#ededed">Ship 1.0 to TestFlight</div><div style="font:400 11px/1 Geist;color:#8a8a8a;margin-top:3px">Release</div></div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;margin:36px 0 22px">
+          <span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#cfcfcf">Mode B · Month</span>
+          <span style="flex:1;height:1px;background:rgba(255,255,255,.08)"></span>
+        </div>
+        <div style="display:flex;justify-content:center">
+          <div style="width:720px;height:400px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,.07);border-radius:4px 4px 24px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9);position:relative;padding:0 18px 18px">
+            <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0f0f0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)"></div>
+            <div style="display:flex;align-items:center;height:46px">
+              <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);border-radius:100px;padding:6px 12px">
+                <div data-ico style="width:14px;height:14px;color:#fff"><i data-lucide="calendar"></i></div>
+                <span style="font:500 12px/1 Geist;color:#fff">Calendar</span>
+              </div>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+                <div style="display:flex;align-items:center;gap:8px"><span data-ico style="width:13px;height:13px;color:#6e6e6e"><i data-lucide="chevron-left"></i></span><span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a">July 2026</span><span data-ico style="width:13px;height:13px;color:#6e6e6e"><i data-lucide="chevron-right"></i></span></div>
+                <div style="display:flex;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px"><span style="font:500 10px/1 Geist;color:#9a9a9a;padding:5px 9px">Week</span><span style="font:500 10px/1 Geist;color:#0a0a0a;background:#ededed;border-radius:6px;padding:5px 9px">Month</span></div>
+              </div>
+            </div>
+            <!-- DOW header -->
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:4px">
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e;text-align:center">MON</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e;text-align:center">TUE</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e;text-align:center">WED</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e;text-align:center">THU</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#6e6e6e;text-align:center">FRI</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#5a5a5a;text-align:center">SAT</span>
+              <span style="font:500 10px/1 'Geist Mono',monospace;color:#5a5a5a;text-align:center">SUN</span>
+            </div>
+            <!-- month grid -->
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px">
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#5a5a5a">29</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#5a5a5a">30</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">1</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">2</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:#6ea8f5"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">3</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">4</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">5</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">6</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">7</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:var(--accent,#d97742)"></span><span style="width:4px;height:4px;border-radius:50%;background:#3fb27f"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">8</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">9</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:#6ea8f5"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">10</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">11</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">12</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">13</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">14</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:#3fb27f"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">15</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px;background:var(--accent,#d97742)"><span style="font:600 13px/1 Geist;color:#0a0a0a">16</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:rgba(0,0,0,.55)"></span><span style="width:4px;height:4px;border-radius:50%;background:rgba(0,0,0,.55)"></span><span style="width:4px;height:4px;border-radius:50%;background:rgba(0,0,0,.55)"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">17</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">18</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">19</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">20</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">21</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:#6ea8f5"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">22</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">23</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">24</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:var(--accent,#d97742)"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">25</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#7a7a7a">26</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">27</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">28</span><div style="display:flex;gap:3px;margin-top:5px"><span style="width:4px;height:4px;border-radius:50%;background:#3fb27f"></span></div></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">29</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">30</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#ededed">31</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#5a5a5a">1</span></div>
+              <div style="height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding-top:8px"><span style="font:500 13px/1 Geist;color:#5a5a5a">2</span></div>
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,.08);margin:12px 0"></div>
+            <!-- selected day summary -->
+            <div style="display:flex;align-items:center;gap:14px;padding:2px 4px 4px">
+              <span style="font:500 10px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a">Wed 16</span>
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 Geist;color:#cfcfcf"><span style="width:3px;height:14px;border-radius:100px;background:var(--accent,#d97742)"></span>09:30 Design standup</span>
+              <span style="display:flex;align-items:center;gap:7px;font:400 12px/1 Geist;color:#cfcfcf"><span style="width:3px;height:14px;border-radius:100px;background:#6ea8f5"></span>13:00 Redesign review</span>
+              <span style="margin-left:auto;font:400 11px/1 'Geist Mono',monospace;color:#6e6e6e">3 events</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ FOOTER ══════════ -->
+    <div style="margin-top:96px;padding-top:30px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="width:9px;height:9px;border-radius:3px;background:var(--accent,#d97742)"></span>
+      <span style="font:400 12px/1.5 'Geist Mono',monospace;letter-spacing:.06em;color:#6e6e6e">VibeIsland · an ink adaptation of the Vercel design language · Geist + Geist Mono · one accent, mono labels, monochrome data</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:2600},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#d97742&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#d97742&quot;,&quot;#0070f3&quot;,&quot;#3fb27f&quot;,&quot;#7928ca&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;grid&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.renderIcons(); }
+  componentDidUpdate() { this.renderIcons(); }
+  renderIcons() {
+    const run = () => { if (window.lucide) window.lucide.createIcons(); };
+    if (window.lucide) { run(); return; }
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.lucide || n++ > 60) { clearInterval(t); run(); }
+    }, 50);
+  }
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#d97742',
+      glowOp: (this.props.glow ?? true) ? 1 : 0,
+      gridOp: (this.props.grid ?? true) ? 1 : 0,
+    };
+  }
+}
+</script>
+</body>
+</html>
