@@ -131,20 +131,62 @@ struct GeistRow<Content: View>: View {
     }
 }
 
+/// A small ⓘ affordance that reveals help text on click (popover) and hover.
+/// Attach to any row whose purpose isn't self-evident.
+struct GeistInfoButton: View {
+    let text: String
+    @State private var showPopover = false
+
+    var body: some View {
+        Button { showPopover.toggle() } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(Geist.Colors.mute)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(text)
+        .popover(isPresented: $showPopover, arrowEdge: .bottom) {
+            Text(text)
+                .font(Geist.Typography.caption)
+                .foregroundStyle(Geist.Colors.body)
+                .frame(maxWidth: 260, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(Geist.Spacing.md)
+        }
+    }
+}
+
+/// A row title (`bodyStrong` ink text) with an optional trailing ⓘ info button.
+struct GeistRowTitle: View {
+    let title: String
+    var info: String?
+
+    var body: some View {
+        HStack(spacing: Geist.Spacing.xxs) {
+            Text(title)
+                .font(Geist.Typography.bodyStrong)
+                .foregroundStyle(Geist.Colors.ink)
+            if let info {
+                GeistInfoButton(text: info)
+            }
+        }
+    }
+}
+
 /// A labelled switch row (title + optional description + trailing Toggle).
 struct GeistToggleRow: View {
     let title: String
     var description: String?
     @Binding var isOn: Bool
     var divider: Bool = true
+    var info: String?
 
     var body: some View {
         GeistRow(divider: divider) {
             HStack(alignment: .center, spacing: Geist.Spacing.md) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(Geist.Typography.bodyStrong)
-                        .foregroundStyle(Geist.Colors.ink)
+                    GeistRowTitle(title: title, info: info)
                     if let description {
                         Text(description)
                             .font(Geist.Typography.caption)
@@ -167,14 +209,13 @@ struct GeistPickerRow<T: Hashable, Options: View>: View {
     let title: String
     @Binding var selection: T
     var divider: Bool = true
+    var info: String?
     @ViewBuilder var options: Options
 
     var body: some View {
         GeistRow(divider: divider) {
             HStack(spacing: Geist.Spacing.sm) {
-                Text(title)
-                    .font(Geist.Typography.bodyStrong)
-                    .foregroundStyle(Geist.Colors.ink)
+                GeistRowTitle(title: title, info: info)
                 Spacer(minLength: 0)
                 Picker("", selection: $selection) { options }
                     .labelsHidden()
@@ -190,14 +231,13 @@ struct GeistPickerRow<T: Hashable, Options: View>: View {
 struct GeistLabeledRow<Trailing: View>: View {
     let title: String
     var divider: Bool = true
+    var info: String?
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
         GeistRow(divider: divider) {
             HStack(spacing: Geist.Spacing.sm) {
-                Text(title)
-                    .font(Geist.Typography.bodyStrong)
-                    .foregroundStyle(Geist.Colors.ink)
+                GeistRowTitle(title: title, info: info)
                 Spacer(minLength: 0)
                 trailing
             }
@@ -213,15 +253,14 @@ struct GeistSliderRow<V: BinaryFloatingPoint>: View where V.Stride: BinaryFloati
     let range: ClosedRange<V>
     var step: V.Stride = 1
     var divider: Bool = true
+    var info: String?
     var onChange: (() -> Void)?
 
     var body: some View {
         GeistRow(divider: divider) {
             VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
                 HStack(spacing: Geist.Spacing.sm) {
-                    Text(title)
-                        .font(Geist.Typography.bodyStrong)
-                        .foregroundStyle(Geist.Colors.ink)
+                    GeistRowTitle(title: title, info: info)
                     Spacer(minLength: 0)
                     if let valueLabel {
                         Text(valueLabel)
@@ -247,15 +286,14 @@ struct GeistStepperRow: View {
     var step: Int = 1
     var divider: Bool = true
     var valueLabel: String?
+    var info: String?
     var onChange: (() -> Void)?
 
     var body: some View {
         GeistRow(divider: divider) {
             HStack(alignment: .center, spacing: Geist.Spacing.md) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(Geist.Typography.bodyStrong)
-                        .foregroundStyle(Geist.Colors.ink)
+                    GeistRowTitle(title: title, info: info)
                     if let description {
                         Text(description)
                             .font(Geist.Typography.caption)
@@ -285,14 +323,13 @@ struct GeistSegmentedRow<T: Hashable, Options: View>: View {
     let title: String
     @Binding var selection: T
     var divider: Bool = true
+    var info: String?
     @ViewBuilder var options: Options
 
     var body: some View {
         GeistRow(divider: divider) {
             VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
-                Text(title)
-                    .font(Geist.Typography.bodyStrong)
-                    .foregroundStyle(Geist.Colors.ink)
+                GeistRowTitle(title: title, info: info)
                 Picker("", selection: $selection) { options }
                     .labelsHidden()
                     .pickerStyle(.segmented)

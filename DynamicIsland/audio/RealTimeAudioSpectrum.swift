@@ -51,7 +51,7 @@ class RealTimeAudioSpectrum: NSView {
         let barCount = 4
         let spacing: CGFloat = barWidth
         let totalWidth = CGFloat(barCount) * (barWidth + spacing)
-        let totalHeight: CGFloat = 14
+        let totalHeight: CGFloat = 18
         frame.size = CGSize(width: totalWidth, height: totalHeight)
 
         for i in 0 ..< barCount {
@@ -114,8 +114,9 @@ class RealTimeAudioSpectrum: NSView {
         // Update each bar with its corresponding band magnitude
         for (index, barLayer) in barLayers.enumerated() {
             let magnitude = magnitudes[index]
-            // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal
-            let scale = max(0.2, min(1.0, CGFloat(magnitude) * 1.5 + 0.2))
+            // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal.
+            // Higher multiplier = bars reach full height more readily (more lively).
+            let scale = max(0.2, min(1.0, CGFloat(magnitude) * 4.0 + 0.2))
             
             CATransaction.begin()
             CATransaction.setDisableActions(true)
