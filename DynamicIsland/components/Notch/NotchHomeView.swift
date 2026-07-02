@@ -728,7 +728,7 @@ struct NotchHomeView: View {
                 if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
+                        .padding(5)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 }
 
@@ -738,7 +738,7 @@ struct NotchHomeView: View {
                     NotchAgentsView(showsInputOverlay: false)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .environmentObject(vm)
-                        .padding(14)
+                        .padding(5)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 } else if Defaults[.showCalendar] {
                     Group {
@@ -756,7 +756,7 @@ struct NotchHomeView: View {
                         vm.setScrollGestureSuppression(false, token: calendarScrollSuppressionToken)
                     }
                     .environmentObject(vm)
-                    .padding(14)
+                    .padding(5)
                     .notchCard(radius: NotchDesign.Radius.lg)
                 }
 
