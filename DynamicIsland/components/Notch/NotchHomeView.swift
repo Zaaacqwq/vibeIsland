@@ -290,16 +290,6 @@ struct MusicControlsView: View {
     @Default(.enableLyrics) private var enableLyrics
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 6
-    /// Measured via `.onGeometryChange` rather than wrapping the row in a
-    /// `GeometryReader` — a bare `GeometryReader` has no intrinsic height, so
-    /// when its parent proposes more height than the content needs (e.g. the
-    /// Agents column growing when a session appears) it silently *centers*
-    /// its child in the extra space, shoving this row down into the controls
-    /// row below it. Reading width this way keeps the VStack's real,
-    /// content-sized height so siblings stack normally regardless of how
-    /// much height the parent happens to offer.
-    @State private var songInfoWidth: CGFloat = 200
-
     var body: some View {
         VStack(alignment: .leading) {
             songInfoAndSlider
@@ -314,20 +304,24 @@ struct MusicControlsView: View {
     }
 
     private var songInfoAndSlider: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center, spacing: 11) {
-                AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                    .frame(width: 44, height: 44)
-                songInfo(width: songInfoWidth)
+        GeometryReader { geo in
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 11) {
+                    AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
+                        .frame(width: 44, height: 44)
+                    songInfo(width: max(0, geo.size.width - 55))
+                }
+                musicSlider
             }
-            musicSlider
+            // Pin to the top of whatever height the parent proposes — a bare
+            // GeometryReader centers its child by default, which shoved this
+            // row down into the controls row below whenever the parent
+            // offered more height than the content needed.
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .padding(.top, 10)
         .padding(.leading, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { width in
-            songInfoWidth = max(0, width - 55)
-        }
     }
 
     private func songInfo(width: CGFloat) -> some View {
