@@ -96,7 +96,7 @@ struct NotchAgentsView: View {
             if !showsInputOverlay {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13))
-                    .foregroundStyle(NotchDesign.Colors.accent)
+                    .foregroundStyle(claudeColor)
                 NotchMonoEyebrow(text: "Agents")
             }
             Spacer()
@@ -123,23 +123,37 @@ struct NotchAgentsView: View {
 
     @ViewBuilder
     private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        if let five = usage.fiveHour {
-            usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
-        }
-        if let week = usage.sevenDay {
-            usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
+        HStack(spacing: 4) {
+            Image("claude-icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 12, height: 12)
+                .help("Claude usage")
+            if let five = usage.fiveHour {
+                usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
+            }
+            if let week = usage.sevenDay {
+                usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
+            }
         }
     }
 
     @ViewBuilder
     private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
-        ForEach(usage.windows) { window in
-            usageBadge(
-                title: window.label,
-                percent: window.roundedUsedPercentage,
-                warn: window.usedPercentage >= 80,
-                help: "Codex \(window.label) limit used"
-            )
+        HStack(spacing: 4) {
+            Image("codex-icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 12, height: 12)
+                .help("Codex usage")
+            ForEach(usage.windows) { window in
+                usageBadge(
+                    title: window.label,
+                    percent: window.roundedUsedPercentage,
+                    warn: window.usedPercentage >= 80,
+                    help: "Codex \(window.label) limit used"
+                )
+            }
         }
     }
 
