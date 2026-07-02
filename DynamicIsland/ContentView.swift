@@ -254,6 +254,18 @@ struct ContentView: View {
             )
         }
     }
+
+    /// Open/close transition for the whole content stack: a top-down drop that
+    /// blurs + fades in (and collapses back upward on close), restoring the
+    /// original expand feel. Symmetric so closing mirrors opening. This is owned
+    /// by the open-state container, distinct from `tabSwitchTransition` which
+    /// handles horizontal slides between tabs while already open.
+    private var notchOpenTransition: AnyTransition {
+        .move(edge: .top).combined(with: .modifier(
+            active: BlurFadeModifier(radius: 14, opacity: 0),
+            identity: BlurFadeModifier(radius: 0, opacity: 1)
+        ))
+    }
     
     private var standardMediaControlsActive: Bool {
         showStandardMediaControls && !enableMinimalisticUI
@@ -947,46 +959,53 @@ struct ContentView: View {
               
               ZStack {
                   if vm.notchState == .open {
-                      Group {
-                          switch coordinator.currentView {
-                              case .home:
-                                  NotchHomeView(albumArtNamespace: albumArtNamespace)
-                              case .shelf:
-                                  NotchShelfView()
-                              case .timer:
-                                  NotchTimerView()
-                            case .agents:
-                                NotchAgentsView()
-                            case .calendar:
-                                StandaloneCalendarView()
-                                    .onHover { hovering in
-                                        vm.setScrollGestureSuppression(hovering, token: calendarTabScrollSuppressionToken)
-                                    }
-                                    .onDisappear {
-                                        vm.setScrollGestureSuppression(false, token: calendarTabScrollSuppressionToken)
-                                    }
-                            case .notifications:
-                                NotchNotificationCenterView()
-                                    .environmentObject(vm)
-                            case .weather:
-                                NotchWeatherView()
-                                    .environmentObject(vm)
+                      // Outer container owns the OPEN/CLOSE transition (top-down
+                      // drop + blur in, collapse upward on close). The inner id'd
+                      // switch owns TAB switches (horizontal slide). Nesting keeps
+                      // the two distinct: opening the notch fires the outer
+                      // transition only, while changing tabs fires the inner one.
+                      ZStack {
+                          Group {
+                              switch coordinator.currentView {
+                                  case .home:
+                                      NotchHomeView(albumArtNamespace: albumArtNamespace)
+                                  case .shelf:
+                                      NotchShelfView()
+                                  case .timer:
+                                      NotchTimerView()
+                                case .agents:
+                                    NotchAgentsView()
+                                case .calendar:
+                                    StandaloneCalendarView()
+                                        .onHover { hovering in
+                                            vm.setScrollGestureSuppression(hovering, token: calendarTabScrollSuppressionToken)
+                                        }
+                                        .onDisappear {
+                                            vm.setScrollGestureSuppression(false, token: calendarTabScrollSuppressionToken)
+                                        }
+                                case .notifications:
+                                    NotchNotificationCenterView()
+                                        .environmentObject(vm)
+                                case .weather:
+                                    NotchWeatherView()
+                                        .environmentObject(vm)
+                              }
                           }
+                          .id(coordinator.currentView)
+                          // Tab switching always uses the directional horizontal slide
+                          // (driven by `tabSwitchForward`). Per-tab views must NOT
+                          // attach their own root `.transition` or it overrides this
+                          // slide (blur / vertical / opacity-in-place).
+                          .transition(tabSwitchTransition)
                       }
-                      .id(coordinator.currentView)
-                      // Tab switching always uses the directional horizontal slide
-                      // (driven by `tabSwitchForward`). `useModernCloseAnimation`
-                      // only governs the notch frame open/close spring (see
-                      // `configuredMainLayout`), not the content transition.
-                      // Per-tab views must NOT attach their own root `.transition`
-                      // or it overrides this slide (blur / vertical / opacity-in-place).
-                      .transition(tabSwitchTransition)
+                      .transition(notchOpenTransition)
                   }
               }
               .zIndex(1)
               .allowsHitTesting(vm.notchState == .open)
               .blur(radius: abs(gestureProgress) > 0.3 ? min(abs(gestureProgress), 8) : 0)
               .opacity(abs(gestureProgress) > 0.3 ? min(abs(gestureProgress * 2), 0.8) : 1)
+              .animation(.spring(response: 0.42, dampingFraction: 0.9, blendDuration: 0), value: vm.notchState)
               .animation(.smooth(duration: 0.3), value: coordinator.currentView)
           }
       }

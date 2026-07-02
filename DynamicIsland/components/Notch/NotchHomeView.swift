@@ -704,9 +704,10 @@ struct NotchHomeView: View {
                 mainContent
             }
         }
-        // No root `.transition`: the tab switcher in ContentView owns the
-        // appear/disappear animation (a directional horizontal slide). A blur
-        // transition here would override it and make Home fade/blur in instead.
+        // No root `.transition`: ContentView owns both the open/close transition
+        // (top-down drop + blur, on the open-state container) and the horizontal
+        // tab-switch slide (on the id'd switch). A transition here would override
+        // them.
     }
 
     private var mainContent: some View {
@@ -749,10 +750,9 @@ struct NotchHomeView: View {
                 
             }
         }
-        // No root `.transition` here either — the tab switcher owns the slide.
-        // This previously combined blur + `.move(edge: .top)`, which is what made
-        // Home drop in from the top instead of sliding sideways. The `.blur` below
-        // is a separate closed-state effect and stays.
+        // No root `.transition` here either — ContentView owns open/close (top-down
+        // drop + blur) and tab-switch (horizontal slide). The `.blur` below is a
+        // separate closed-state effect and stays.
         .blur(radius: vm.notchState == .closed ? 30 : 0)
         .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
     }
