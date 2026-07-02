@@ -183,6 +183,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
+    private var audioTapObserversInstalled = false
     private var optionalShortcutHandlersRegistered = false
     private weak var focusWithoutDevToolsMenuItem: NSMenuItem?
     private weak var focusUseDevToolsMenuItem: NSMenuItem?
@@ -245,6 +246,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     /// Setup observers for music player state changes to restart AudioTap capture
     private func setupAudioTapMusicObservers() {
+        // Install once — this is called from both initial launch and the
+        // enableRealTimeWaveform toggle; re-running would duplicate observers.
+        guard !audioTapObserversInstalled else { return }
+        audioTapObserversInstalled = true
+
+        // Only capture system audio while something is actually playing. This
+        // keeps the CoreAudio tap (and the macOS "System Audio Recording"
+        // indicator) off whenever playback is paused/idle, and avoids the
+        // constant IO callback cost when there's nothing to visualize.
+        MusicManager.shared.$isPlaying
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { isPlaying in
+                guard Defaults[.enableRealTimeWaveform] else { return }
+                if isPlaying {
+                    Task { await AudioTap.shared.startCapture() }
+                } else {
+                    AudioTap.shared.stopCapture()
+                }
+            }
+            .store(in: &cancellables)
+
         // Listen for app launches to restart capture when music apps are opened
         let targetBundleIDs = [
             "com.apple.Music",
@@ -268,8 +291,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                   let bundleID = app.bundleIdentifier,
                   targetBundleIDs.contains(bundleID) else { return }
             
-            // A target music app was launched, restart capture to include it
-            if Defaults[.enableRealTimeWaveform] {
+            // A target music app was launched; only refresh capture if we're
+            // actively playing (otherwise the isPlaying observer starts it fresh
+            // once playback begins, picking up the new app).
+            if Defaults[.enableRealTimeWaveform] && MusicManager.shared.isPlaying {
                 print("🎵 [AudioTap] Music app launched: \(bundleID), restarting capture...")
                 // Give the app a moment to fully launch
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -288,10 +313,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                   let bundleID = app.bundleIdentifier,
                   targetBundleIDs.contains(bundleID) else { return }
             
-            // A target music app was terminated, restart capture to update the list
+            // A target music app was terminated; only refresh capture if still
+            // playing from another source, otherwise just stop.
             if Defaults[.enableRealTimeWaveform] {
-                print("🎵 [AudioTap] Music app terminated: \(bundleID), restarting capture...")
-                AudioTap.shared.restartCapture()
+                if MusicManager.shared.isPlaying {
+                    print("🎵 [AudioTap] Music app terminated: \(bundleID), restarting capture...")
+                    AudioTap.shared.restartCapture()
+                } else {
+                    AudioTap.shared.stopCapture()
+                }
             }
         }
     }
@@ -656,22 +686,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
         
-        // Setup Real-time Audio Waveform capture if enabled
+        // Setup Real-time Audio Waveform capture if enabled. Capture is gated on
+        // playback (see setupAudioTapMusicObservers) — start now only if already
+        // playing; otherwise the observer starts it when playback begins.
         if Defaults[.enableRealTimeWaveform] {
-            Task {
-                await AudioTap.shared.startCapture()
-            }
             setupAudioTapMusicObservers()
+            if MusicManager.shared.isPlaying {
+                Task { await AudioTap.shared.startCapture() }
+            }
         }
-        
+
         // Observe enableRealTimeWaveform changes
         Defaults.publisher(.enableRealTimeWaveform, options: [])
             .sink { [weak self] change in
                 if change.newValue {
-                    Task {
-                        await AudioTap.shared.startCapture()
-                    }
                     self?.setupAudioTapMusicObservers()
+                    if MusicManager.shared.isPlaying {
+                        Task { await AudioTap.shared.startCapture() }
+                    }
                 } else {
                     AudioTap.shared.stopCapture()
                 }
