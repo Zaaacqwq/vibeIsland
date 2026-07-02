@@ -418,6 +418,7 @@ struct MusicControlsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.bottom, 8)
     }
 
     private var shouldShowControlHUDRow: Bool {
