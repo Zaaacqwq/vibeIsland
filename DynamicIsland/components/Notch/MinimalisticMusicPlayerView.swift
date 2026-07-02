@@ -644,9 +644,9 @@ private struct MinimalisticReminderDetailsView: View {
             .fill(Defaults[.coloredSpectrogram] ? Color(nsColor: MusicManager.shared.avgColor).gradient : Color.gray.gradient)
             .mask {
                 AudioVisualizerView(isPlaying: .constant(MusicManager.shared.isPlaying))
-                    .frame(width: 20, height: 16)
+                    .frame(width: 16, height: 18)
             }
-            .frame(width: 20, height: 16)
+            .frame(width: 16, height: 18)
             .matchedGeometryEffect(id: "spectrum", in: albumArtNamespace)
     }
     

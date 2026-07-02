@@ -116,7 +116,7 @@ struct MinimalisticMusicView: View {
                 .frame(width: 50, alignment: .center)
                 .mask {
                     AudioVisualizerView(isPlaying: $musicManager.isPlaying)
-                        .frame(width: 16, height: 12)
+                        .frame(width: 16, height: 18)
                 }
                 .frame(width: max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12)),
                        height: max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12)), alignment: .center)

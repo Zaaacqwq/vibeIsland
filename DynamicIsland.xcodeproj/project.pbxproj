@@ -71,7 +71,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "" build phase */ = {
+		7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "Copy Files" phase from "DynamicIsland" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
 				Helpers/NowPlayingTestClient = (CodeSignOnCopy, );
@@ -90,7 +90,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				7EA69B1E2F5AE61200EB2D16 /* Exceptions for "Contents" folder in "DynamicIsland" target */,
-				7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "" build phase */,
+				7EA69B202F5AE63200EB2D16 /* Exceptions for "Contents" folder in "Copy Files" phase from "DynamicIsland" target */,
 			);
 			path = Contents;
 			sourceTree = "<group>";
@@ -263,7 +263,7 @@
 				7E61181F2E24071E0050006C /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
 				7E09D5962EB7B497005AF41D /* XCRemoteSwiftPackageReference "open-meteo" */,
 				7EF19C152F577040005B9929 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
-				808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */,
+				808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "Packages/OpenIslandEngine" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F54406E82CD4987A00C7AFD9 /* Products */;
@@ -451,7 +451,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
-				DEVELOPMENT_TEAM = 2BM54B4CS9;
+				DEVELOPMENT_TEAM = 66M8FY87U6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -524,7 +524,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = 9Y64TRM77N;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 66M8FY87U6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -607,7 +607,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */ = {
+		808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "Packages/OpenIslandEngine" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/OpenIslandEngine;
 		};
@@ -730,12 +730,12 @@
 		};
 		5A3ACE8DF5DFC55301948002 /* VibeIslandAgentKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */;
+			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "Packages/OpenIslandEngine" */;
 			productName = VibeIslandAgentKit;
 		};
 		751D122FB2749407D65EA317 /* OpenIslandCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "OpenIslandEngine" */;
+			package = 808CA5DE0559C004722478CA /* XCLocalSwiftPackageReference "Packages/OpenIslandEngine" */;
 			productName = OpenIslandCore;
 		};
 		7E61181E2E24071E0050006C /* SkyLightWindow */ = {

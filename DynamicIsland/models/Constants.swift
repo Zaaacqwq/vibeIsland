@@ -560,7 +560,6 @@ extension Defaults.Keys {
         //static let openLastTabByDefault = Key<Bool>("openLastTabByDefault", default: false)
     
         // MARK: Appearance
-    static let showEmojis = Key<Bool>("showEmojis", default: false)
         //static let alwaysShowTabs = Key<Bool>("alwaysShowTabs", default: true)
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
@@ -613,8 +612,6 @@ extension Defaults.Keys {
     static let waitInterval = Key<Double>("waitInterval", default: 3)
     static let showShuffleAndRepeat = Key<Bool>("showShuffleAndRepeat", default: true)
     static let showMediaOutputControl = Key<Bool>("showMediaOutputControl", default: true)
-    static let musicAuxLeftControl = Key<MusicAuxiliaryControl>("musicAuxLeftControl", default: .shuffle)
-    static let musicAuxRightControl = Key<MusicAuxiliaryControl>("musicAuxRightControl", default: .repeatMode)
     static let didMigrateMusicAuxControls = Key<Bool>("didMigrateMusicAuxControls", default: false)
     static let musicControlSlots = Key<[MusicControlButton]>("musicControlSlots", default: MusicControlButton.defaultLayout)
     static let didMigrateMusicControlSlots = Key<Bool>("didMigrateMusicControlSlots", default: false)
@@ -650,15 +647,12 @@ extension Defaults.Keys {
 
         // MARK: Downloads
     static let enableDownloadListener = Key<Bool>("enableDownloadListener", default: true)
-    static let enableSafariDownloads = Key<Bool>("enableSafariDownloads", default: true)
     static let selectedDownloadIndicatorStyle = Key<DownloadIndicatorStyle>("selectedDownloadIndicatorStyle", default: DownloadIndicatorStyle.progress)
-    static let selectedDownloadIconStyle = Key<DownloadIconStyle>("selectedDownloadIconStyle", default: DownloadIconStyle.onlyAppIcon)
     
         // MARK: HUD
     static let inlineHUD = Key<Bool>("inlineHUD", default: true)
     static let progressBarStyle = Key<ProgressBarStyle>("progressBarStyle", default: .hierarchical)
     // Legacy support - keeping for backward compatibility
-    static let enableGradient = Key<Bool>("enableGradient", default: false)
     static let systemEventIndicatorShadow = Key<Bool>("systemEventIndicatorShadow", default: false)
     static let systemEventIndicatorUseAccent = Key<Bool>("systemEventIndicatorUseAccent", default: false)
     static let showProgressPercentages = Key<Bool>("showProgressPercentages", default: true)
@@ -672,7 +666,6 @@ extension Defaults.Keys {
         static let localSendDevicePickerLiquidGlassVariant = Key<LiquidGlassVariant>("localSendDevicePickerLiquidGlassVariant", default: .v11)
         static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
         static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
-        static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
     
         // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
@@ -680,12 +673,10 @@ extension Defaults.Keys {
         static let autoScrollToNextEvent = Key<Bool>("autoScrollToNextEvent", default: true)
     
         // MARK: Fullscreen Media Detection
-    static let alwaysHideInFullscreen = Key<Bool>("alwaysHideInFullscreen", default: false)
     
     static let hideNotchOption = Key<HideNotchOption>("hideNotchOption", default: .nowPlayingOnly)
     
     // MARK: Wobble Animation
-    static let enableWobbleAnimation = Key<Bool>("enableWobbleAnimation", default: false)
     
     // MARK: Media Controller
     static let mediaController = Key<MediaControllerType>("mediaController", default: defaultMediaController)
@@ -704,8 +695,6 @@ extension Defaults.Keys {
     static let showBluetoothDeviceNameMarquee = Key<Bool>("showBluetoothDeviceNameMarquee", default: false)
 
     // MARK: Stats Feature
-    static let autoStartStatsMonitoring = Key<Bool>("autoStartStatsMonitoring", default: true)
-    static let cpuTemperatureUnit = Key<TemperatureUnit>("cpuTemperatureUnit", default: .celsius)
     
     
     // MARK: Timer Feature
@@ -720,7 +709,6 @@ extension Defaults.Keys {
     static let timerShowsProgress = Key<Bool>("timerShowsProgress", default: true)
     static let timerProgressStyle = Key<TimerProgressStyle>("timerProgressStyle", default: .bar)
     static let mirrorSystemTimer = Key<Bool>("mirrorSystemTimer", default: true)
-    static let timerInputStyle = Key<TimerInputStyle>("timerInputStyle", default: .manual)
     
     
     // MARK: Reminder Live Activity
@@ -730,11 +718,8 @@ extension Defaults.Keys {
     static let reminderSneakPeekDuration = Key<Double>("reminderSneakPeekDuration", default: 5)
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
-    static let showColorFormats = Key<Bool>("showColorFormats", default: true)
-    static let colorHistorySize = Key<Int>("colorHistorySize", default: 10)
     
     // MARK: Clipboard Feature
-    static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 3)
     
     static let closedNotchActivityPriorityOrder = Key<[ClosedNotchActivityKind]>(
         "closedNotchActivityPriorityOrder",
@@ -755,7 +740,6 @@ extension Defaults.Keys {
     static let enableVolumeHUD = Key<Bool>("enableVolumeHUD", default: true)
     static let enableBrightnessHUD = Key<Bool>("enableBrightnessHUD", default: true)
     static let enableKeyboardBacklightHUD = Key<Bool>("enableKeyboardBacklightHUD", default: true)
-    static let systemHUDSensitivity = Key<Int>("systemHUDSensitivity", default: 5)
     static let playVolumeChangeFeedback = Key<Bool>("playVolumeChangeFeedback", default: false)
 
     // Step sizes for hardware media keys (percent of full range, 1-25)
@@ -858,7 +842,6 @@ extension Defaults.Keys {
     
     // MARK: Caps Lock Indicator
     static let enableCapsLockIndicator = Key<Bool>("enableCapsLockIndicator", default: true)
-    static let capsLockIndicatorUseGreenColor = Key<Bool>("capsLockIndicatorUseGreenColor", default: false) // Legacy toggle
     static let capsLockIndicatorTintMode = Key<CapsLockIndicatorTintMode>("capsLockIndicatorTintMode", default: .white)
     static let didMigrateCapsLockTintMode = Key<Bool>("didMigrateCapsLockTintMode", default: false)
     static let showCapsLockLabel = Key<Bool>("showCapsLockLabel", default: false)
@@ -877,14 +860,6 @@ extension Defaults.Keys {
     static let showLiveCanvasInDynamicIsland = Key<Bool>("showLiveCanvasInDynamicIsland", default: false)
     
     // MARK: Notes Feature
-    static let enableNotePinning = Key<Bool>("enableNotePinning", default: true)
-    static let enableNoteSearch = Key<Bool>("enableNoteSearch", default: false)
-    static let enableNoteColorFiltering = Key<Bool>("enableNoteColorFiltering", default: false)
-    static let enableCreateFromClipboard = Key<Bool>("enableCreateFromClipboard", default: true)
-    static let enableNoteCharCount = Key<Bool>("enableNoteCharCount", default: true)
-    static let savedNotes = Key<[NoteItem]>("savedNotes", default: [])
-    static let enableAppleNotesSync = Key<Bool>("enableAppleNotesSync", default: false)
-    static let appleNotesLastSyncDate = Key<Date?>("appleNotesLastSyncDate", default: nil)
     
     // Helper to determine the default media controller based on macOS version
     static var defaultMediaController: MediaControllerType {
@@ -895,64 +870,5 @@ extension Defaults.Keys {
         }
     }
     
-    // Migration helper to convert from legacy enableGradient Boolean to new ProgressBarStyle enum
-    static func migrateProgressBarStyle() {
-        // Check if migration is needed by seeing if the old Boolean was set to gradient
-        let wasGradientEnabled = Defaults[.enableGradient]
-        
-        // Only migrate if we're still using the default hierarchical value but gradient was enabled
-        if wasGradientEnabled && Defaults[.progressBarStyle] == .hierarchical {
-            Defaults[.progressBarStyle] = .gradient
-        }
-    }
-
-    static func migrateMusicAuxControls() {
-        if Defaults[.didMigrateMusicAuxControls] == false {
-            if Defaults[.showMediaOutputControl] {
-                Defaults[.musicAuxRightControl] = .mediaOutput
-            }
-
-            Defaults[.didMigrateMusicAuxControls] = true
-        }
-
-        normalizeMusicAuxControls()
-    }
-
-    static func migrateCapsLockTintMode() {
-        guard Defaults[.didMigrateCapsLockTintMode] == false else { return }
-
-        let legacyGreen = Defaults[.capsLockIndicatorUseGreenColor]
-        Defaults[.capsLockIndicatorTintMode] = legacyGreen ? .green : .white
-        Defaults[.didMigrateCapsLockTintMode] = true
-    }
-
-    static func migrateMusicControlSlots() {
-        guard Defaults[.didMigrateMusicControlSlots] == false else { return }
-
-        let allowMediaOutput = Defaults[.showMediaOutputControl]
-        let baseLayout: [MusicControlButton]
-
-        if Defaults[.showShuffleAndRepeat] {
-            var slots = MusicControlButton.defaultLayout
-            let left = MusicControlButton(auxiliaryControl: Defaults[.musicAuxLeftControl])
-            let right = MusicControlButton(auxiliaryControl: Defaults[.musicAuxRightControl])
-            slots[0] = left
-            slots[4] = right
-            baseLayout = slots
-        } else {
-            baseLayout = MusicControlButton.minimalLayout
-        }
-
-        Defaults[.musicControlSlots] = baseLayout.normalized(allowingMediaOutput: allowMediaOutput)
-        Defaults[.didMigrateMusicControlSlots] = true
-    }
-
-    private static func normalizeMusicAuxControls() {
-        guard Defaults[.musicAuxLeftControl] == Defaults[.musicAuxRightControl] else { return }
-
-        let current = Defaults[.musicAuxLeftControl]
-        let fallback = MusicAuxiliaryControl.alternative(excluding: current)
-        Defaults[.musicAuxRightControl] = fallback
-    }
     static let showSongMetadataInClosedNotch = Key<Bool>("showSongMetadataInClosedNotch", default: false)
 }

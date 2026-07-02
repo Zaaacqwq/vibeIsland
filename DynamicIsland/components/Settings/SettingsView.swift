@@ -20,9 +20,10 @@ import UniformTypeIdentifiers
 /// Groups for organizing settings tabs in the sidebar.
 private enum SettingsTabGroup: String, CaseIterable, Identifiable {
     case core
-    case mediaAndDisplay
-    case system
+    case mediaAndLiveActivities
+    case hudsAndHardware
     case productivity
+    case notchWidgets
     case utilities
     case developer
     case info
@@ -32,13 +33,14 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
     /// Display title for the section header.  `nil` means no visible header.
     var title: String? {
         switch self {
-        case .core:             return nil
-        case .mediaAndDisplay:  return String(localized: "Media & Display")
-        case .system:           return String(localized: "System")
-        case .productivity:     return String(localized: "Productivity")
-        case .utilities:        return String(localized: "Utilities")
-        case .developer:        return String(localized: "Developer")
-        case .info:             return nil
+        case .core:                   return nil
+        case .mediaAndLiveActivities: return String(localized: "Media & Live Activities")
+        case .hudsAndHardware:        return String(localized: "HUDs & Hardware")
+        case .productivity:           return String(localized: "Productivity")
+        case .notchWidgets:           return String(localized: "Notch Widgets")
+        case .utilities:              return String(localized: "Utilities")
+        case .developer:              return String(localized: "Developer")
+        case .info:                   return nil
         }
     }
 }
@@ -67,14 +69,14 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     /// Which sidebar group this tab belongs to.
     var group: SettingsTabGroup {
         switch self {
-        case .general, .appearance:                                          return .core
-        case .media, .liveActivities, .devices, .notifications, .weather: return .mediaAndDisplay
-        case .hudAndOSD, .battery:                                           return .system
-        case .timer, .calendar:                                      return .productivity
-        case .shelf,
-             .downloads, .shortcuts:                                         return .utilities
-        case .agents, .debug:                             return .developer
-        case .about:                                                         return .info
+        case .general, .appearance:            return .core
+        case .media, .liveActivities:          return .mediaAndLiveActivities
+        case .hudAndOSD, .devices, .battery:   return .hudsAndHardware
+        case .timer, .calendar:                return .productivity
+        case .weather, .notifications:         return .notchWidgets
+        case .shelf, .downloads, .shortcuts:   return .utilities
+        case .agents, .debug:                  return .developer
+        case .about:                           return .info
         }
     }
 
@@ -435,24 +437,26 @@ struct SettingsView: View {
     }
 
     private var availableTabs: [SettingsTab] {
-        // Ordered to match group layout: core → media & display → system →
-        // productivity → utilities → developer → integrations → info.
+        // Ordered to match group layout: core → media & live activities →
+        // HUDs & hardware → productivity → notch widgets → utilities →
+        // developer → info.
         let ordered: [SettingsTab] = [
             // Core
             .general,
             .appearance,
-            // Media & Display
+            // Media & Live Activities
             .media,
             .liveActivities,
-            .notifications,
-            .weather,
-            .devices,
-            // System
+            // HUDs & Hardware
             .hudAndOSD,
+            .devices,
             .battery,
             // Productivity
             .timer,
             .calendar,
+            // Notch Widgets
+            .weather,
+            .notifications,
             // Utilities
             .shelf,
             .downloads,
@@ -661,7 +665,6 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .general, title: "Extend hover area", keywords: ["hover", "cursor"], highlightID: SettingsTab.general.highlightID(for: "Extend hover area")),
             SettingsSearchEntry(tab: .general, title: "Enable haptics", keywords: ["haptic", "feedback"], highlightID: SettingsTab.general.highlightID(for: "Enable haptics")),
             SettingsSearchEntry(tab: .general, title: "Open notch on hover", keywords: ["hover to open", "auto open"], highlightID: SettingsTab.general.highlightID(for: "Open notch on hover")),
-            SettingsSearchEntry(tab: .general, title: "External display style", keywords: ["dynamic island", "pill", "external display", "non-notch", "floating", "capsule"], highlightID: SettingsTab.general.highlightID(for: "External display style")),
             SettingsSearchEntry(tab: .general, title: "Hide until hovered", keywords: ["hide", "hover", "external", "non-notch", "auto hide", "slide"], highlightID: SettingsTab.general.highlightID(for: "Hide until hovered")),
             SettingsSearchEntry(tab: .general, title: "Notch display height", keywords: ["display height", "menu bar size"], highlightID: SettingsTab.general.highlightID(for: "Notch display height")),
 
@@ -734,10 +737,10 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .media, title: "Auto-hide inactive notch media player", keywords: ["auto hide", "inactive", "placeholder", "notch media"], highlightID: SettingsTab.media.highlightID(for: "Auto-hide inactive notch media player")),
             SettingsSearchEntry(tab: .media, title: "Show Change Media Output control", keywords: ["airplay", "route picker", "media output"], highlightID: SettingsTab.media.highlightID(for: "Show Change Media Output control")),
             SettingsSearchEntry(tab: .media, title: "Enable album art parallax effect", keywords: ["parallax", "parallax effect", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable album art parallax effect")),
+            SettingsSearchEntry(tab: .media, title: "Show song info in closed notch", keywords: ["song info", "metadata", "closed notch", "title", "artist"], highlightID: SettingsTab.media.highlightID(for: "Show song info in closed notch")),
 
             // Calendar
             SettingsSearchEntry(tab: .calendar, title: "Show calendar", keywords: ["calendar", "events"], highlightID: SettingsTab.calendar.highlightID(for: "Show calendar")),
-            SettingsSearchEntry(tab: .calendar, title: "Enable reminder live activity", keywords: ["reminder", "live activity"], highlightID: SettingsTab.calendar.highlightID(for: "Enable reminder live activity")),
             SettingsSearchEntry(tab: .calendar, title: "Countdown style", keywords: ["reminder countdown"], highlightID: SettingsTab.calendar.highlightID(for: "Countdown style")),
             SettingsSearchEntry(tab: .calendar, title: "Show events within the next", keywords: ["calendar widget", "lookahead"], highlightID: SettingsTab.calendar.highlightID(for: "Show events within the next")),
             SettingsSearchEntry(tab: .calendar, title: "Show events from all calendars", keywords: ["calendar widget", "selection"], highlightID: SettingsTab.calendar.highlightID(for: "Show events from all calendars")),
@@ -762,17 +765,18 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .shelf, title: "LocalSend Device Picker Style", keywords: ["localsend", "glass", "picker", "material"], highlightID: SettingsTab.shelf.highlightID(for: "Device Picker Style")),
 
             // Appearance
-            SettingsSearchEntry(tab: .appearance, title: "Main screen style", keywords: ["dynamic island", "pill", "non-notch", "display style", "notch style"], highlightID: SettingsTab.appearance.highlightID(for: "Main screen style")),
+            SettingsSearchEntry(tab: .appearance, title: "Non-notch display style", keywords: ["dynamic island", "pill", "non-notch", "display style", "notch style", "external display", "main screen"], highlightID: SettingsTab.appearance.highlightID(for: "Non-notch display style")),
             SettingsSearchEntry(tab: .appearance, title: "Settings icon in notch", keywords: ["settings button", "toolbar"], highlightID: SettingsTab.appearance.highlightID(for: "Settings icon in notch")),
             SettingsSearchEntry(tab: .appearance, title: "Enable window shadow", keywords: ["shadow", "appearance"], highlightID: SettingsTab.appearance.highlightID(for: "Enable window shadow")),
             SettingsSearchEntry(tab: .appearance, title: "Corner radius scaling", keywords: ["corner radius", "shape"], highlightID: SettingsTab.appearance.highlightID(for: "Corner radius scaling")),
             SettingsSearchEntry(tab: .appearance, title: "Use simpler close animation", keywords: ["close animation", "notch"], highlightID: SettingsTab.appearance.highlightID(for: "Use simpler close animation")),
             SettingsSearchEntry(tab: .appearance, title: "Notch Width", keywords: ["expanded notch", "width", "resize"], highlightID: SettingsTab.appearance.highlightID(for: "Expanded notch width")),
-            SettingsSearchEntry(tab: .appearance, title: "Enable colored spectrograms", keywords: ["spectrogram", "audio"], highlightID: SettingsTab.appearance.highlightID(for: "Enable colored spectrograms")),
-            SettingsSearchEntry(tab: .appearance, title: "Enable colored lyrics", keywords: ["lyrics", "color", "album color"], highlightID: SettingsTab.appearance.highlightID(for: "Enable colored lyrics")),
-            SettingsSearchEntry(tab: .appearance, title: "Enable player color tinting", keywords: ["tint", "album color", "player"], highlightID: SettingsTab.appearance.highlightID(for: "Enable player color tinting")),
-            SettingsSearchEntry(tab: .appearance, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.appearance.highlightID(for: "Enable blur effect behind album art")),
-            SettingsSearchEntry(tab: .appearance, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.appearance.highlightID(for: "Slider color")),
+            SettingsSearchEntry(tab: .media, title: "Enable colored spectrograms", keywords: ["spectrogram", "audio"], highlightID: SettingsTab.media.highlightID(for: "Enable colored spectrograms")),
+            SettingsSearchEntry(tab: .media, title: "Enable colored lyrics", keywords: ["lyrics", "color", "album color"], highlightID: SettingsTab.media.highlightID(for: "Enable colored lyrics")),
+            SettingsSearchEntry(tab: .media, title: "Enable player color tinting", keywords: ["tint", "album color", "player"], highlightID: SettingsTab.media.highlightID(for: "Enable player color tinting")),
+            SettingsSearchEntry(tab: .media, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable blur effect behind album art")),
+            SettingsSearchEntry(tab: .media, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.media.highlightID(for: "Slider color")),
+            SettingsSearchEntry(tab: .appearance, title: "Real-time audio waveform", keywords: ["waveform", "audio", "visualizer", "spectrum"], highlightID: SettingsTab.appearance.highlightID(for: "Real-time audio waveform")),
             SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
             SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
@@ -786,14 +790,6 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .timer, title: "Solid colour", keywords: ["timer colour", "custom"], highlightID: SettingsTab.timer.highlightID(for: "Solid colour")),
             SettingsSearchEntry(tab: .timer, title: "Progress style", keywords: ["progress", "bar", "ring"], highlightID: SettingsTab.timer.highlightID(for: "Progress style")),
             SettingsSearchEntry(tab: .timer, title: "Accent colour", keywords: ["accent", "timer"], highlightID: SettingsTab.timer.highlightID(for: "Accent colour")),
-
-            // Stats
-
-            // Clipboard
-
-            // Color Picker
-
-            // Terminal
         ]
     }
 
@@ -891,7 +887,6 @@ struct GeneralSettings: View {
     @State private var screens: [String] = NSScreen.screens.compactMap { $0.localizedName }
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.showEmojis) var showEmojis
     @Default(.gestureSensitivity) var gestureSensitivity
     @Default(.minimumHoverDuration) var minimumHoverDuration
     @Default(.nonNotchHeight) var nonNotchHeight
@@ -906,7 +901,6 @@ struct GeneralSettings: View {
     @Default(.enableHorizontalTabGestures) var enableHorizontalTabGestures
     @Default(.reverseSwipeGestures) var reverseSwipeGestures
     @Default(.reverseScrollGestures) var reverseScrollGestures
-    @Default(.externalDisplayStyle) var externalDisplayStyle
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
 
     private var gestureSensitivityLabel: String {
@@ -1057,10 +1051,10 @@ struct GeneralSettings: View {
             title: "Notch behavior",
             footer: "When \"Hide until hovered\" is enabled, the notch slides up and hides on external (non-notch) displays until you hover over it."
         ) {
-            GeistToggleRow(title: "Extend hover area", isOn: geistBinding(.extendHoverArea))
-            GeistToggleRow(title: "Enable haptics", isOn: geistBinding(.enableHaptics))
-            GeistToggleRow(title: "Open notch on hover", isOn: geistBinding(.openNotchOnHover))
-            GeistToggleRow(title: "Remember last tab", isOn: $coordinator.openLastTabByDefault)
+            GeistToggleRow(title: "Extend hover area", isOn: geistBinding(.extendHoverArea), info: "Enlarges the invisible hover zone around the notch so it's easier to trigger.")
+            GeistToggleRow(title: "Enable haptics", isOn: geistBinding(.enableHaptics), info: "Plays trackpad haptic feedback when the notch opens and closes.")
+            GeistToggleRow(title: "Open notch on hover", isOn: geistBinding(.openNotchOnHover), info: "Expands the notch automatically when the pointer hovers over it, instead of requiring a click.")
+            GeistToggleRow(title: "Remember last tab", isOn: $coordinator.openLastTabByDefault, info: "Reopens the notch on the tab you last used rather than the default Home tab.")
             if openNotchOnHover {
                 GeistSliderRow(
                     title: "Minimum hover duration",
@@ -1068,18 +1062,6 @@ struct GeneralSettings: View {
                     value: $minimumHoverDuration, range: 0...1, step: 0.1,
                     onChange: { NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil) }
                 )
-            }
-            GeistPickerRow(title: "External display style", selection: $externalDisplayStyle) {
-                ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
-            }
-            .onChange(of: externalDisplayStyle) {
-                NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-            }
-            GeistRow {
-                Text(externalDisplayStyle.description)
-                    .font(Geist.Typography.caption)
-                    .foregroundStyle(Geist.Colors.body)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             GeistToggleRow(title: "Hide until hovered on non-notch displays", isOn: $hideNonNotchUntilHover, divider: false)
         }
@@ -1247,7 +1229,6 @@ struct Charge: View {
 
 struct Downloads: View {
     @Default(.selectedDownloadIndicatorStyle) var selectedDownloadIndicatorStyle
-    @Default(.selectedDownloadIconStyle) var selectedDownloadIconStyle
 
     var body: some View {
         GeistSettingsPage(title: "Downloads") {
@@ -1914,7 +1895,6 @@ struct HUD: View {
     @Default(.enableVolumeHUD) var enableVolumeHUD
     @Default(.enableBrightnessHUD) var enableBrightnessHUD
     @Default(.enableKeyboardBacklightHUD) var enableKeyboardBacklightHUD
-    @Default(.systemHUDSensitivity) var systemHUDSensitivity
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var accessibilityPermission = AccessibilityPermissionStore.shared
 
@@ -1986,8 +1966,8 @@ struct HUD: View {
                     Text("Gradient").tag(ProgressBarStyle.gradient)
                     Text("Segmented").tag(ProgressBarStyle.segmented)
                 }
-                GeistToggleRow(title: "Enable glowing effect", isOn: geistBinding(.systemEventIndicatorShadow))
-                GeistToggleRow(title: "Use accent color", isOn: geistBinding(.systemEventIndicatorUseAccent), divider: false)
+                GeistToggleRow(title: "Enable glowing effect", isOn: geistBinding(.systemEventIndicatorShadow), info: "Adds a soft glow around the HUD progress bar.")
+                GeistToggleRow(title: "Use accent color", isOn: geistBinding(.systemEventIndicatorUseAccent), divider: false, info: "Fills the HUD progress bar with your accent color instead of white.")
             }
         }
         .onAppear {
@@ -2016,8 +1996,12 @@ struct Media: View {
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     @Default(.parallaxEffectIntensity) private var parallaxEffectIntensity
+    @Default(.enableLyrics) private var enableLyrics
+    @Default(.showLyricsInClosedNotch) private var showLyricsInClosedNotch
+    @Default(.showLiveCanvasInDynamicIsland) private var showLiveCanvasInDynamicIsland
+    @Default(.showSongMetadataInClosedNotch) private var showSongMetadataInClosedNotch
+    @Default(.sliderColor) private var sliderColor
 
-    
     @ObservedObject private var musicManager = MusicManager.shared
 
     private var isAppleMusicActive: Bool {
@@ -2060,8 +2044,9 @@ struct Media: View {
             GeistSection(title: "Dynamic Island Visibility") {
                 GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
                     .disabled(enableMinimalisticUI)
-                GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer, divider: visibilityNote != nil)
+                GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer)
                     .disabled(enableMinimalisticUI || !showStandardMediaControls)
+                GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: visibilityNote != nil, info: "Shows the current track title and artist beside the closed notch pill.")
                 if let visibilityNote {
                     GeistRow(divider: false) {
                         Text(visibilityNote)
@@ -2069,6 +2054,36 @@ struct Media: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+            }
+
+            GeistSection(
+                title: "Sneak Peek",
+                footer: "Sneak Peek briefly shows the track title and artist under the notch when playback changes."
+            ) {
+                GeistToggleRow(title: "Enable Sneak Peek", isOn: $enableSneakPeek)
+                GeistToggleRow(title: "Show on track change", isOn: $showSneakPeekOnTrackChange)
+                    .disabled(!enableSneakPeek)
+                GeistSegmentedRow(title: "Sneak Peek style", selection: $sneakPeekStyles, divider: false) {
+                    ForEach(SneakPeekStyle.allCases) { Text($0.LocalizedName).tag($0) }
+                }
+                .disabled(!enableSneakPeek)
+            }
+
+            GeistSection(
+                title: "Lyrics",
+                footer: "Fetches synced lyrics for the current track. Live canvas shows Spotify's looping video art when available."
+            ) {
+                GeistToggleRow(title: "Enable lyrics", isOn: $enableLyrics)
+                GeistToggleRow(title: "Show lyrics in closed notch", isOn: $showLyricsInClosedNotch)
+                    .disabled(!enableLyrics)
+                GeistToggleRow(title: "Show live canvas in Dynamic Island", isOn: $showLiveCanvasInDynamicIsland, divider: false, info: "Plays Spotify Canvas looping video behind the album art when the track has one.")
+            }
+
+            GeistSection(title: "Skip Buttons") {
+                GeistSegmentedRow(title: "Skip button behavior", selection: $musicSkipBehavior, divider: false) {
+                    ForEach(MusicSkipBehavior.allCases) { Text($0.displayName).tag($0) }
+                }
+                .help(musicSkipBehavior.description)
             }
 
             GeistSection(title: "Media controls", badge: "Beta") {
@@ -2088,6 +2103,17 @@ struct Media: View {
             }
             .disabled(!showStandardMediaControls)
             .opacity(showStandardMediaControls ? 1 : 0.5)
+
+            GeistSection(title: "Appearance") {
+                GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
+                GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
+                GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")
+                GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
+                GeistSliderRow(title: "Album art parallax", valueLabel: parallaxEffectIntensity == 0 ? "Off" : String(format: "%.0f", parallaxEffectIntensity), value: $parallaxEffectIntensity, range: 0...20, step: 1, info: "3D tilt of the album art as you move the pointer. Set to Off to disable.")
+                GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
+                    ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+            }
 
             GeistSection(title: "Fullscreen", badge: "Beta") {
                 GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
@@ -2135,26 +2161,6 @@ struct Media: View {
         }
     }
 
-    private var unavailableBlurRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Enable media panel blur")
-                .foregroundStyle(.secondary)
-            Text("Only applies when Material is set to Frosted Glass.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    private var customLiquidBlurRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Enable media panel blur")
-                .foregroundStyle(.secondary)
-            Text("Custom liquid glass already renders with Apple's liquid material, so this option is managed automatically.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 }
 
 struct CalendarSettings: View {
@@ -2268,8 +2274,10 @@ struct CalendarSettings: View {
                         .disabled(!showCalendar)
                 }
 
-                GeistSection(title: "Reminder Live Activity") {
-                    GeistToggleRow(title: "Enable reminder live activity", isOn: $enableReminderLiveActivity)
+                GeistSection(
+                    title: "Reminder Live Activity",
+                    footer: "Turn the reminder live activity on or off in the Live Activities tab. These settings control how it looks."
+                ) {
                     GeistSegmentedRow(title: "Countdown style", selection: $reminderPresentationStyle) {
                         ForEach(ReminderPresentationStyle.allCases) { Text($0.displayName).tag($0) }
                     }
@@ -2478,7 +2486,6 @@ struct About: View {
 
 struct Shelf: View {
     @Default(.quickShareProvider) var quickShareProvider
-    @Default(.expandedDragDetection) var expandedDragDetection
     @Default(.copyOnDrag) var copyOnDrag
     @Default(.autoRemoveShelfItems) var autoRemoveShelfItems
     @StateObject private var quickShareService = QuickShareService.shared
@@ -2532,7 +2539,6 @@ struct Shelf: View {
                 GeistToggleRow(title: "Enable shelf", isOn: geistBinding(.dynamicShelf))
                     .disabled(!canEnableShelf)
                 GeistToggleRow(title: "Open shelf tab by default if items added", isOn: geistBinding(.openShelfByDefault))
-                GeistToggleRow(title: "Expanded drag detection area", isOn: $expandedDragDetection)
                 GeistToggleRow(title: "Copy items on drag", isOn: $copyOnDrag)
                 GeistToggleRow(title: "Remove from shelf after dragging", isOn: $autoRemoveShelfItems, divider: false)
             }
@@ -2824,226 +2830,50 @@ struct LiveActivitiesSettings: View {
 
 struct Appearance: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.sliderColor) var sliderColor
-    @Default(.useMusicVisualizer) var useMusicVisualizer
-    @Default(.customVisualizers) var customVisualizers
-    @Default(.selectedVisualizer) var selectedVisualizer
     @Default(.customAppIcons) private var customAppIcons
     @Default(.selectedAppIconID) private var selectedAppIconID
     @Default(.openNotchWidth) var openNotchWidth
     @Default(.autoNotchWidth) var autoNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
-    @State private var selectedListVisualizer: CustomVisualizer? = nil
 
     @State private var isIconImporterPresented = false
     @State private var isIconDropTarget = false
     @State private var iconImportError: String?
 
-    @State private var isPresented: Bool = false
-    @State private var name: String = ""
-    @State private var url: String = ""
-    @State private var speed: CGFloat = 1.0
-
-    /// Whether the main screen has a physical notch.
-    private var mainScreenHasPhysicalNotch: Bool {
-        guard let screen = NSScreen.main else { return false }
-        return screen.safeAreaInsets.top > 0
-    }
-
-    private var notchWidthRange: ClosedRange<Double> {
-        let minW = Double(currentRecommendedMinimumNotchWidth())
-        let maxW = min(900, Double(maxAllowedNotchWidth()))
-        return minW...max(minW, maxW)
-    }
-    private var defaultOpenNotchWidth: CGFloat {
-        currentRecommendedMinimumNotchWidth()
-    }
-
     var body: some View {
         GeistSettingsPage(title: "Appearance") {
             GeistSection(title: "General") {
-                GeistToggleRow(title: "Always show tabs", isOn: $coordinator.alwaysShowTabs)
-                GeistToggleRow(title: "Settings icon in notch", isOn: geistBinding(.settingsIconInNotch))
+                GeistToggleRow(title: "Always show tabs", isOn: $coordinator.alwaysShowTabs, info: "Keeps the tab bar visible in the open notch instead of only showing it on hover.")
+                GeistToggleRow(title: "Settings icon in notch", isOn: geistBinding(.settingsIconInNotch), info: "Shows a gear button in the open notch that opens this Settings window.")
                 GeistToggleRow(title: "Enable window shadow", isOn: geistBinding(.enableShadow))
-                GeistToggleRow(title: "Corner radius scaling", isOn: geistBinding(.cornerRadiusScaling))
-                GeistToggleRow(title: "Use simpler close animation", isOn: geistBinding(.useModernCloseAnimation), divider: false)
+                GeistToggleRow(title: "Corner radius scaling", isOn: geistBinding(.cornerRadiusScaling), info: "Scales the notch's rounded corners with its size so the curvature stays proportional.")
+                GeistToggleRow(title: "Use simpler close animation", isOn: geistBinding(.useModernCloseAnimation), divider: false, info: "Uses a lighter close animation. Enabled automatically in Minimalistic UI mode.")
             }
 
-            // Show display style picker only on non-notch Macs (main screen has no physical notch)
-            if !mainScreenHasPhysicalNotch {
-                GeistSection(title: "Display Style") {
-                    GeistPickerRow(title: "Main screen style", selection: $externalDisplayStyle) {
-                        ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
-                    }
-                    .onChange(of: externalDisplayStyle) {
-                        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
-                    }
-                    GeistRow(divider: false) {
-                        Text(externalDisplayStyle.description)
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            GeistSection(title: "Display Style") {
+                GeistPickerRow(
+                    title: "Non-notch display style",
+                    selection: $externalDisplayStyle,
+                    info: "How the island looks on displays without a physical notch — the main screen on non-notch Macs, or external monitors on a notch MacBook."
+                ) {
+                    ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
+                }
+                .onChange(of: externalDisplayStyle) {
+                    NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
+                }
+                GeistRow(divider: false) {
+                    Text(externalDisplayStyle.description)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
             notchWidthControls()
 
-            GeistSection(title: "Media") {
-                GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
-                GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
-                GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting))
-                GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
-                GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
-                    ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-            }
-
-            GeistSection(title: "Custom music live activity animation", badge: "Coming soon") {
-                GeistToggleRow(title: "Use music visualizer spectrogram", isOn: $useMusicVisualizer.animation(), divider: !useMusicVisualizer)
-                    .disabled(true)
-                if !useMusicVisualizer {
-                    if customVisualizers.count > 0 {
-                        GeistPickerRow(title: "Selected animation", selection: $selectedVisualizer, divider: false) {
-                            ForEach(customVisualizers, id: \.self) { Text($0.name).tag($0) }
-                        }
-                    } else {
-                        GeistLabeledRow(title: "Selected animation", divider: false) {
-                            Text("No custom animation available")
-                                .font(Geist.Typography.body).foregroundStyle(Geist.Colors.mute)
-                        }
-                    }
-                }
-            }
-
-            GeistSection(title: customVisualizers.isEmpty ? "Custom visualizers (Lottie)" : "Custom visualizers (Lottie) – \(customVisualizers.count)") {
-              GeistRow(divider: false) {
-                List {
-                    ForEach(customVisualizers, id: \.self) { visualizer in
-                        HStack {
-                            LottieView(state: LUStateData(type: .loadedFrom(visualizer.url), speed: visualizer.speed, loopMode: .loop))
-                                .frame(width: 30, height: 30, alignment: .center)
-                            Text(visualizer.name)
-                            Spacer(minLength: 0)
-                            if selectedVisualizer == visualizer {
-                                Text("selected")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.trailing, 8)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.vertical, 2)
-                        .background(
-                            selectedListVisualizer != nil ? selectedListVisualizer == visualizer ? Color.accentColor : Color.clear : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 5)
-                        )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if selectedListVisualizer == visualizer {
-                                selectedListVisualizer = nil
-                                return
-                            }
-                            selectedListVisualizer = visualizer
-                        }
-                    }
-                }
-                .safeAreaPadding(
-                    EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0)
-                )
-                .frame(minHeight: 120)
-                .actionBar {
-                    HStack(spacing: 5) {
-                        Button {
-                            name = ""
-                            url = ""
-                            speed = 1.0
-                            isPresented.toggle()
-                        } label: {
-                            Image(systemName: "plus")
-                                .foregroundStyle(.secondary)
-                                .contentShape(Rectangle())
-                        }
-                        Divider()
-                        Button {
-                            if selectedListVisualizer != nil {
-                                let visualizer = selectedListVisualizer!
-                                selectedListVisualizer = nil
-                                customVisualizers.remove(at: customVisualizers.firstIndex(of: visualizer)!)
-                                if visualizer == selectedVisualizer && customVisualizers.count > 0 {
-                                    selectedVisualizer = customVisualizers[0]
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "minus")
-                                .foregroundStyle(.secondary)
-                                .contentShape(Rectangle())
-                        }
-                    }
-                }
-                .controlSize(.small)
-                .buttonStyle(PlainButtonStyle())
-                .overlay {
-                    if customVisualizers.isEmpty {
-                        Text("No custom visualizer")
-                            .foregroundStyle(Color(.secondaryLabelColor))
-                            .padding(.bottom, 22)
-                    }
-                }
-                .sheet(isPresented: $isPresented) {
-                    VStack(alignment: .leading) {
-                        Text("Add new visualizer")
-                            .font(.largeTitle.bold())
-                            .padding(.vertical)
-                        TextField("Name", text: $name)
-                        TextField("Lottie JSON URL", text: $url)
-                        HStack {
-                            Text("Speed")
-                            Spacer(minLength: 80)
-                            Text("\(speed, specifier: "%.1f")s")
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(.secondary)
-                            Slider(value: $speed, in: 0...2, step: 0.1)
-                        }
-                        .padding(.vertical)
-                        HStack {
-                            Button {
-                                isPresented.toggle()
-                            } label: {
-                                Text("Cancel")
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                            }
-
-                            Button {
-                                let visualizer: CustomVisualizer = .init(
-                                    UUID: UUID(),
-                                    name: name,
-                                    url: URL(string: url)!,
-                                    speed: speed
-                                )
-
-                                if !customVisualizers.contains(visualizer) {
-                                    customVisualizers.append(visualizer)
-                                }
-
-                                isPresented.toggle()
-                            } label: {
-                                Text("Add")
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                            }
-                            .buttonStyle(BorderedProminentButtonStyle())
-                        }
-                    }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .controlSize(.extraLarge)
-                    .padding()
-                }
-              }
-            }
-
-            GeistSection(title: "Additional features") {
-                GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), divider: false)
+            GeistSection(title: "Animations") {
+                GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), info: "Plays a small looping face animation in the notch when idle.")
+                GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), divider: false, info: "Shows a live waveform driven by system audio in the music live activity.")
             }
 
             GeistSection(title: "App icon") {
@@ -3694,23 +3524,6 @@ struct TimerSettings: View {
         if panel.runModal() == .OK {
             if let url = panel.url {
                 UserDefaults.standard.set(url.path, forKey: "customTimerSoundPath")
-            }
-        }
-    }
-}
-
-private struct TimerDurationStepperRow: View {
-    let title: String
-    @Binding var value: Int
-    let range: ClosedRange<Int>
-
-    var body: some View {
-        Stepper(value: $value, in: range) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text("\(value)")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
             }
         }
     }
