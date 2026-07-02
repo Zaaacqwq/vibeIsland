@@ -264,8 +264,8 @@ struct AlbumArtView: View {
             AppIcon(for: musicManager.bundleIdentifier ?? "com.apple.Music")
                 .resizable()
                 .scaledToFill()
-                .frame(width: 36, height: 36)
-                .offset(x: 10, y: 10)
+                .frame(width: 15, height: 15)
+                .offset(x: 4, y: 4)
                 .transition(.scale.combined(with: .opacity).animation(.bouncy.delay(0.3)))
                 .zIndex(2)
         }
@@ -306,10 +306,10 @@ struct MusicControlsView: View {
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .center, spacing: 11) {
+                HStack(alignment: .center, spacing: 10) {
                     AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                        .frame(width: 44, height: 44)
-                    songInfo(width: max(0, geo.size.width - 55))
+                        .frame(width: 36, height: 36)
+                    songInfo(width: max(0, geo.size.width - 46))
                 }
                 musicSlider
             }
@@ -326,24 +326,32 @@ struct MusicControlsView: View {
 
     private func songInfo(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            MusicTitleMarqueeView(
-                text: musicManager.songTitle,
-                isExplicit: musicManager.isCurrentTrackExplicit,
-                font: NotchDesign.Typography.voice(15, weight: .semibold),
-                nsFont: .headline,
-                textColor: NotchDesign.Colors.textPrimary,
-                frameWidth: width,
-                badgeHeight: 14
-            )
-            MarqueeText(
-                $musicManager.artistName,
-                font: NotchDesign.Typography.voice(13, weight: .medium),
-                nsFont: .headline,
-                textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                    .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
-                frameWidth: width
-            )
-            // Lyrics shown under the author name (same font size as author) when enabled in settings
+            // Title + artist share one line (instead of stacking) so the
+            // block only spans two rows (this + lyrics), letting the album
+            // art shrink to match.
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                MusicTitleMarqueeView(
+                    text: musicManager.songTitle,
+                    isExplicit: musicManager.isCurrentTrackExplicit,
+                    font: NotchDesign.Typography.voice(14, weight: .semibold),
+                    nsFont: .headline,
+                    textColor: NotchDesign.Colors.textPrimary,
+                    frameWidth: width * 0.58,
+                    badgeHeight: 14
+                )
+                Text("·")
+                    .font(NotchDesign.Typography.voice(13))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
+                MarqueeText(
+                    $musicManager.artistName,
+                    font: NotchDesign.Typography.voice(12, weight: .medium),
+                    nsFont: .headline,
+                    textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
+                        .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
+                    frameWidth: width * 0.37
+                )
+            }
+            // Lyrics shown under the title/artist line (when enabled in settings)
             if enableLyrics {
                 let transition = AnyTransition.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
