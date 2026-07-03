@@ -27,6 +27,13 @@ import SwiftUI
 let downloadSneakSize: CGSize = .init(width: 65, height: 1)
 let batterySneakSize: CGSize = .init(width: 160, height: 1)
 
+/// Fixed content height for every standard (non-minimalistic) open-notch tab
+/// surface. Uniform across Home/Shelf/Timer/Agents/Calendar/Notifications/
+/// Weather, per the notch redesign's "same height everywhere" rule — tabs
+/// with shorter content top-align and leave breathing room below rather than
+/// shrinking the window (see the tab-switch container in ContentView.swift).
+let standardOpenNotchContentHeight: CGFloat = 200
+
 var openNotchSize: CGSize {
     let maxWidth = maxAllowedNotchWidth()
     let width: CGFloat
@@ -39,7 +46,7 @@ var openNotchSize: CGSize {
         let minWidth = currentRecommendedMinimumNotchWidth()
         width = min(max(storedWidth, minWidth), maxWidth)
     }
-    return .init(width: width, height: 200)
+    return .init(width: width, height: standardOpenNotchContentHeight)
 }
 
 /// Maximum notch width based on the current screen's point width.

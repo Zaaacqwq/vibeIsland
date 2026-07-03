@@ -411,15 +411,14 @@ struct NotchTimerView: View {
 
     // MARK: - Derived values
 
-    private var resolvedNotchHeight: CGFloat {
-        let height = vm.notchSize.height
-        return height > 0 ? height : openNotchSize.height
-    }
-
     private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
 
+    /// Budget derived from the fixed open-notch content height (not the live
+    /// `vm.notchSize`, which used to create a circular dependency: this tab's
+    /// layout would read the window's current height while also being the
+    /// content that determined it, so heights drifted between tabs).
     private var maxTabContentHeight: CGFloat {
-        let available = resolvedNotchHeight - headerHeight - 36
+        let available = standardOpenNotchContentHeight - headerHeight - 36
         return max(130, available)
     }
 

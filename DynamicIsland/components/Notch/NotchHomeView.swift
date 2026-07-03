@@ -736,7 +736,12 @@ struct NotchHomeView: View {
                 // it while idle, so the home tab keeps its music + agents split.
                 if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Fill the full (fixed) panel height so the media and
+                        // agents cards are always the SAME height — a two-column
+                        // equal grid. Content top-aligns; shorter content leaves
+                        // breathing room below rather than making its card shorter
+                        // than its neighbour.
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(5)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 }
@@ -745,7 +750,10 @@ struct NotchHomeView: View {
                     // Agent monitor takes the home view's secondary panel;
                     // the calendar moves to its own tab.
                     NotchAgentsView(showsInputOverlay: false)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Match the media card's full height (see above) so the
+                        // idle empty-state no longer sticks out taller than the
+                        // media card next to it.
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .environmentObject(vm)
                         .padding(5)
                         .notchCard(radius: NotchDesign.Radius.lg)
@@ -776,6 +784,11 @@ struct NotchHomeView: View {
         // separate closed-state effect and stays.
         .blur(radius: vm.notchState == .closed ? 30 : 0)
         .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
+        // Claim the full (fixed) open-notch height so the two cards inside have a
+        // definite height to stretch into — otherwise the HStack hugs its content
+        // and the equal-height cards collapse back to intrinsic (idle-agents-taller)
+        // sizing. Safe now that the window height is fixed (see standardOpenNotchContentHeight).
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 

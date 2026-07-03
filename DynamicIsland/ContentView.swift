@@ -103,13 +103,6 @@ struct ContentView: View {
     var dynamicNotchSize: CGSize {
         let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
 
-        // The approve/ask overlay lives inside the Agents tab; give it some extra
-        // height (its content scrolls) so multi-option prompts aren't clipped.
-        if vm.notchState == .open, coordinator.currentView == .agents,
-           agentMonitor.activeInputSession != nil {
-            return CGSize(width: baseSize.width, height: 250)
-        }
-
         // When inline sneak peek is active in closed notch, use the wider inline width
         // so the outer maxWidth frame doesn't clip the expanded content
         let inlineSneakPeekActive = vm.notchState == .closed
@@ -155,13 +148,11 @@ struct ContentView: View {
             }
         }
         
-        if coordinator.currentView == .timer {
-            return CGSize(width: baseSize.width, height: 250) // Extra height for timer presets
-        }
-
-
-
-
+        // Every standard tab claims the same fixed open-notch height
+        // (`standardOpenNotchContentHeight`). No per-tab height override here —
+        // tabs whose content is denser must compress/scroll to fit rather than
+        // resizing the window, per the redesign's "uniform height everywhere"
+        // rule. (Removed the old Timer→250 and Agents-overlay→250 special cases.)
         return baseSize
     }
     
@@ -674,9 +665,6 @@ struct ContentView: View {
         // Smoothly animate the notch height when switching tabs (e.g. into the
         // taller weather tab) instead of snapping.
         .animation(.smooth(duration: 0.3), value: coordinator.currentView)
-        // Smoothly grow/shrink when the approve/ask overlay appears or collapses
-        // within the Agents tab (no currentView change there).
-        .animation(.smooth(duration: 0.3), value: agentMonitor.activeInputSession != nil)
         .environmentObject(privacyManager)
         .background(dragDetector)
         .environmentObject(vm)
@@ -997,16 +985,15 @@ struct ContentView: View {
                           // attach their own root `.transition` or it overrides this
                           // slide (blur / vertical / opacity-in-place).
                           .transition(tabSwitchTransition)
-                          // Measure the active tab's real content height so the open
-                          // notch sizes to it instead of a fixed constant (standard
-                          // mode only — minimalistic has its own dynamic sizing).
-                          // Reported height is guarded/clamped in the view model, so
-                          // a measurement hiccup here can't runaway-resize the window.
-                          .modifier(MeasureSizeModifier())
-                          .onPreferenceChange(SizePreferenceKey.self) { size in
-                              guard size.height > 0 else { return }
-                              vm.reportMeasuredContentHeight(size.height + max(24, vm.effectiveClosedNotchHeight))
-                          }
+                          // Every tab claims the same fixed open-notch height (see
+                          // `dynamicNotchSize`/`openNotchSize`) top-aligned, so tabs
+                          // with shorter content (Home, empty Agents/Shelf) leave
+                          // breathing room below instead of shrinking the window —
+                          // per the notch redesign's "uniform height across every
+                          // tab" rule. Do NOT reintroduce content-height measurement
+                          // here; it previously fed back into the window size and
+                          // made heights drift between tabs.
+                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                       }
                       .transition(notchOpenTransition)
                   }

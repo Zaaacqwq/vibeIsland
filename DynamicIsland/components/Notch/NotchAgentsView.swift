@@ -64,14 +64,16 @@ struct NotchAgentsView: View {
                 .padding(.vertical, 8)
             }
         }
-        // Fill the height ONLY as the full Agents tab (so the empty-state moon
-        // centers nicely). When embedded in the Home tab (showsInputOverlay ==
-        // false) do NOT fill: the empty state's Spacers would otherwise expand
-        // into maxHeight:.infinity and inflate Home taller than every other tab.
-        // Without a max, the panel defers to the music player's height instead.
+        // Always fill the available height — both as the full Agents tab and as
+        // the Home-embedded card. The Home card is now given a fixed, definite
+        // height by its parent (equal-height two-column grid), so filling here
+        // makes the idle empty-state center within that card instead of hugging
+        // its content and sticking out taller than the media card beside it.
+        // (This no longer inflates Home: the open-notch height is fixed — see
+        // `standardOpenNotchContentHeight` — so filling can't grow the window.)
         .frame(
             maxWidth: .infinity,
-            maxHeight: showsInputOverlay ? CGFloat.infinity : nil,
+            maxHeight: .infinity,
             alignment: .top
         )
         .contentShape(Rectangle())
@@ -189,12 +191,11 @@ struct NotchAgentsView: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 10) {
-            // Only stretch to vertically center the moon in the full Agents tab.
-            // In the Home embed (showsInputOverlay == false) these Spacers would
-            // expand to fill the HStack's proposed height and balloon Home taller
-            // than the other tabs whenever there are no sessions — so omit them
-            // and let the panel take its natural (compact) height there.
-            if showsInputOverlay { Spacer() }
+            // Center the moon vertically in the card — both in the full Agents tab
+            // and in the Home embed. The Home card now has a fixed, definite height
+            // (equal-height grid), so these Spacers center the empty-state within it
+            // rather than ballooning Home (the window height is fixed regardless).
+            Spacer()
             switch agentMonitor.hookStatus {
             case .installed, .unknown:
                 Image(systemName: "moon.zzz")
@@ -229,9 +230,9 @@ struct NotchAgentsView: View {
                 }
                 .buttonStyle(.plain)
             }
-            if showsInputOverlay { Spacer() }
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
