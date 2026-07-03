@@ -290,8 +290,11 @@ struct MusicControlsView: View {
     @Default(.enableLyrics) private var enableLyrics
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 6
+    private let contentSpacing: CGFloat = 4
+    private let songInfoAndSliderHeight: CGFloat = 74
+
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: contentSpacing) {
             songInfoAndSlider
             if shouldShowControlHUDRow {
                 controlHUDRow
@@ -308,7 +311,7 @@ struct MusicControlsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center, spacing: 10) {
                     AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 34, height: 34)
                     songInfo(width: max(0, geo.size.width - 46))
                 }
                 musicSlider
@@ -322,6 +325,7 @@ struct MusicControlsView: View {
         .padding(.top, 10)
         .padding(.leading, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: songInfoAndSliderHeight, alignment: .top)
     }
 
     private func songInfo(width: CGFloat) -> some View {
@@ -406,8 +410,8 @@ struct MusicControlsView: View {
                 guard !musicManager.isLiveStream else { return }
                 MusicManager.shared.seek(to: newValue)
             }
-            .padding(.top, 5)
-            .frame(height: 36)
+            .padding(.top, 2)
+            .frame(height: 26)
         }
     }
 
@@ -418,7 +422,7 @@ struct MusicControlsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.bottom, 8)
+        .padding(.bottom, 0)
     }
 
     private var shouldShowControlHUDRow: Bool {
@@ -708,6 +712,15 @@ struct NotchHomeView: View {
     let albumArtNamespace: Namespace.ID
     @State private var calendarScrollSuppressionToken = UUID()
 
+    private let homePanelPadding: CGFloat = 8
+    private let homeCardContentPadding: CGFloat = 5
+    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    private var homeCardContentHeight: CGFloat {
+        let available = standardOpenNotchContentHeight - headerHeight - 36
+        return max(120, available - (homePanelPadding * 2) - (homeCardContentPadding * 2))
+    }
+
     /// Whether the music player should actively display (enabled AND has real content).
     private var shouldShowMusicPlayer: Bool {
         showStandardMediaControls && (!autoHideInactiveNotchMediaPlayer || musicManager.hasActiveSession)
@@ -741,8 +754,9 @@ struct NotchHomeView: View {
                         // equal grid. Content top-aligns; shorter content leaves
                         // breathing room below rather than making its card shorter
                         // than its neighbour.
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .padding(5)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .frame(height: homeCardContentHeight, alignment: .topLeading)
+                        .padding(homeCardContentPadding)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 }
 
@@ -753,9 +767,10 @@ struct NotchHomeView: View {
                         // Match the media card's full height (see above) so the
                         // idle empty-state no longer sticks out taller than the
                         // media card next to it.
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .frame(height: homeCardContentHeight, alignment: .topLeading)
                         .environmentObject(vm)
-                        .padding(5)
+                        .padding(homeCardContentPadding)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 } else if Defaults[.showCalendar] {
                     Group {
@@ -783,7 +798,7 @@ struct NotchHomeView: View {
         // drop + blur) and tab-switch (horizontal slide). The `.blur` below is a
         // separate closed-state effect and stays.
         .blur(radius: vm.notchState == .closed ? 30 : 0)
-        .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
+        .padding(Defaults[.enableMinimalisticUI] ? 0 : homePanelPadding) //Putting the main padding for home view here for consistency
         // Claim the full (fixed) open-notch height so the two cards inside have a
         // definite height to stretch into — otherwise the HStack hugs its content
         // and the equal-height cards collapse back to intrinsic (idle-agents-taller)

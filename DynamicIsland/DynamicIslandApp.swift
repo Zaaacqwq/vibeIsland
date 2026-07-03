@@ -476,14 +476,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        // Use minimalistic or normal size based on settings
-        var baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
-        
-        // Use a consistent height for different view types
-        if coordinator.currentView == .timer {
-            baseSize.height = 250 // Extra space for timer presets
-        }
-        
+        // Use minimalistic or normal size based on settings. Standard tabs all
+        // share `openNotchSize`; dense content must compress/scroll rather than
+        // resizing the window.
+        let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
+
         return addShadowPadding(
             to: baseSize,
             isMinimalistic: Defaults[.enableMinimalisticUI]

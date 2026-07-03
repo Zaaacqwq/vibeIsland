@@ -34,6 +34,13 @@ struct NotchAgentsView: View {
     private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
     private let codexColor = Color(red: 16.0 / 255.0, green: 163.0 / 255.0, blue: 127.0 / 255.0)
 
+    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    private var maxTabContentHeight: CGFloat {
+        let available = standardOpenNotchContentHeight - headerHeight - 36
+        return max(120, available)
+    }
+
     // Suppress the notch's scroll-to-close gesture while hovering the list, so
     // scrolling pages through sessions instead of closing the notch.
     @State private var scrollSuppressionToken = UUID()
@@ -64,16 +71,13 @@ struct NotchAgentsView: View {
                 .padding(.vertical, 8)
             }
         }
-        // Always fill the available height — both as the full Agents tab and as
-        // the Home-embedded card. The Home card is now given a fixed, definite
-        // height by its parent (equal-height two-column grid), so filling here
-        // makes the idle empty-state center within that card instead of hugging
-        // its content and sticking out taller than the media card beside it.
-        // (This no longer inflates Home: the open-notch height is fixed — see
-        // `standardOpenNotchContentHeight` — so filling can't grow the window.)
+        // The full Agents tab uses the same post-header content budget as the
+        // dense Timer/Calendar tabs. The Home embed stays intrinsic here; its
+        // parent owns the card height so this view cannot greedily pull Home
+        // taller than the media card.
         .frame(
             maxWidth: .infinity,
-            maxHeight: .infinity,
+            maxHeight: showsInputOverlay ? maxTabContentHeight : nil,
             alignment: .top
         )
         .contentShape(Rectangle())
@@ -191,11 +195,11 @@ struct NotchAgentsView: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 10) {
-            // Center the moon vertically in the card — both in the full Agents tab
-            // and in the Home embed. The Home card now has a fixed, definite height
-            // (equal-height grid), so these Spacers center the empty-state within it
-            // rather than ballooning Home (the window height is fixed regardless).
-            Spacer()
+            // Center the empty state in the full Agents tab. The Home embed stays
+            // compact here; its parent owns the card height.
+            if showsInputOverlay {
+                Spacer()
+            }
             switch agentMonitor.hookStatus {
             case .installed, .unknown:
                 Image(systemName: "moon.zzz")
@@ -230,9 +234,11 @@ struct NotchAgentsView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Spacer()
+            if showsInputOverlay {
+                Spacer()
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? maxTabContentHeight : nil)
     }
 }
 
