@@ -75,90 +75,81 @@ struct FileShareView: View {
             }
     }
 
-    private var dropArea: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(
-                    LinearGradient(colors: [Color.black.opacity(0.35), Color.black.opacity(0.20)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            vm.dropZoneTargeting
-                                ? Color.accentColor.opacity(0.9)
-                                : Color.white.opacity(0.1),
-                            style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [10])
-                        )
-                )
-                .shadow(color: Color.black.opacity(0.6), radius: 6, x: 0, y: 2)
+    @ViewBuilder
+    private var providerIcon: some View {
+        if let imgData = selectedProvider.imageData, let nsImg = NSImage(data: imgData) {
+            Image(nsImage: nsImg)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 30, height: 30)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        } else {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 23, weight: .medium))
+        }
+    }
 
-            // Content
-            VStack(spacing: 5) {
+    private var dropArea: some View {
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: NotchDesign.Radius.xl, style: .continuous)
+                .fill(NotchDesign.Colors.cardFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: NotchDesign.Radius.xl, style: .continuous)
+                        .strokeBorder(
+                            vm.dropZoneTargeting ? NotchDesign.Colors.accent.opacity(0.55) : NotchDesign.Colors.hairline,
+                            lineWidth: NotchDesign.hairlineWidth
+                        )
+                }
+
+            VStack(spacing: 8) {
+                Spacer(minLength: 0)
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(
-                            vm.dropZoneTargeting ? 0.11 : 0.09
-                        ))
-                        .frame(width: 55, height: 55)
-                    Image(systemName: "square.and.arrow.up")
-                    Group {
-                        if let imgData = selectedProvider.imageData, let nsImg = NSImage(data: imgData) {
-                            Image(nsImage: nsImg)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 34, height: 34)
-                                .clipped()
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 34, height: 34)
-                        }
-                    }
-                        .foregroundStyle(
-                            vm.dropZoneTargeting ? Color.accentColor : Color.gray
+                        .strokeBorder(
+                            vm.dropZoneTargeting ? NotchDesign.Colors.accent : NotchDesign.Colors.hairlineStrong,
+                            lineWidth: 1.5
                         )
-                        .scaleEffect(
-                            vm.dropZoneTargeting ? 1.06 : 1.0
-                        )
+                        .background(Circle().fill(Color.white.opacity(vm.dropZoneTargeting ? 0.08 : 0.04)))
+                        .frame(width: 48, height: 48)
+                    providerIcon
+                        .foregroundStyle(vm.dropZoneTargeting ? NotchDesign.Colors.accent : NotchDesign.Colors.textSecondary)
+                        .scaleEffect(vm.dropZoneTargeting ? 1.06 : 1.0)
                         .animation(.spring(response: 0.36, dampingFraction: 0.7), value: vm.dropZoneTargeting)
                 }
 
-                Text(selectedProvider.id)
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundColor(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity)
-
+                VStack(spacing: 2) {
+                    Text("Quick Share")
+                        .font(NotchDesign.Typography.voice(14, weight: .semibold))
+                        .foregroundStyle(NotchDesign.Colors.textPrimary)
+                    Text(selectedProvider.id)
+                        .font(NotchDesign.Typography.mono(10, weight: .medium))
+                        .foregroundStyle(NotchDesign.Colors.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                Spacer(minLength: 0)
             }
-            .padding(18)
-            .frame(maxWidth: .infinity)
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Switch button pinned to top-right corner
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                        vm.setAutoCloseSuppression(true, token: autoCloseToken)
-                        quickShare.ensureDiscovered()
-                        showQuickSharePopover.toggle()
-                    } label: {
-                        Image(systemName: "switch.2")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 14, height: 14)
-                            .padding(8)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(isSwitchHover ? Color(.windowBackgroundColor).opacity(0.12) : Color.clear))
-                            .foregroundColor(isSwitchHover ? .accentColor : .gray)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .onHover { hovering in
-                        isSwitchHover = hovering
-                        vm.setAutoCloseSuppression(hovering, token: autoCloseToken)
-                    }
-                    .popover(isPresented: $showQuickSharePopover, arrowEdge: .bottom) {
+            Button {
+                vm.setAutoCloseSuppression(true, token: autoCloseToken)
+                quickShare.ensureDiscovered()
+                showQuickSharePopover.toggle()
+            } label: {
+                Image(systemName: "switch.2")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 26, height: 26)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(isSwitchHover ? Color.white.opacity(0.08) : Color.clear))
+                    .foregroundColor(isSwitchHover ? NotchDesign.Colors.accent : NotchDesign.Colors.textTertiary)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(7)
+            .onHover { hovering in
+                isSwitchHover = hovering
+                vm.setAutoCloseSuppression(hovering, token: autoCloseToken)
+            }
+            .popover(isPresented: $showQuickSharePopover, arrowEdge: .bottom) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Quick Share")
                                 .font(.headline)
@@ -233,12 +224,7 @@ struct FileShareView: View {
                         }
                         .onHover { hovering in vm.setAutoCloseSuppression(hovering, token: autoCloseToken) }
                     }
-                    .padding(.trailing, 8)
-                    .padding(.top, 8)
-                }
-                Spacer()
-            }
-            
+
             // Loading overlay
             if isProcessing || quickShare.isPickerOpen {
                 RoundedRectangle(cornerRadius: 12)
@@ -282,7 +268,7 @@ struct FileShareView: View {
                 .transition(.opacity)
             }
         }
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: NotchDesign.Radius.xl, style: .continuous))
         .onChange(of: showLocalSendPicker) { _, show in
             if show {
                 LocalSendDevicePickerWindowManager.shared.show(

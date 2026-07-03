@@ -38,22 +38,47 @@ struct ShelfItemView: View {
 
     private var isSelected: Bool { viewModel.isSelected }
     private var shouldHideDuringDrag: Bool { selection.isDragging && selection.isSelected(item.id) && false }
-    
+
+    private var itemCaption: String {
+        switch item.kind {
+        case .file:
+            let extensionName = item.fileURL?.pathExtension.uppercased() ?? ""
+            let fileType = extensionName.isEmpty ? "FILE" : extensionName
+            let size = item.fileURL.flatMap { Self.formattedFileSize(for: $0) } ?? "—"
+            return "\(fileType) · \(size)"
+        case .text:
+            return "TEXT · \(item.displayName.count) chars"
+        case .link(let url):
+            return "LINK · \(url.host ?? url.scheme ?? "URL")"
+        }
+    }
+
     init(item: ShelfItem) {
         self.item = item
         _viewModel = StateObject(wrappedValue: ShelfItemViewModel(item: item))
     }
 
+    private static func formattedFileSize(for url: URL) -> String? {
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return nil }
+        return ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+    }
+
     var body: some View {
         ZStack {
             if !shouldHideDuringDrag {
-                VStack(alignment: .center, spacing: 2) {
+                HStack(spacing: 8) {
                     iconView
-                    textView
+                    VStack(alignment: .leading, spacing: 2) {
+                        textView
+                        Text(itemCaption)
+                            .font(NotchDesign.Typography.mono(9, weight: .medium))
+                            .foregroundStyle(NotchDesign.Colors.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .frame(width: 105)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 5)
+                .frame(width: 148, height: 58, alignment: .leading)
+                .padding(.horizontal, 8)
                 .background(backgroundView)
                 .contentShape(Rectangle())
                 .animation(.easeInOut(duration: 0.1), value: debouncedDropTarget)
@@ -73,9 +98,7 @@ struct ShelfItemView: View {
                 )
             } else {
                 Color.clear
-                    .frame(width: 105)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 5)
+                    .frame(width: 164, height: 58)
             }
         }
         .onChange(of: viewModel.isDropTargeted) { _, targeted in
@@ -112,27 +135,28 @@ struct ShelfItemView: View {
     private var iconView: some View {
         Image(nsImage: viewModel.thumbnail ?? item.icon)
             .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 56, height: 56)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+            .aspectRatio(contentMode: .fill)
+            .frame(width: 34, height: 34)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(NotchDesign.Colors.hairline, lineWidth: NotchDesign.hairlineWidth)
+            }
     }
 
     private var textView: some View {
         Text(item.displayName)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(Color.white)
-            .lineLimit(2)
+            .font(NotchDesign.Typography.voice(11, weight: .medium))
+            .foregroundStyle(NotchDesign.Colors.textPrimary)
+            .lineLimit(1)
             .truncationMode(.middle)
-            .multilineTextAlignment(.center)
-            .frame(height: 30, alignment: .top)
     }
 
     private var backgroundView: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous)
             .fill(backgroundColor)
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous)
                     .strokeBorder(
                         strokeColor,
                         lineWidth: strokeWidth
@@ -142,21 +166,21 @@ struct ShelfItemView: View {
 
     private var backgroundColor: Color {
         if debouncedDropTarget {
-            return Color.accentColor.opacity(0.25)
+            return NotchDesign.Colors.accent.opacity(0.18)
         } else if isSelected {
-            return Color.accentColor.opacity(0.15)
+            return NotchDesign.Colors.accent.opacity(0.12)
         } else {
-            return Color.clear
+            return NotchDesign.Colors.sunken
         }
     }
 
     private var strokeColor: Color {
         if debouncedDropTarget {
-            return Color.accentColor.opacity(0.9)
+            return NotchDesign.Colors.accent.opacity(0.9)
         } else if isSelected {
-            return Color.accentColor.opacity(0.8)
+            return NotchDesign.Colors.accent.opacity(0.8)
         } else {
-            return Color.clear
+            return NotchDesign.Colors.hairline
         }
     }
 
