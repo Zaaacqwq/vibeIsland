@@ -31,14 +31,29 @@ struct NotchAgentsView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
-    private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
-    private let codexColor = Color(red: 16.0 / 255.0, green: 163.0 / 255.0, blue: 127.0 / 255.0)
-
     private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
 
-    private var maxTabContentHeight: CGFloat {
-        let available = standardOpenNotchContentHeight - headerHeight - 36
-        return max(120, available)
+    /// Session rows need most of the post-header body height; otherwise the list
+    /// gets clipped and leaves a large dead-black band at the bottom.
+    private var sessionListContentHeight: CGFloat {
+        max(140, standardOpenNotchContentHeight - headerHeight - 10)
+    }
+
+    /// Empty state has centering Spacers, so giving it the list budget makes the
+    /// no-session Agents tab visually taller than the other tabs. Keep the old,
+    /// compact budget only for the empty state.
+    private var emptyStateContentHeight: CGFloat {
+        max(120, standardOpenNotchContentHeight - headerHeight - 36)
+    }
+
+    private var standardTabContentHeight: CGFloat {
+        agentMonitor.sessions.isEmpty ? emptyStateContentHeight : sessionListContentHeight
+    }
+
+    /// Height the approve/ask overlay fills. It should behave like the session list,
+    /// not the compact empty state.
+    private var overlayContentHeight: CGFloat {
+        sessionListContentHeight
     }
 
     // Suppress the notch's scroll-to-close gesture while hovering the list, so
@@ -56,33 +71,48 @@ struct NotchAgentsView: View {
         // list when `activeInputSession` toggles — an internal swap, not a tab switch.
         Group {
             if showsInputOverlay, let active = agentMonitor.activeInputSession {
-                // The approve/ask overlay lives inside the Agents tab so it sits
-                // at the normal tab height (content scrolls) — no notch-height
-                // jump, hence no open/close glitch.
+                // The approve/ask overlay fills (nearly) the whole content region
+                // so a long diff / option list has room and no dead-black band
+                // sits beneath it. Its content scrolls, so this never grows the
+                // notch past the cap.
                 AgentInputOverlay(session: active)
                     .id(active.id)
+                    .frame(maxWidth: .infinity, maxHeight: overlayContentHeight, alignment: .top)
                     .transition(.opacity)
+            } else if showsInputOverlay {
+                // Full Agents tab: two columns — session list on the left (~60%),
+                // rate-limit + token-usage panels stacked on the right (~40%).
+                GeometryReader { geo in
+                    let gap: CGFloat = 12
+                    let leftWidth = max(0, (geo.size.width - gap) * 0.5)
+                    HStack(alignment: .top, spacing: gap) {
+                        sessionColumn
+                            .frame(width: leftWidth, alignment: .top)
+                        usageColumn
+                            .frame(maxWidth: .infinity, alignment: .top)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: standardTabContentHeight, alignment: .top)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
             } else {
+                // Home embed: intrinsic height, eyebrow header + compact session
+                // list. Its parent card owns the height (maxHeight nil).
                 VStack(alignment: .leading, spacing: 8) {
                     header
                     content
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .top)
             }
         }
-        // The full Agents tab uses the same post-header content budget as the
-        // dense Timer/Calendar tabs. The Home embed stays intrinsic here; its
-        // parent owns the card height so this view cannot greedily pull Home
-        // taller than the media card.
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: showsInputOverlay ? maxTabContentHeight : nil,
-            alignment: .top
-        )
         .contentShape(Rectangle())
         .onHover { updateScrollSuppression(for: $0) }
-        .onAppear { agentMonitor.refreshHookStatus() }
+        .onAppear {
+            agentMonitor.refreshHookStatus()
+            if showsInputOverlay { agentMonitor.refreshTokenUsage() }
+        }
         .onDisappear { updateScrollSuppression(for: false) }
         .animation(.smooth(duration: 0.25), value: agentMonitor.activeInputSession?.id)
     }
@@ -102,7 +132,7 @@ struct NotchAgentsView: View {
             if !showsInputOverlay {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13))
-                    .foregroundStyle(claudeColor)
+                    .foregroundStyle(NotchDesign.Colors.accent)
                 NotchMonoEyebrow(text: "Agents")
             }
             Spacer()
@@ -177,18 +207,78 @@ struct NotchAgentsView: View {
             .help(help)
     }
 
+    /// Home-embed content: compact session list, no usage panels.
     @ViewBuilder
     private var content: some View {
         if agentMonitor.sessions.isEmpty {
             emptyState
         } else {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: showsInputOverlay ? 9 : 8) {
+                VStack(spacing: 8) {
                     ForEach(agentMonitor.sessions) { session in
-                        AgentSessionRow(session: session, accent: claudeColor, compact: !showsInputOverlay)
+                        AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: true)
                     }
                 }
             }
+        }
+    }
+
+    /// Left column of the full tab: the scrollable session list, or the centered
+    /// empty / hook-setup state when there are none.
+    @ViewBuilder
+    private var sessionColumn: some View {
+        if agentMonitor.sessions.isEmpty {
+            emptyState
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 9) {
+                    ForEach(agentMonitor.sessions) { session in
+                        AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: false)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Right column of the full tab: a bare rate-limit line above the token-usage
+    /// card, sized to fit without scrolling.
+    private var usageColumn: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            rateLimitRow
+            if let usage = agentMonitor.tokenUsage, !usage.isEmpty {
+                NotchTokenUsageCard(
+                    usage: usage,
+                    isRefreshing: agentMonitor.isRefreshingTokenUsage,
+                    onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
+                )
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Claude / Codex rate-limit windows (5h / 7d etc.) on a single bare line —
+    /// no box or eyebrow. Hidden until at least one provider reports usage.
+    @ViewBuilder
+    private var rateLimitRow: some View {
+        let claudeUsage = agentMonitor.usage
+        let codexUsage = agentMonitor.codexUsage
+        let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
+        let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
+        if hasClaude || hasCodex {
+            HStack(spacing: 12) {
+                if let claudeUsage, hasClaude {
+                    claudeUsageBadges(claudeUsage)
+                }
+                if let codexUsage, hasCodex {
+                    codexUsageBadges(codexUsage)
+                }
+                Spacer(minLength: 0)
+            }
+        } else if !agentMonitor.isBridgeReady {
+            Text("Connecting…")
+                .font(NotchDesign.Typography.mono(11))
+                .foregroundStyle(NotchDesign.Colors.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -238,7 +328,7 @@ struct NotchAgentsView: View {
                 Spacer()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? maxTabContentHeight : nil)
+        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? standardTabContentHeight : nil)
     }
 }
 
@@ -252,10 +342,10 @@ private struct AgentSessionRow: View {
     var compact: Bool = true
     @ObservedObject private var agentMonitor = AgentMonitorManager.shared
 
-    private var ringSize: CGFloat { compact ? 14 : 16 }
-    private var titleFont: Font { NotchDesign.Typography.voice(compact ? 12 : 14, weight: .medium) }
-    private var statusFont: Font { NotchDesign.Typography.mono(compact ? 10 : 11) }
-    private var rowPadding: EdgeInsets { compact ? EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10) : EdgeInsets(top: 12, leading: 13, bottom: 12, trailing: 13) }
+    private var ringSize: CGFloat { compact ? 14 : 15 }
+    private var titleFont: Font { NotchDesign.Typography.voice(compact ? 12 : 12.5, weight: .medium) }
+    private var statusFont: Font { NotchDesign.Typography.mono(compact ? 10 : 10) }
+    private var rowPadding: EdgeInsets { compact ? EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10) : EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12) }
     private var rowRadius: CGFloat { compact ? NotchDesign.Radius.sm : NotchDesign.Radius.md }
     private var rowFill: Color { compact ? NotchDesign.Colors.sunken : NotchDesign.Colors.cardFill }
     private var rowGap: CGFloat { compact ? 9 : 11 }

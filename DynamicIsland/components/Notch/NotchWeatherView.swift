@@ -17,15 +17,15 @@
  */
 
 import SwiftUI
-import Defaults
 
-/// Open-notch tab showing current conditions: large icon + temperature,
-/// description, location, high/low, air quality, sun cycle and (optionally)
-/// extra detail metrics.
+/// Open-notch tab showing current conditions in the shared notch design system:
+/// a monochrome hero glyph + temperature, condition/feels-like, a 2×2 mono
+/// detail grid (sunrise/humidity/sunset/wind), and a 7-day mono forecast strip.
+/// Temperature is the hero; icons stay monochrome so the forecast never turns
+/// into confetti (per the redesign handoff, screen #8).
 struct NotchWeatherView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var weather = WeatherManager.shared
-    @Default(.weatherShowsDetails) private var showsDetails
 
     var body: some View {
         Group {
@@ -37,148 +37,170 @@ struct NotchWeatherView: View {
                 loading
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .onAppear { Task { await weather.refresh(force: false) } }
     }
 
+    // MARK: - Layout height (mirrors sibling tabs so heights don't drift)
+
+    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    private var maxTabContentHeight: CGFloat {
+        max(130, standardOpenNotchContentHeight - headerHeight - 36)
+    }
+
     // MARK: - Content
 
     private func content(_ snapshot: WeatherSnapshot) -> some View {
-        VStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
             current(snapshot)
             if !snapshot.daily.isEmpty {
-                Divider().overlay(Color.white.opacity(0.12))
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: NotchDesign.hairlineWidth)
                 forecastRow(snapshot)
             }
         }
     }
 
-    private func current(_ snapshot: WeatherSnapshot) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Image(systemName: snapshot.symbolName)
-                        .symbolRenderingMode(.multicolor)
-                        .font(.system(size: 28))
-                    Text(temperatureDisplay(snapshot))
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                    if let temp = snapshot.temperatureInfo,
-                       let hi = temp.displayMaximum, let lo = temp.displayMinimum {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("H:\(hi)°").font(.system(size: 9, weight: .medium))
-                            Text("L:\(lo)°").font(.system(size: 9, weight: .medium))
-                        }
-                        .foregroundStyle(.white.opacity(0.6))
-                    }
-                }
-                if showsDetails, let feels = snapshot.conditions?.feelsLike {
-                    Text("Feels like \(Int(round(feels)))°")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(snapshot.description)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
+    @ViewBuilder
+    private func locationLabel(_ snapshot: WeatherSnapshot) -> some View {
+        if let location = snapshot.locationName {
+            HStack(spacing: 5) {
+                Image(systemName: "mappin")
+                    .font(NotchDesign.Typography.mono(10))
+                    .foregroundStyle(NotchDesign.Colors.textFaint)
+                Text(location)
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(1)
-                if let location = snapshot.locationName {
-                    Label(location, systemImage: "location.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .labelStyle(.titleAndIcon)
-                        .lineLimit(1)
-                }
-                if let aq = snapshot.airQuality {
-                    detailRow(icon: "aqi.medium",
-                              text: "\(aq.scale.compactLabel) \(aq.index) · \(aq.category.displayName)",
-                              tint: aqiColor(aq))
-                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            detailsColumn(snapshot)
         }
     }
 
-    /// Right side: sunrise/sunset, plus humidity/wind/UV/rain when "Show weather
-    /// details" is on. Capped at two rows so the row height (and the notch's
-    /// rounded bottom corners) match the other tabs.
-    @ViewBuilder
-    private func detailsColumn(_ snapshot: WeatherSnapshot) -> some View {
-        let cycle = snapshot.sunCycle
-        let conditions = showsDetails ? snapshot.conditions : nil
-        if cycle != nil || conditions != nil {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    if let sunrise = cycle?.sunrise {
-                        detailRow(icon: "sunrise.fill", text: sunTime(sunrise), tint: .orange)
+    private func current(_ snapshot: WeatherSnapshot) -> some View {
+        HStack(alignment: .center, spacing: 18) {
+            Image(systemName: snapshot.symbolName)
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
+                .frame(width: 38, height: 38)
+
+            HStack(alignment: .top, spacing: 8) {
+                Text(temperatureDisplay(snapshot))
+                    .font(NotchDesign.Typography.voice(34, weight: .semibold))
+                    .foregroundStyle(Color(nsColor: NSColor(geistHex: "#fafafa")))
+                if let temp = snapshot.temperatureInfo,
+                   let hi = temp.displayMaximum, let lo = temp.displayMinimum {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("H \(hi)°")
+                            .foregroundStyle(NotchDesign.Colors.textSecondary)
+                        Text("L \(lo)°")
+                            .foregroundStyle(NotchDesign.Colors.textTertiary)
                     }
-                    if let sunset = cycle?.sunset {
-                        detailRow(icon: "sunset.fill", text: sunTime(sunset), tint: Color(red: 1.0, green: 0.55, blue: 0.3))
-                    }
-                }
-                if let c = conditions {
-                    VStack(alignment: .leading, spacing: 3) {
-                        if let humidity = c.humidity {
-                            detailRow(icon: "humidity.fill", text: "\(humidity)%", tint: .cyan)
-                        }
-                        if let wind = c.windSpeed {
-                            detailRow(icon: "wind", text: "\(Int(round(wind))) \(c.windUnit)")
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        if let uv = c.uvIndex {
-                            detailRow(icon: "sun.max.fill", text: "UV \(Int(round(uv)))", tint: .yellow)
-                        }
-                        if let pop = c.precipitationProbability {
-                            detailRow(icon: "umbrella.fill", text: "\(pop)%", tint: .blue)
-                        }
-                    }
+                    .font(NotchDesign.Typography.mono(11, weight: .medium))
+                    .padding(.top, 3)
                 }
             }
-            .padding(.trailing, 4)
+
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: NotchDesign.hairlineWidth, height: 34)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(snapshot.description)
+                    .font(NotchDesign.Typography.voice(14, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
+                    .lineLimit(1)
+                if let feels = snapshot.conditions?.feelsLike {
+                    Text("Feels like \(Int(round(feels)))°")
+                        .font(NotchDesign.Typography.voice(12))
+                        .foregroundStyle(NotchDesign.Colors.textSecondary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 6) {
+                locationLabel(snapshot)
+                detailGrid(snapshot)
+            }
+        }
+    }
+
+    /// 3×2 mono detail grid: sunrise/humidity/UV on top, sunset/wind/rain below.
+    /// Monochrome dim icons — no per-metric color tints (matches the mockup's
+    /// ink-only look).
+    @ViewBuilder
+    private func detailGrid(_ snapshot: WeatherSnapshot) -> some View {
+        let cycle = snapshot.sunCycle
+        let conditions = snapshot.conditions
+        if cycle != nil || conditions != nil {
+            Grid(horizontalSpacing: 16, verticalSpacing: 8) {
+                GridRow {
+                    detailCell(icon: "sunrise", value: cycle?.sunrise.map(sunTime))
+                    detailCell(icon: "drop", value: conditions?.humidity.map { "\($0)%" })
+                    detailCell(icon: "sun.max", value: conditions?.uvIndex.map { "UV \(Int(round($0)))" })
+                }
+                GridRow {
+                    detailCell(icon: "sunset", value: cycle?.sunset.map(sunTime))
+                    detailCell(icon: "wind",
+                               value: conditions?.windSpeed.map { "\(Int(round($0))) \(conditions?.windUnit ?? "")" })
+                    detailCell(icon: "umbrella", value: conditions?.precipitationProbability.map { "\($0)%" })
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func detailCell(icon: String, value: String?) -> some View {
+        if let value {
+            detailRow(icon: icon, text: value)
+        } else {
+            Color.clear.frame(width: 0, height: 0)
         }
     }
 
     private func forecastRow(_ snapshot: WeatherSnapshot) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(snapshot.daily.prefix(7).enumerated()), id: \.element.id) { index, day in
-                VStack(spacing: 2) {
-                    Text(weekdayLabel(day.date, isFirst: index == 0))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.7))
+                let isToday = index == 0
+                VStack(spacing: 7) {
+                    Text(weekdayLabel(day.date, isFirst: isToday))
+                        .font(NotchDesign.Typography.mono(11, weight: .medium))
+                        .tracking(0.6)
+                        .foregroundStyle(isToday
+                            ? Color(nsColor: NSColor(geistHex: "#cfcfcf"))
+                            : NotchDesign.Colors.textSecondary)
                     Image(systemName: day.symbolName)
-                        .symbolRenderingMode(.multicolor)
-                        .font(.system(size: 14))
-                        .frame(height: 16)
+                        .symbolRenderingMode(.monochrome)
+                        .font(.system(size: 18, weight: .light))
+                        .foregroundStyle(Color(nsColor: NSColor(geistHex: "#c9c9c9")))
+                        .frame(height: 20)
                     HStack(spacing: 4) {
                         Text(tempLabel(day.high))
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(NotchDesign.Colors.textPrimary)
                         Text(tempLabel(day.low))
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(NotchDesign.Colors.textTertiary)
                     }
+                    .font(NotchDesign.Typography.mono(12, weight: .medium))
                 }
                 .frame(maxWidth: .infinity)
             }
         }
     }
 
-    private func detailRow(icon: String, text: String, tint: Color = .white.opacity(0.7)) -> some View {
-        HStack(spacing: 6) {
+    private func detailRow(icon: String, text: String) -> some View {
+        HStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(tint)
-                .frame(width: 16)
+                .font(NotchDesign.Typography.mono(11))
+                .foregroundStyle(NotchDesign.Colors.textFaint)
+                .frame(width: 14)
             Text(text)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.8))
+                .font(NotchDesign.Typography.mono(12))
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
         }
     }
 
@@ -187,27 +209,29 @@ struct NotchWeatherView: View {
             ProgressView()
                 .controlSize(.small)
             Text("Loading weather…")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .font(NotchDesign.Typography.body)
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var locationPrompt: some View {
         VStack(spacing: 8) {
             Image(systemName: "location.slash")
                 .font(.system(size: 22, weight: .light))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(NotchDesign.Colors.textTertiary)
             Text("Location access needed")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white)
+                .font(NotchDesign.Typography.bodyStrong)
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
             Text("Enable Location Services for VibeIsland to show local weather.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(NotchDesign.Typography.caption)
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
                 .multilineTextAlignment(.center)
             Button("Open System Settings") { weather.openLocationSettings() }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Helpers
@@ -219,26 +243,15 @@ struct NotchWeatherView: View {
     }
 
     private func weekdayLabel(_ date: Date, isFirst: Bool) -> String {
-        if isFirst { return String(localized: "Today") }
+        if isFirst { return String(localized: "Today").uppercased() }
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("EEE")
-        return formatter.string(from: date)
+        return formatter.string(from: date).uppercased()
     }
 
     private func tempLabel(_ value: Double?) -> String {
         guard let value else { return "—" }
         return "\(Int(round(value)))°"
-    }
-
-    private func aqiColor(_ aq: WeatherSnapshot.AirQualityInfo) -> Color {
-        switch aq.category {
-        case .good, .fair: return .green
-        case .moderate: return .yellow
-        case .unhealthyForSensitive, .poor: return .orange
-        case .unhealthy, .veryPoor, .veryUnhealthy: return .red
-        case .extremelyPoor, .hazardous: return .purple
-        case .unknown: return .gray
-        }
     }
 
     private func sunTime(_ date: Date) -> String {

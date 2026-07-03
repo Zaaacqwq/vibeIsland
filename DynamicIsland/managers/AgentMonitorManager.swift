@@ -94,6 +94,14 @@ final class AgentMonitorManager: ObservableObject {
     /// `~/.codex/sessions`. `nil` until a rollout with rate limits is found.
     @Published private(set) var codexUsage: CodexUsageSnapshot?
 
+    /// Rolling 14-day token usage / cost / cache summary across all agents,
+    /// aggregated from local transcripts. `nil` until the first aggregation
+    /// finishes; drives the Agents tab's "Token Usage" card.
+    @Published private(set) var tokenUsage: TokenUsageSummary?
+    /// Whether an aggregation pass is currently running (spins the card's
+    /// refresh control).
+    @Published private(set) var isRefreshingTokenUsage = false
+
     /// The single session currently demanding attention (permission/answer),
     /// if any — drives the closed-pill live activity.
     var attentionSession: AgentSession? {
@@ -121,6 +129,9 @@ final class AgentMonitorManager: ObservableObject {
     private var bridgeTask: Task<Void, Never>?
     private var reconnectTask: Task<Void, Never>?
     private var state = SessionState()
+    private let tokenUsageProvider = AgentTokenUsageProvider()
+    private var lastTokenUsageRefresh: Date?
+    private static let tokenUsageTTL: TimeInterval = 60
     private var hasStarted = false
     private var livenessTimer: Timer?
     /// Lightweight in-memory watchdog (no `ps`) that completes idle Antigravity
@@ -157,7 +168,32 @@ final class AgentMonitorManager: ObservableObject {
         connectObserver()
         refreshHookStatus()
         startLivenessMonitor()
+        refreshTokenUsage()
         AgentInputHotkeyMonitor.shared.start()
+    }
+
+    // MARK: - Token usage
+
+    /// Recomputes the rolling token-usage summary off the main thread. Honors a
+    /// short TTL so opening the Agents tab repeatedly doesn't re-walk every
+    /// transcript; pass `force: true` for the card's manual refresh button.
+    func refreshTokenUsage(force: Bool = false) {
+        if !force, let last = lastTokenUsageRefresh,
+           Date().timeIntervalSince(last) < Self.tokenUsageTTL {
+            return
+        }
+        guard !isRefreshingTokenUsage else { return }
+        isRefreshingTokenUsage = true
+
+        let provider = tokenUsageProvider
+        Task.detached(priority: .utility) {
+            let summary = provider.snapshot()
+            await MainActor.run {
+                self.tokenUsage = summary
+                self.lastTokenUsageRefresh = Date()
+                self.isRefreshingTokenUsage = false
+            }
+        }
     }
 
     func stop() {

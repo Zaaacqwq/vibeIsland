@@ -8,6 +8,8 @@
 
 1. lockscreen sound
 2. option for agent to enable ask/permission pop up
+3. scroll left and right on shelf when there are lots of files will cause tab switch
+4. remove all files from shelf
 
 
 
