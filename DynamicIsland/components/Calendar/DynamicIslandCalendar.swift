@@ -205,61 +205,62 @@ struct WheelPicker: View {
     }
 }
 
+/// Compact week-view calendar embedded in the Home tab's right panel (shown when
+/// agent monitoring is off and music is playing). Same notch-calendar language as
+/// the full tab — month/year label, the shared `WeekDateSlider`, and the new
+/// `CalendarAgendaList` — laid out for the narrower panel (label left, a wide
+/// slider filling the rest, agenda below). The Home embed's `.notchCard` wrapper
+/// provides the gray surface, so this view adds no card of its own.
 struct CalendarView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
     @Default(.hideAllDayEvents) private var hideAllDayEvents
     @Default(.hideCompletedReminders) private var hideCompletedReminders
+    @Default(.showFullEventTitles) private var showFullEventTitles
+
+    private let calendar = Calendar.current
+
+    private var filteredEvents: [EventModel] {
+        EventListView.filteredEvents(
+            events: calendarManager.events,
+            hideCompletedReminders: hideCompletedReminders,
+            hideAllDayEvents: hideAllDayEvents
+        )
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(selectedDate.formatted(.dateTime.month(.abbreviated)))
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .font(NotchDesign.Typography.voice(13, weight: .semibold))
+                        .foregroundStyle(CalendarStyle.ink)
                     Text(selectedDate.formatted(.dateTime.year()))
-                        .font(.title3)
-                        .fontWeight(.light)
-                        .foregroundColor(Color(white: 0.65))
+                        .font(NotchDesign.Typography.voice(13, weight: .light))
+                        .foregroundStyle(CalendarStyle.muted)
                 }
+                .fixedSize()
 
-                ZStack(alignment: .top) {
-                    WheelPicker(selectedDate: $selectedDate, config: Config())
-                    HStack(alignment: .top) {
-                        LinearGradient(
-                            colors: [Color.black, .clear], startPoint: .leading, endPoint: .trailing
-                        )
-                        .frame(width: 20)
-                        Spacer()
-                        LinearGradient(
-                            colors: [.clear, Color.black], startPoint: .leading, endPoint: .trailing
-                        )
-                        .frame(width: 20)
-                    }
-                }
+                // Tighter cells + fade into the card fill (this sits inside the
+                // Home embed's gray notchCard, not the black panel). Pin the
+                // height so the horizontal ScrollView doesn't greedily expand
+                // vertically (the tab constrains this via its control-row height)
+                // and leave a big gap above the agenda.
+                WeekDateSlider(
+                    selectedDate: $selectedDate,
+                    cellWidth: 36,
+                    cellSpacing: 2,
+                    fadeColor: NotchDesign.Colors.cardFill
+                )
+                .frame(height: 34)
             }
 
-            let filteredEvents = EventListView.filteredEvents(
-                events: calendarManager.events,
-                hideCompletedReminders: hideCompletedReminders,
-                hideAllDayEvents: hideAllDayEvents
-            )
-            if filteredEvents.isEmpty {
-                EmptyEventsView(selectedDate: selectedDate)
-                Spacer(minLength: 0)
-            } else {
-                EventListView(events: calendarManager.events)
-            }
+            agenda
         }
-        .listRowBackground(Color.clear)
-        .frame(height: 120)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: selectedDate) {
-            Task {
-                await calendarManager.updateCurrentDate(selectedDate)
-            }
+            Task { await calendarManager.updateCurrentDate(selectedDate) }
         }
         .onChange(of: vm.notchState) { _, _ in
             Task {
@@ -274,6 +275,24 @@ struct CalendarView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private var agenda: some View {
+        if filteredEvents.isEmpty {
+            EmptyEventsView(selectedDate: selectedDate)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            CalendarAgendaList(
+                events: filteredEvents,
+                showFullEventTitles: showFullEventTitles,
+                onToggleReminder: { reminderID, completed in
+                    Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
+                }
+            )
+            .id(calendar.startOfDay(for: selectedDate))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
 }
 
 /// Full open-notch Calendar tab. Single-column, mode-toggled surface following
@@ -282,20 +301,139 @@ struct CalendarView: View {
 /// month grid over a compact selected-day summary. The "Calendar" tab pill
 /// itself lives in the shared `DynamicIslandHeader`, so this body starts with
 /// the mode controls rather than repeating the pill.
+/// Reusable horizontal date slider in the notch calendar style: a continuous,
+/// snap-to-center strip of days. Scrolling pages days and selects the centered
+/// one; changing `selectedDate` elsewhere recenters the strip. Registers scroll +
+/// tab-switch suppression while hovered so a sideways scroll pages days instead of
+/// closing the notch / switching tabs. Shared by the full Calendar tab header and
+/// the compact Home embed.
+struct WeekDateSlider: View {
+    @EnvironmentObject var vm: DynamicIslandViewModel
+    @Binding var selectedDate: Date
+    var cellWidth: CGFloat = 44
+    var cellSpacing: CGFloat = 3
+    /// Color the day cells fade into at both ends — black on the tab's flat black
+    /// header, the card fill when embedded inside a `notchCard` (Home).
+    var fadeColor: Color = .black
+
+    @State private var scrollID: Date?
+    @State private var programmatic = false
+    @State private var suppressionToken = UUID()
+
+    private let calendar = Calendar.current
+    private static let pastDays = 120
+    private static let futureDays = 240
+
+    private var days: [Date] {
+        let today = calendar.startOfDay(for: Date())
+        guard let start = calendar.date(byAdding: .day, value: -Self.pastDays, to: today) else { return [] }
+        let count = Self.pastDays + Self.futureDays + 1
+        return (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: cellSpacing) {
+                ForEach(days, id: \.self) { day in
+                    cell(day)
+                        .frame(width: cellWidth)
+                        .id(calendar.startOfDay(for: day))
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.never)
+        .scrollPosition(id: $scrollID, anchor: .center)
+        .scrollTargetBehavior(.viewAligned)
+        .overlay(alignment: .leading) { edgeFade(leading: true) }
+        .overlay(alignment: .trailing) { edgeFade(leading: false) }
+        .onHover { hovering in
+            vm.setScrollGestureSuppression(hovering, token: suppressionToken)
+            vm.setTabSwitchSuppression(hovering, token: suppressionToken)
+        }
+        .onDisappear {
+            vm.setScrollGestureSuppression(false, token: suppressionToken)
+            vm.setTabSwitchSuppression(false, token: suppressionToken)
+        }
+        .onAppear {
+            programmatic = true
+            scrollID = calendar.startOfDay(for: selectedDate)
+        }
+        // User scroll settled on a new centered day → select it.
+        .onChange(of: scrollID) { _, newID in
+            guard let newID else { return }
+            if programmatic { programmatic = false; return }
+            if !calendar.isDate(newID, inSameDayAs: selectedDate) { select(newID) }
+        }
+        // Selection changed elsewhere (tap, nav arrows) → recenter the slider.
+        .onChange(of: selectedDate) { _, newDate in
+            let target = calendar.startOfDay(for: newDate)
+            guard scrollID == nil || !calendar.isDate(scrollID ?? target, inSameDayAs: target) else { return }
+            programmatic = true
+            withAnimation(.smooth(duration: 0.2)) { scrollID = target }
+        }
+    }
+
+    private func select(_ day: Date) {
+        withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
+    }
+
+    private func edgeFade(leading: Bool) -> some View {
+        LinearGradient(
+            colors: leading ? [fadeColor, .clear] : [.clear, fadeColor],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .frame(width: 18)
+        .allowsHitTesting(false)
+    }
+
+    private func cell(_ day: Date) -> some View {
+        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(day)
+        let isWeekend = calendar.isDateInWeekend(day)
+        let dow = day.formatted(.dateTime.weekday(.abbreviated)).uppercased()
+
+        return Button { select(day) } label: {
+            VStack(spacing: 1) {
+                Text(dow)
+                    .font(NotchDesign.Typography.mono(7, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? CalendarStyle.onAccent.opacity(0.7)
+                                     : (isWeekend ? CalendarStyle.dim : CalendarStyle.faint))
+                Text(day.formatted(.dateTime.day()))
+                    .font(NotchDesign.Typography.voice(12, weight: isSelected || isToday ? .semibold : .medium))
+                    .foregroundStyle(numeralColor(isSelected: isSelected, isToday: isToday, isWeekend: isWeekend))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isSelected ? CalendarStyle.accent : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .stroke(CalendarStyle.accent, lineWidth: (!isSelected && isToday) ? 1.5 : 0)
+                    )
+                    // Inset the highlight so its rounded top/bottom (and today's
+                    // ring) clear the slider's clip edges instead of being cropped.
+                    .padding(.vertical, 3)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func numeralColor(isSelected: Bool, isToday: Bool, isWeekend: Bool) -> Color {
+        if isSelected { return CalendarStyle.onAccent }
+        if isToday { return CalendarStyle.accent }
+        if isWeekend { return NotchDesign.Colors.textFaint }
+        return CalendarStyle.ink
+    }
+}
+
 struct StandaloneCalendarView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
     @State private var displayedMonth = Date()
-    /// Centered day of the week-mode horizontal date slider. Kept in sync with
-    /// `selectedDate`; `weekSliderProgrammatic` guards the two-way binding so a
-    /// programmatic scroll (from tapping a day / nav arrows) doesn't echo back
-    /// as a user scroll and vice-versa.
-    @State private var weekSliderID: Date?
-    @State private var weekSliderProgrammatic = false
-    /// Suppresses the notch's scroll-to-close gesture while the cursor is over the
-    /// horizontal week slider, so a sideways scroll pages days instead of closing.
-    @State private var weekSliderScrollSuppressionToken = UUID()
     @Default(.hideAllDayEvents) private var hideAllDayEvents
     @Default(.hideCompletedReminders) private var hideCompletedReminders
     @Default(.showFullEventTitles) private var showFullEventTitles
@@ -423,7 +561,7 @@ struct StandaloneCalendarView: View {
             // mode lifts just the weekday header up (its date grid stays in the
             // lower-left card), padded to line its columns up with that grid.
             if isWeek {
-                inlineWeekStrip
+                WeekDateSlider(selectedDate: $selectedDate)
             } else {
                 monthWeekdayHeader
                     .padding(.horizontal, 8)
@@ -482,125 +620,6 @@ struct StandaloneCalendarView: View {
     }
 
     // MARK: - Week mode
-
-    /// Horizontal date slider that lives inline in the control row (left half,
-    /// beside the month label). Folding the weekday/date row into the header frees
-    /// the whole remaining height for the agenda; making it a scroller lets a
-    /// swipe page through days directly, snapping the centered day into selection.
-    private static let sliderCellWidth: CGFloat = 44
-    private static let sliderPastDays = 120
-    private static let sliderFutureDays = 240
-
-    /// Continuous day range the slider scrolls through (centered near today).
-    private var sliderDays: [Date] {
-        let today = calendar.startOfDay(for: Date())
-        guard let start = calendar.date(byAdding: .day, value: -Self.sliderPastDays, to: today) else { return [] }
-        let count = Self.sliderPastDays + Self.sliderFutureDays + 1
-        return (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
-    }
-
-    private var inlineWeekStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 3) {
-                ForEach(sliderDays, id: \.self) { day in
-                    inlineWeekCell(day)
-                        .frame(width: Self.sliderCellWidth)
-                        .id(calendar.startOfDay(for: day))
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollIndicators(.never)
-        .scrollPosition(id: $weekSliderID, anchor: .center)
-        .scrollTargetBehavior(.viewAligned)
-        // Fade the day cells out at both ends of the slider (control row sits on
-        // the black notch panel, so fade to black).
-        .overlay(alignment: .leading) { sliderEdgeFade(leading: true) }
-        .overlay(alignment: .trailing) { sliderEdgeFade(leading: false) }
-        // Sideways scrolling here pages days; keep it from closing the notch AND
-        // from switching to the adjacent tab.
-        .onHover { hovering in
-            vm.setScrollGestureSuppression(hovering, token: weekSliderScrollSuppressionToken)
-            vm.setTabSwitchSuppression(hovering, token: weekSliderScrollSuppressionToken)
-        }
-        .onDisappear {
-            vm.setScrollGestureSuppression(false, token: weekSliderScrollSuppressionToken)
-            vm.setTabSwitchSuppression(false, token: weekSliderScrollSuppressionToken)
-        }
-        .onAppear {
-            weekSliderProgrammatic = true
-            weekSliderID = calendar.startOfDay(for: selectedDate)
-        }
-        // User scroll settled on a new centered day → select it.
-        .onChange(of: weekSliderID) { _, newID in
-            guard let newID else { return }
-            if weekSliderProgrammatic {
-                weekSliderProgrammatic = false
-                return
-            }
-            if !calendar.isDate(newID, inSameDayAs: selectedDate) {
-                select(newID)
-            }
-        }
-        // Selection changed elsewhere (tap, nav arrows) → recenter the slider.
-        .onChange(of: selectedDate) { _, newDate in
-            let target = calendar.startOfDay(for: newDate)
-            guard weekSliderID == nil || !calendar.isDate(weekSliderID ?? target, inSameDayAs: target) else { return }
-            weekSliderProgrammatic = true
-            withAnimation(.smooth(duration: 0.2)) { weekSliderID = target }
-        }
-    }
-
-    private func sliderEdgeFade(leading: Bool) -> some View {
-        LinearGradient(
-            colors: leading ? [Color.black, .clear] : [.clear, Color.black],
-            startPoint: .leading, endPoint: .trailing
-        )
-        .frame(width: 18)
-        .allowsHitTesting(false)
-    }
-
-    private func inlineWeekCell(_ day: Date) -> some View {
-        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
-        let isToday = calendar.isDateInToday(day)
-        let isWeekend = calendar.isDateInWeekend(day)
-        let dow = day.formatted(.dateTime.weekday(.abbreviated)).uppercased()
-
-        return Button { select(day) } label: {
-            VStack(spacing: 1) {
-                Text(dow)
-                    .font(NotchDesign.Typography.mono(7, weight: isSelected ? .semibold : .medium))
-                    .foregroundStyle(isSelected ? CalendarStyle.onAccent.opacity(0.7)
-                                     : (isWeekend ? CalendarStyle.dim : CalendarStyle.faint))
-                Text(day.formatted(.dateTime.day()))
-                    .font(NotchDesign.Typography.voice(12, weight: isSelected || isToday ? .semibold : .medium))
-                    .foregroundStyle(weekNumeralColor(isSelected: isSelected, isToday: isToday, isWeekend: isWeekend))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 7)
-                    .fill(isSelected ? CalendarStyle.accent : Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7)
-                            .stroke(CalendarStyle.accent, lineWidth: (!isSelected && isToday) ? 1.5 : 0)
-                    )
-                    // Inset the highlight vertically so its rounded top/bottom
-                    // (and today's ring) clear the slider's clip edges instead of
-                    // being cropped — keeps the cell footprint/row height the same.
-                    .padding(.vertical, 3)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func weekNumeralColor(isSelected: Bool, isToday: Bool, isWeekend: Bool) -> Color {
-        if isSelected { return CalendarStyle.onAccent }
-        if isToday { return CalendarStyle.accent }
-        if isWeekend { return NotchDesign.Colors.textFaint }
-        return CalendarStyle.ink
-    }
 
     private var agenda: some View {
         Group {

@@ -768,7 +768,11 @@ struct NotchHomeView: View {
                             StandaloneCalendarView()
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Fill the full (fixed) panel height so the calendar card is
+                    // the same height as the media card next to it (equal columns),
+                    // matching the media/agents branches above.
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
                     .onHover { isHovering in
                         vm.setScrollGestureSuppression(isHovering, token: calendarScrollSuppressionToken)
                     }
