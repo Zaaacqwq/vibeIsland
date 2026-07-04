@@ -299,13 +299,12 @@ struct StandaloneCalendarView: View {
 
     private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
 
-    /// Fixed content-height budget derived from the shared open-notch height, so
-    /// the tab always claims the same height as every other tab. Both modes are
-    /// fully height-bounded (week: strip + scrolling agenda; month: scrolling
-    /// grid + agenda pane), so neither over-inflates the notch, and both get the
-    /// larger "list" budget (like the Agents session list).
+    /// Shared content-height budget (open-notch height minus header and the
+    /// uniform tab insets), identical to every other tab via
+    /// `NotchDesign.TabInset`. Used for internal splits (e.g. `weekStripHeight`);
+    /// the root frame itself just fills the region the shared container provides.
     private var tabContentHeight: CGFloat {
-        max(150, standardOpenNotchContentHeight - headerHeight - 6)
+        NotchDesign.TabInset.contentHeight(headerHeight: headerHeight)
     }
 
     // MARK: - Derived data
@@ -378,9 +377,9 @@ struct StandaloneCalendarView: View {
                 monthTwoPane
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 2)
-        .frame(maxWidth: .infinity, maxHeight: tabContentHeight, alignment: .top)
+        // Uniform tab insets + height budget come from the shared tab container
+        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear { resetToToday() }
         .onChange(of: selectedDate) { _, newDate in
             withAnimation(.smooth(duration: 0.22)) { displayedMonth = newDate.startOfMonth }

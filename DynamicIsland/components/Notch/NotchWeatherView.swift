@@ -37,18 +37,10 @@ struct NotchWeatherView: View {
                 loading
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        // Uniform tab insets + height budget come from the shared tab container
+        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear { Task { await weather.refresh(force: false) } }
-    }
-
-    // MARK: - Layout height (mirrors sibling tabs so heights don't drift)
-
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    private var maxTabContentHeight: CGFloat {
-        max(130, standardOpenNotchContentHeight - headerHeight - 36)
     }
 
     // MARK: - Content

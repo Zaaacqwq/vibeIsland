@@ -64,6 +64,7 @@ struct ContentView: View {
     @ObservedObject var weatherManager = WeatherManager.shared
     @Default(.debugNotchBackgroundEnabled) var debugNotchBackgroundEnabled
     @Default(.debugNotchBackgroundColor) var debugNotchBackgroundColor
+    @Default(.debugTabInsetBorderEnabled) var debugTabInsetBorderEnabled
 
     /// Gap between an activity wing and the black notch cover so content never
     /// touches the physical notch.
@@ -985,14 +986,35 @@ struct ContentView: View {
                           // attach their own root `.transition` or it overrides this
                           // slide (blur / vertical / opacity-in-place).
                           .transition(tabSwitchTransition)
-                          // Every tab claims the same fixed open-notch height (see
-                          // `dynamicNotchSize`/`openNotchSize`) top-aligned, so tabs
-                          // with shorter content (Home, empty Agents/Shelf) leave
-                          // breathing room below instead of shrinking the window —
-                          // per the notch redesign's "uniform height across every
-                          // tab" rule. Do NOT reintroduce content-height measurement
-                          // here; it previously fed back into the window size and
-                          // made heights drift between tabs.
+                          // Uniform tab insets are applied HERE, once, for every
+                          // tab — individual tab views no longer add their own root
+                          // padding or content-height math (see `NotchDesign.TabInset`).
+                          // 1) Bound the content to the shared height budget so each
+                          //    tab's scroll views cap identically. Short tabs (Home,
+                          //    empty Agents/Shelf) stay top-aligned and leave the same
+                          //    breathing room below instead of resizing the window —
+                          //    per the redesign's "uniform height everywhere" rule.
+                          // 2) Left/right + top insets stack on the shell's shared
+                          //    `.padding([.horizontal, .bottom], 12)`. The bottom inset
+                          //    is folded into the height budget (top pad + bounded
+                          //    height, then pinned to the top), so it emerges as the
+                          //    gap below without an explicit `.padding(.bottom)`.
+                          .frame(
+                              maxWidth: .infinity,
+                              maxHeight: NotchDesign.TabInset.contentHeight(headerHeight: max(24, vm.effectiveClosedNotchHeight)),
+                              alignment: .top
+                          )
+                          // Debug: outline the uniform inset box so the shared
+                          // left/right/top/bottom margins are visible across tabs.
+                          .overlay {
+                              if debugTabInsetBorderEnabled {
+                                  Rectangle()
+                                      .strokeBorder(Color.cyan, lineWidth: 1)
+                                      .allowsHitTesting(false)
+                              }
+                          }
+                          .padding(.horizontal, NotchDesign.TabInset.horizontal)
+                          .padding(.top, NotchDesign.TabInset.top)
                           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                       }
                       .transition(notchOpenTransition)

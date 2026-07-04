@@ -24,6 +24,7 @@ import SwiftUI
 struct DebugSettings: View {
     @Default(.debugNotchBackgroundEnabled) private var debugNotchBackgroundEnabled
     @Default(.debugNotchBackgroundColor) private var debugNotchBackgroundColor
+    @Default(.debugTabInsetBorderEnabled) private var debugTabInsetBorderEnabled
     @Default(.debugForcedActivities) private var debugForcedActivities
 
     /// Activities that can be previewed with sample data.
@@ -73,6 +74,17 @@ struct DebugSettings: View {
                             .foregroundStyle(Geist.Colors.ink)
                     }
                 }
+            }
+
+            GeistSection(
+                title: "Tab layout",
+                footer: "Outlines the uniform content inset every tab sits inside, so you can see the shared left/right/top/bottom margins line up across tabs."
+            ) {
+                GeistToggleRow(
+                    title: "Show tab inset border",
+                    isOn: $debugTabInsetBorderEnabled,
+                    divider: false
+                )
             }
         }
     }

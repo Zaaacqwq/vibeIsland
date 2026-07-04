@@ -31,30 +31,10 @@ struct NotchAgentsView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    /// Session rows need most of the post-header body height; otherwise the list
-    /// gets clipped and leaves a large dead-black band at the bottom.
-    private var sessionListContentHeight: CGFloat {
-        max(140, standardOpenNotchContentHeight - headerHeight - 10)
-    }
-
-    /// Empty state has centering Spacers, so giving it the list budget makes the
-    /// no-session Agents tab visually taller than the other tabs. Keep the old,
-    /// compact budget only for the empty state.
-    private var emptyStateContentHeight: CGFloat {
-        max(120, standardOpenNotchContentHeight - headerHeight - 36)
-    }
-
-    private var standardTabContentHeight: CGFloat {
-        agentMonitor.sessions.isEmpty ? emptyStateContentHeight : sessionListContentHeight
-    }
-
-    /// Height the approve/ask overlay fills. It should behave like the session list,
-    /// not the compact empty state.
-    private var overlayContentHeight: CGFloat {
-        sessionListContentHeight
-    }
+    // The full Agents tab (overlay + two-column) fills the shared tab container
+    // from ContentView, which already applies uniform insets and the shared
+    // height budget (`NotchDesign.TabInset`). Only the Home-embed branch below
+    // keeps its own padding, since it renders inside a Home card, not the tab.
 
     // Suppress the notch's scroll-to-close gesture while hovering the list, so
     // scrolling pages through sessions instead of closing the notch.
@@ -77,7 +57,7 @@ struct NotchAgentsView: View {
                 // notch past the cap.
                 AgentInputOverlay(session: active)
                     .id(active.id)
-                    .frame(maxWidth: .infinity, maxHeight: overlayContentHeight, alignment: .top)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.opacity)
             } else if showsInputOverlay {
                 // Full Agents tab: two columns — session list on the left (~60%),
@@ -92,9 +72,7 @@ struct NotchAgentsView: View {
                             .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: standardTabContentHeight, alignment: .top)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 // Home embed: intrinsic height, eyebrow header + compact session
                 // list. Its parent card owns the height (maxHeight nil).
@@ -328,7 +306,7 @@ struct NotchAgentsView: View {
                 Spacer()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? standardTabContentHeight : nil)
+        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? .infinity : nil)
     }
 }
 

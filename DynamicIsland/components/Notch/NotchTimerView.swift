@@ -67,9 +67,9 @@ struct NotchTimerView: View {
         Group {
             if enableTimerFeature {
                 content
-                    .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
+                    // Uniform tab insets + height budget come from the shared tab
+                    // container in ContentView (`NotchDesign.TabInset`); fill it.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     // No root `.transition`: the tab switcher owns the directional
                     // slide; a blur transition here would override it.
                     .onAppear { syncCustomDuration(with: customTimerDuration) }
@@ -125,7 +125,7 @@ struct NotchTimerView: View {
 
             bottomChipRow
         }
-        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var inputSection: some View {
@@ -236,7 +236,7 @@ struct NotchTimerView: View {
             controlCluster
         }
         .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .background(card)
         // Resolve the whole card's geometry as one unit before the tab's `.move`
         // transition offsets it. Its observable-driven children (countdown ring,
@@ -443,17 +443,6 @@ struct NotchTimerView: View {
     }
 
     // MARK: - Derived values
-
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    /// Budget derived from the fixed open-notch content height (not the live
-    /// `vm.notchSize`, which used to create a circular dependency: this tab's
-    /// layout would read the window's current height while also being the
-    /// content that determined it, so heights drifted between tabs).
-    private var maxTabContentHeight: CGFloat {
-        let available = standardOpenNotchContentHeight - headerHeight - 36
-        return max(130, available)
-    }
 
     private func lockAccentColorIfNeeded() {
         if timerManager.isTimerActive { lockedAccentColor = resolvedAccentColor }

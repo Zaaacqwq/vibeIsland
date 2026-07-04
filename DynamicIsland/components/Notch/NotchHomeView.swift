@@ -291,7 +291,7 @@ struct MusicControlsView: View {
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 6
     private let contentSpacing: CGFloat = 4
-    private let songInfoAndSliderHeight: CGFloat = 74
+    private let songInfoAndSliderHeight: CGFloat = 92
 
     var body: some View {
         VStack(alignment: .leading, spacing: contentSpacing) {
@@ -309,10 +309,10 @@ struct MusicControlsView: View {
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .center, spacing: 10) {
+                HStack(alignment: .center, spacing: 12) {
                     AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                        .frame(width: 34, height: 34)
-                    songInfo(width: max(0, geo.size.width - 46))
+                        .frame(width: 48, height: 48)
+                    songInfo(width: max(0, geo.size.width - 65))
                 }
                 musicSlider
             }
@@ -330,32 +330,27 @@ struct MusicControlsView: View {
 
     private func songInfo(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Title + artist share one line (instead of stacking) so the
-            // block only spans two rows (this + lyrics), letting the album
-            // art shrink to match.
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                MusicTitleMarqueeView(
-                    text: musicManager.songTitle,
-                    isExplicit: musicManager.isCurrentTrackExplicit,
-                    font: NotchDesign.Typography.voice(14, weight: .semibold),
-                    nsFont: .headline,
-                    textColor: NotchDesign.Colors.textPrimary,
-                    frameWidth: width * 0.58,
-                    badgeHeight: 14
-                )
-                Text("·")
-                    .font(NotchDesign.Typography.voice(13))
-                    .foregroundStyle(NotchDesign.Colors.textTertiary)
-                MarqueeText(
-                    $musicManager.artistName,
-                    font: NotchDesign.Typography.voice(12, weight: .medium),
-                    nsFont: .headline,
-                    textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                        .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
-                    frameWidth: width * 0.37
-                )
-            }
-            // Lyrics shown under the title/artist line (when enabled in settings)
+            // Title, then artist on its own line beneath it, then lyrics — three
+            // stacked rows. The taller album art (see songInfoAndSlider) matches
+            // this block now that the card fills the full tab height.
+            MusicTitleMarqueeView(
+                text: musicManager.songTitle,
+                isExplicit: musicManager.isCurrentTrackExplicit,
+                font: NotchDesign.Typography.voice(15, weight: .semibold),
+                nsFont: .headline,
+                textColor: NotchDesign.Colors.textPrimary,
+                frameWidth: width,
+                badgeHeight: 15
+            )
+            MarqueeText(
+                $musicManager.artistName,
+                font: NotchDesign.Typography.voice(12.5, weight: .medium),
+                nsFont: .headline,
+                textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
+                    .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
+                frameWidth: width
+            )
+            // Lyrics shown under the title/artist lines (when enabled in settings)
             if enableLyrics {
                 let transition = AnyTransition.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
@@ -712,14 +707,7 @@ struct NotchHomeView: View {
     let albumArtNamespace: Namespace.ID
     @State private var calendarScrollSuppressionToken = UUID()
 
-    private let homePanelPadding: CGFloat = 8
     private let homeCardContentPadding: CGFloat = 5
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    private var homeCardContentHeight: CGFloat {
-        let available = standardOpenNotchContentHeight - headerHeight - 36
-        return max(120, available - (homePanelPadding * 2) - (homeCardContentPadding * 2))
-    }
 
     /// Whether the music player should actively display (enabled AND has real content).
     private var shouldShowMusicPlayer: Bool {
@@ -755,7 +743,7 @@ struct NotchHomeView: View {
                         // breathing room below rather than making its card shorter
                         // than its neighbour.
                         .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .frame(height: homeCardContentHeight, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
                         .padding(homeCardContentPadding)
                         .notchCard(radius: NotchDesign.Radius.lg)
                 }
@@ -768,7 +756,7 @@ struct NotchHomeView: View {
                         // idle empty-state no longer sticks out taller than the
                         // media card next to it.
                         .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .frame(height: homeCardContentHeight, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
                         .environmentObject(vm)
                         .padding(homeCardContentPadding)
                         .notchCard(radius: NotchDesign.Radius.lg)
@@ -798,11 +786,14 @@ struct NotchHomeView: View {
         // drop + blur) and tab-switch (horizontal slide). The `.blur` below is a
         // separate closed-state effect and stays.
         .blur(radius: vm.notchState == .closed ? 30 : 0)
-        .padding(Defaults[.enableMinimalisticUI] ? 0 : homePanelPadding) //Putting the main padding for home view here for consistency
+        // Uniform tab insets come from the shared tab container in ContentView
+        // (`NotchDesign.TabInset`) — no root padding here.
         // Claim the full (fixed) open-notch height so the two cards inside have a
-        // definite height to stretch into — otherwise the HStack hugs its content
-        // and the equal-height cards collapse back to intrinsic (idle-agents-taller)
-        // sizing. Safe now that the window height is fixed (see standardOpenNotchContentHeight).
+        // definite height to stretch into (each card uses `maxHeight: .infinity`,
+        // so both fill down to the shared inset boundary and stay equal height)
+        // — otherwise the HStack hugs its content and the cards collapse back to
+        // intrinsic (idle-agents-taller) sizing. Safe now that the window height
+        // is fixed (see standardOpenNotchContentHeight).
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

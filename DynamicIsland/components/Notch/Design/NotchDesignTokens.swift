@@ -117,4 +117,27 @@ enum NotchDesign {
     static let hairlineWidth: CGFloat = 1
     /// Letter-spacing for mono eyebrow labels (~0.12–0.16em per the handoff).
     static let eyebrowTracking: CGFloat = 1.2
+
+    // MARK: - Tab content insets
+
+    /// Uniform inset every open-notch tab's content sits inside. Applied ONCE by
+    /// `ContentView` around the tab `switch` (not per-tab), so Home, Shelf,
+    /// Agents, Calendar, Weather, Timer and Notifications share identical
+    /// left/right/top/bottom margins. These stack on top of the shell's shared
+    /// `.padding([.horizontal, .bottom], 12)` — top has no shell padding, so the
+    /// top value is the full gap between the header row and the tab content.
+    /// Individual tabs must NOT re-add their own root padding or height math.
+    enum TabInset {
+        static let horizontal: CGFloat = 8
+        static let top: CGFloat = 8
+        static let bottom: CGFloat = 8
+
+        /// Fixed content-height budget shared by every tab: the open-notch
+        /// height minus the header row and the top/bottom insets. Passed to each
+        /// tab so its scroll views bound identically instead of each inventing a
+        /// magic `standardOpenNotchContentHeight - N` subtraction.
+        static func contentHeight(headerHeight: CGFloat) -> CGFloat {
+            max(0, standardOpenNotchContentHeight - headerHeight - top - bottom)
+        }
+    }
 }

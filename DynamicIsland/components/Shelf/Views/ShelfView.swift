@@ -51,15 +51,7 @@ struct ShelfView: View {
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
     private let spacing: CGFloat = 8
-    private let contentPadding: CGFloat = 8
     private let quickShareWidth: CGFloat = 150
-    private let dropZoneVerticalOutset: CGFloat = 8
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    private var maxShelfContentHeight: CGFloat {
-        let available = standardOpenNotchContentHeight - headerHeight - 36
-        return max(120, available)
-    }
 
     var body: some View {
         HStack(spacing: NotchDesign.Spacing.md) {
@@ -69,13 +61,15 @@ struct ShelfView: View {
                 .environmentObject(vm)
             panel
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.vertical, -dropZoneVerticalOutset)
                 .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
                     handleDrop(providers: providers)
                 }
         }
-        .padding(contentPadding)
-        .frame(maxWidth: .infinity, maxHeight: maxShelfContentHeight, alignment: .top)
+        // Uniform tab insets + height budget come from the shared tab container
+        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
+        // (The old `contentPadding` + negative drop-zone outset are gone so the
+        // shelf respects the same margins as every other tab.)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // Bind Quick Look to shelf selection
         .onChange(of: selection.selectedIDs) {
             updateQuickLookSelection()

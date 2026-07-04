@@ -567,6 +567,9 @@ extension Defaults.Keys {
     /// Debug: tint the notch background instead of black, to inspect the layout regions.
     static let debugNotchBackgroundEnabled = Key<Bool>("debugNotchBackgroundEnabled", default: false)
     static let debugNotchBackgroundColor = Key<Color>("debugNotchBackgroundColor", default: .red)
+    /// Debug: outline the uniform tab-content inset (`NotchDesign.TabInset`) so the
+    /// shared left/right/top/bottom margins are visible across every tab.
+    static let debugTabInsetBorderEnabled = Key<Bool>("debugTabInsetBorderEnabled", default: false)
     /// Debug: force-show these closed-pill activities (with sample data) to preview combinations.
     static let debugForcedActivities = Key<Set<ClosedNotchActivityKind>>("debugForcedActivities", default: [])
     static let enableShadow = Key<Bool>("enableShadow", default: true)
