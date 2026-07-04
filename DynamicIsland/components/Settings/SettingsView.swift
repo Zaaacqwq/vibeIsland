@@ -2836,19 +2836,51 @@ struct Appearance: View {
     @Default(.autoNotchWidth) var autoNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
+    @Default(.showHeaderContextWidgets) private var showHeaderContextWidgets
+    @Default(.homeHeaderStats) private var homeHeaderStats
 
     @State private var isIconImporterPresented = false
     @State private var isIconDropTarget = false
     @State private var iconImportError: String?
+
+    /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
+    /// in canonical `allCases` order so the header layout stays stable.
+    private func homeStatBinding(_ kind: HeaderStatKind) -> Binding<Bool> {
+        Binding(
+            get: { homeHeaderStats.contains(kind) },
+            set: { isOn in
+                var selected = Set(homeHeaderStats)
+                if isOn { selected.insert(kind) } else { selected.remove(kind) }
+                homeHeaderStats = HeaderStatKind.allCases.filter { selected.contains($0) }
+            }
+        )
+    }
 
     var body: some View {
         GeistSettingsPage(title: "Appearance") {
             GeistSection(title: "General") {
                 GeistToggleRow(title: "Always show tabs", isOn: $coordinator.alwaysShowTabs, info: "Keeps the tab bar visible in the open notch instead of only showing it on hover.")
                 GeistToggleRow(title: "Settings icon in notch", isOn: geistBinding(.settingsIconInNotch), info: "Shows a gear button in the open notch that opens this Settings window.")
+                GeistToggleRow(title: "Show tab info in notch header", isOn: geistBinding(.showHeaderContextWidgets), info: "Fills the open notch's right side with info for the active tab — Home CPU/RAM, Shelf device name, Agents usage, Calendar's next event, and Weather location.")
                 GeistToggleRow(title: "Enable window shadow", isOn: geistBinding(.enableShadow))
                 GeistToggleRow(title: "Corner radius scaling", isOn: geistBinding(.cornerRadiusScaling), info: "Scales the notch's rounded corners with its size so the curvature stays proportional.")
                 GeistToggleRow(title: "Use simpler close animation", isOn: geistBinding(.useModernCloseAnimation), divider: false, info: "Uses a lighter close animation. Enabled automatically in Minimalistic UI mode.")
+            }
+
+            if showHeaderContextWidgets {
+                GeistSection(
+                    title: "Home header stats",
+                    footer: "Keep it to about 3 at a time — the notch header has limited room, and more may not fit."
+                ) {
+                    let kinds = HeaderStatKind.allCases
+                    ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
+                        GeistToggleRow(
+                            title: kind.settingsTitle,
+                            isOn: homeStatBinding(kind),
+                            divider: index != kinds.count - 1
+                        )
+                    }
+                }
             }
 
             GeistSection(title: "Display Style") {

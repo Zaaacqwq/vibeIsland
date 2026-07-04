@@ -47,6 +47,22 @@ class CalendarManager: ObservableObject {
     @Published var calendarAuthorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var reminderAuthorizationStatus: EKAuthorizationStatus = .notDetermined
 
+    /// The next non-all-day calendar event happening today that hasn't ended
+    /// yet, from the currently loaded `events` window. Drives the open-notch
+    /// header's Calendar-tab widget; `nil` when nothing is left today.
+    var nextEventToday: EventModel? {
+        let now = Date()
+        let calendar = Calendar.current
+        return events
+            .filter { event in
+                event.type.isEvent
+                    && !event.isAllDay
+                    && calendar.isDateInToday(event.start)
+                    && event.end >= now
+            }
+            .min { $0.start < $1.start }
+    }
+
     private var selectedCalendars: [CalendarModel] = []
     private let calendarService = CalendarService()
     private var lastEventsFetchDate: Date?

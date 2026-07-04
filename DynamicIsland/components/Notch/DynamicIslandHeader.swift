@@ -62,6 +62,11 @@ struct DynamicIslandHeader: View {
             }
 
             HStack(spacing: 4) {
+                if vm.notchState == .open && !enableMinimalisticUI && Defaults[.showHeaderContextWidgets] {
+                    NotchHeaderContextWidget()
+                    Spacer(minLength: 8)
+                }
+
                 if vm.notchState == .open && !enableMinimalisticUI {
                     if Defaults[.enableTimerFeature] && timerDisplayMode == .popover {
                         Button(action: {

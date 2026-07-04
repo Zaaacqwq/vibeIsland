@@ -112,10 +112,7 @@ struct NotchAgentsView: View {
     /// Agents tab is already identified by the shared header's active tab
     /// pill, so its own content starts straight with the usage badges.
     private var header: some View {
-        let claudeUsage = agentMonitor.usage
-        let codexUsage = agentMonitor.codexUsage
-        let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
-        let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
+        let badges = AgentUsageBadges(claude: agentMonitor.usage, codex: agentMonitor.codexUsage)
         return HStack(spacing: 6) {
             if !showsInputOverlay {
                 Image(systemName: "sparkles")
@@ -128,76 +125,14 @@ struct NotchAgentsView: View {
                     .fixedSize()
             }
             Spacer(minLength: 4)
-            if hasClaude || hasCodex {
-                HStack(spacing: 5) {
-                    if let claudeUsage, hasClaude {
-                        claudeUsageBadges(claudeUsage)
-                    }
-                    if let codexUsage, hasCodex {
-                        codexUsageBadges(codexUsage)
-                    }
-                }
+            if badges.hasAny {
+                badges
             } else if !agentMonitor.isBridgeReady {
                 Text("Connecting…")
                     .font(NotchDesign.Typography.mono(11))
                     .foregroundStyle(NotchDesign.Colors.textTertiary)
             }
         }
-    }
-
-    @ViewBuilder
-    private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        HStack(spacing: 3) {
-            Image("claude-icon")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 11, height: 11)
-                .foregroundStyle(NotchDesign.Colors.textPrimary)
-                .help("Claude usage")
-            if let five = usage.fiveHour {
-                usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
-            }
-            if let week = usage.sevenDay {
-                usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
-        HStack(spacing: 3) {
-            Image("codex-icon")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 11, height: 11)
-                .foregroundStyle(NotchDesign.Colors.textPrimary)
-                .help("Codex usage")
-            ForEach(usage.windows) { window in
-                usageBadge(
-                    title: window.label,
-                    percent: window.roundedUsedPercentage,
-                    warn: window.usedPercentage >= 80,
-                    help: "Codex \(window.label) limit used"
-                )
-            }
-        }
-    }
-
-    private func usageBadge(title: String, percent: Int, warn: Bool, help: String) -> some View {
-        Text("\(title) \(percent)%")
-            .font(NotchDesign.Typography.mono(10, weight: .medium))
-            .foregroundStyle(warn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
-            // Keep the pill on one line — without this, a wider value (two digits
-            // or 100%) gets compressed by the header HStack and wraps to two rows,
-            // making the badge taller than its neighbours.
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(warn ? NotchDesign.Colors.warning.opacity(0.1) : Color.white.opacity(0.06)))
-            .help(help)
     }
 
     /// Home-embed content: compact session list, no usage panels.
@@ -247,46 +182,23 @@ struct NotchAgentsView: View {
     /// Right column of the full tab: a bare rate-limit line above the token-usage
     /// card, sized to fit without scrolling.
     private var usageColumn: some View {
+        // The compact rate-limit badges now live in the open-notch header
+        // (`NotchHeaderContextWidget`), so the tab body keeps only the detailed
+        // token-usage panel and lets it own the column.
         VStack(alignment: .leading, spacing: 10) {
-            rateLimitRow
             if let usage = agentMonitor.tokenUsage, !usage.isEmpty {
                 NotchTokenUsageCard(
                     usage: usage,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )
+            } else if !agentMonitor.isBridgeReady {
+                Text("Connecting…")
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Spacer(minLength: 0)
-        }
-    }
-
-    /// A "Usage" eyebrow followed by the Claude / Codex rate-limit windows
-    /// (5h / 7d etc.) on a single bare line. Hidden until at least one provider
-    /// reports usage.
-    @ViewBuilder
-    private var rateLimitRow: some View {
-        let claudeUsage = agentMonitor.usage
-        let codexUsage = agentMonitor.codexUsage
-        let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
-        let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
-        if hasClaude || hasCodex {
-            HStack(spacing: 10) {
-                NotchMonoEyebrow(text: "Usage")
-                    .lineLimit(1)
-                    .fixedSize()
-                if let claudeUsage, hasClaude {
-                    claudeUsageBadges(claudeUsage)
-                }
-                if let codexUsage, hasCodex {
-                    codexUsageBadges(codexUsage)
-                }
-                Spacer(minLength: 0)
-            }
-        } else if !agentMonitor.isBridgeReady {
-            Text("Connecting…")
-                .font(NotchDesign.Typography.mono(11))
-                .foregroundStyle(NotchDesign.Colors.textTertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

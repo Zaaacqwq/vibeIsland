@@ -562,6 +562,14 @@ extension Defaults.Keys {
         // MARK: Appearance
         //static let alwaysShowTabs = Key<Bool>("alwaysShowTabs", default: true)
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
+    /// Show a compact, tab-aware info widget in the open-notch header's right
+    /// wing (Home CPU/RAM, Shelf device, Agents usage, Calendar next event,
+    /// Weather location). Master switch; each widget also respects its own
+    /// feature toggle.
+    static let showHeaderContextWidgets = Key<Bool>("showHeaderContextWidgets", default: true)
+    /// Which system metrics the Home tab's notch-header widget shows, in
+    /// `HeaderStatKind.allCases` order. Empty hides the Home stats entirely.
+    static let homeHeaderStats = Key<[HeaderStatKind]>("homeHeaderStats", default: [.cpu, .ram])
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
     static let accentColor = Key<Color>("accentColor", default: Color.blue)
     /// Debug: tint the notch background instead of black, to inspect the layout regions.
