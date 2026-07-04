@@ -68,6 +68,30 @@ extension View {
     func notchPill(fill: Color = Color.white.opacity(0.09)) -> some View {
         modifier(NotchPillBackground(fill: fill))
     }
+
+    /// Top/bottom fade over a scrolling list so rows dissolve into the surface
+    /// behind them instead of clipping abruptly at the edges (mirrors the
+    /// calendar agenda's edge fade). Apply to the ScrollView. Pass the color of
+    /// the surface the list sits on: the black panel on the full tab, or the
+    /// lighter card fill when the list is embedded in a card (Home).
+    func notchListEdgeFade(color: Color = .black, height: CGFloat = 16) -> some View {
+        overlay(alignment: .top) {
+            LinearGradient(
+                colors: [color.opacity(0.85), color.opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: height)
+            .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [color.opacity(0), color.opacity(0.85)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: height)
+            .allowsHitTesting(false)
+        }
+    }
 }
 
 /// Simple opacity keyframe loop for "needs permission" / "Live" pulsing dots,

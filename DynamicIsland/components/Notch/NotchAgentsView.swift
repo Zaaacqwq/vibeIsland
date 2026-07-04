@@ -41,6 +41,12 @@ struct NotchAgentsView: View {
     @State private var scrollSuppressionToken = UUID()
     @State private var isSuppressingScroll = false
 
+    /// Edge-fade heights for the session lists. Rows are inset by the same amount
+    /// so the first/last clear the fade at rest; the compact Home embed uses a
+    /// smaller fade than the full tab.
+    private let homeListFadeHeight: CGFloat = 12
+    private let fullListFadeHeight: CGFloat = 16
+
     var body: some View {
         // Stays a `Group` (not a ZStack): a ZStack with the maxHeight:.infinity
         // frame below fills greedily, which made the Agents panel embedded in the
@@ -206,7 +212,14 @@ struct NotchAgentsView: View {
                         AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: true)
                     }
                 }
+                // Inset the rows by the fade height so the short list's first and
+                // last rows clear the fade at rest instead of sitting dimmed under
+                // it — the fade then only bites into the padding / while scrolling.
+                .padding(.vertical, homeListFadeHeight)
             }
+            // Home embed sits on the lighter card fill, not the black panel, so
+            // fade to the card colour (a black fade would read as a dark band).
+            .notchListEdgeFade(color: NotchDesign.Colors.cardFill, height: homeListFadeHeight)
         }
     }
 
@@ -223,7 +236,11 @@ struct NotchAgentsView: View {
                         AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: false)
                     }
                 }
+                // Inset by the fade height so the first/last rows clear the fade
+                // at rest (matches the Home embed).
+                .padding(.vertical, fullListFadeHeight)
             }
+            .notchListEdgeFade(height: fullListFadeHeight)
         }
     }
 
