@@ -106,18 +106,25 @@ struct NotchAgentsView: View {
     /// Agents tab is already identified by the shared header's active tab
     /// pill, so its own content starts straight with the usage badges.
     private var header: some View {
-        HStack(spacing: 6) {
+        let claudeUsage = agentMonitor.usage
+        let codexUsage = agentMonitor.codexUsage
+        let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
+        let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
+        // When both providers report usage the four badges fill the narrow Home
+        // header, so keep the sparkles icon but drop the "Agents" wordmark rather
+        // than let the badges clip it. The full Agents tab uses `rateLimitRow`
+        // (no eyebrow) and has room, so this only affects the Home embed.
+        let showEyebrowText = !(hasClaude && hasCodex)
+        return HStack(spacing: 6) {
             if !showsInputOverlay {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13))
                     .foregroundStyle(NotchDesign.Colors.accent)
-                NotchMonoEyebrow(text: "Agents")
+                if showEyebrowText {
+                    NotchMonoEyebrow(text: "Agents")
+                }
             }
             Spacer()
-            let claudeUsage = agentMonitor.usage
-            let codexUsage = agentMonitor.codexUsage
-            let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
-            let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
             if hasClaude || hasCodex {
                 HStack(spacing: 6) {
                     if let claudeUsage, hasClaude {
@@ -179,6 +186,11 @@ struct NotchAgentsView: View {
         Text("\(title) \(percent)%")
             .font(NotchDesign.Typography.mono(10, weight: .medium))
             .foregroundStyle(warn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
+            // Keep the pill on one line — without this, a wider value (two digits
+            // or 100%) gets compressed by the header HStack and wraps to two rows,
+            // making the badge taller than its neighbours.
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
             .background(Capsule().fill(warn ? NotchDesign.Colors.warning.opacity(0.1) : Color.white.opacity(0.06)))
