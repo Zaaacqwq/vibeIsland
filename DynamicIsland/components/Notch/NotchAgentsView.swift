@@ -260,8 +260,9 @@ struct NotchAgentsView: View {
         }
     }
 
-    /// Claude / Codex rate-limit windows (5h / 7d etc.) on a single bare line —
-    /// no box or eyebrow. Hidden until at least one provider reports usage.
+    /// A "Usage" eyebrow followed by the Claude / Codex rate-limit windows
+    /// (5h / 7d etc.) on a single bare line. Hidden until at least one provider
+    /// reports usage.
     @ViewBuilder
     private var rateLimitRow: some View {
         let claudeUsage = agentMonitor.usage
@@ -269,7 +270,10 @@ struct NotchAgentsView: View {
         let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
         let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
         if hasClaude || hasCodex {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                NotchMonoEyebrow(text: "Usage")
+                    .lineLimit(1)
+                    .fixedSize()
                 if let claudeUsage, hasClaude {
                     claudeUsageBadges(claudeUsage)
                 }

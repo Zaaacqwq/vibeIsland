@@ -62,6 +62,9 @@ struct NotchTimerView: View {
     @State private var customSeconds: Int = 0
     @State private var isSyncingCustomDuration = false
     @State private var lockedAccentColor: Color?
+    // Suppress the notch's scroll-to-close gesture while hovering the preset
+    // strip, so left/right scrolling browses presets instead of closing.
+    @State private var presetScrollSuppressionToken = UUID()
 
     var body: some View {
         Group {
@@ -159,15 +162,21 @@ struct NotchTimerView: View {
     /// the right. Without presets: quick-add chips fill the row.
     @ViewBuilder
     private var bottomChipRow: some View {
-        HStack(alignment: .center, spacing: 12) {
-            if showTimerPresetsInNotchTab {
-                presetChipsArea
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                quickAddChips
-            } else {
-                quickAddChips
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        GeometryReader { geo in
+            HStack(alignment: .center, spacing: 12) {
+                if showTimerPresetsInNotchTab {
+                    // Presets stay on a single row, capped at half the notch width;
+                    // overflow scrolls horizontally (see presetChipsArea).
+                    presetChipsArea
+                        .frame(maxWidth: geo.size.width * 0.5, alignment: .leading)
+                    Spacer(minLength: 0)
+                    quickAddChips
+                } else {
+                    quickAddChips
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
         .frame(height: 30)
     }
@@ -192,6 +201,10 @@ struct NotchTimerView: View {
                 }
                 .padding(.horizontal, 2)
             }
+            .onHover { hovering in
+                vm.setScrollGestureSuppression(hovering, token: presetScrollSuppressionToken)
+            }
+            .onDisappear { vm.setScrollGestureSuppression(false, token: presetScrollSuppressionToken) }
         }
     }
 
@@ -675,23 +688,24 @@ private struct TimerPresetChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 9) {
+            HStack(spacing: 7) {
                 Circle()
                     .fill(preset.color)
                     .frame(width: 8, height: 8)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(preset.name)
-                        .font(NotchDesign.Typography.voice(11, weight: .medium))
-                        .foregroundStyle(NotchDesign.Colors.textPrimary)
-                        .lineLimit(1)
-                    Text(preset.formattedDuration)
-                        .font(NotchDesign.Typography.mono(9, weight: .medium))
-                        .foregroundStyle(TimerStyle.muted)
-                }
+                // Name + duration inline on a single line (was stacked two rows).
+                Text(preset.name)
+                    .font(NotchDesign.Typography.voice(11, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
+                    .lineLimit(1)
+                Text(preset.formattedDuration)
+                    .font(NotchDesign.Typography.mono(9, weight: .medium))
+                    .foregroundStyle(TimerStyle.muted)
+                    .lineLimit(1)
             }
+            .fixedSize()
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.vertical, 6)
             .background(
                 Capsule().fill(isActive ? preset.color.opacity(0.22) : (isHovering ? Color.white.opacity(0.12) : TimerStyle.chipFill))
             )
