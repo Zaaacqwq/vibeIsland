@@ -112,20 +112,27 @@ struct NotchTokenUsageCard: View {
         GeometryReader { geo in
             let visible = segments.filter { $0.value > 0 }
             let gap: CGFloat = 2
+            let minWidth: CGFloat = 3
             let totalGap = gap * CGFloat(max(0, visible.count - 1))
-            let available = max(0, geo.size.width - totalGap)
-            let total = Double(usage.breakdown.totalTokens)
+            // Reserve each visible segment's minimum width up front, then split
+            // the LEFTOVER width proportionally. Clamping each segment to a floor
+            // independently used to overflow the bar (and poke past the card's
+            // right edge) when one segment dominated: the tiny segments' floors
+            // stacked on top of the dominant segment's near-full width. This way
+            // the widths always sum to exactly the available width.
+            let reserved = totalGap + minWidth * CGFloat(visible.count)
+            let flexible = max(0, geo.size.width - reserved)
+            let sumValues = Double(visible.reduce(0) { $0 + $1.value })
             HStack(spacing: gap) {
-                if total > 0 {
+                if sumValues > 0 {
                     ForEach(visible) { segment in
                         Capsule()
                             .fill(segment.color)
-                            .frame(width: max(3, available * CGFloat(Double(segment.value) / total)))
+                            .frame(width: minWidth + flexible * CGFloat(Double(segment.value) / sumValues))
                     }
                 } else {
                     Capsule().fill(NotchDesign.Colors.hairline)
                 }
-                Spacer(minLength: 0)
             }
         }
         .frame(height: 8)
