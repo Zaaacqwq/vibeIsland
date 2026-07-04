@@ -171,11 +171,11 @@ struct NotchAgentsView: View {
                         AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: false)
                     }
                 }
-                // Inset by the fade height so the first/last rows clear the fade
-                // at rest (matches the Home embed).
-                .padding(.vertical, fullListFadeHeight)
+                // Keep the first row aligned with the usage column; only inset the
+                // bottom so the last row clears the bottom fade at rest.
+                .padding(.bottom, fullListFadeHeight)
             }
-            .notchListEdgeFade(height: fullListFadeHeight)
+            .notchListEdgeFade(height: fullListFadeHeight, showsTop: false)
         }
     }
 

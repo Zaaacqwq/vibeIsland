@@ -74,22 +74,26 @@ extension View {
     /// calendar agenda's edge fade). Apply to the ScrollView. Pass the color of
     /// the surface the list sits on: the black panel on the full tab, or the
     /// lighter card fill when the list is embedded in a card (Home).
-    func notchListEdgeFade(color: Color = .black, height: CGFloat = 16) -> some View {
+    func notchListEdgeFade(color: Color = .black, height: CGFloat = 16, showsTop: Bool = true, showsBottom: Bool = true) -> some View {
         overlay(alignment: .top) {
-            LinearGradient(
-                colors: [color.opacity(0.85), color.opacity(0)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: height)
-            .allowsHitTesting(false)
+            if showsTop {
+                LinearGradient(
+                    colors: [color.opacity(0.85), color.opacity(0)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: height)
+                .allowsHitTesting(false)
+            }
         }
         .overlay(alignment: .bottom) {
-            LinearGradient(
-                colors: [color.opacity(0), color.opacity(0.85)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: height)
-            .allowsHitTesting(false)
+            if showsBottom {
+                LinearGradient(
+                    colors: [color.opacity(0), color.opacity(0.85)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: height)
+                .allowsHitTesting(false)
+            }
         }
     }
 }
