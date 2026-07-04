@@ -19,5 +19,5 @@
 
 3. when Auto-hide inactive notch media player is turned on, cant expand the notch at all
 
-4. 
+4. 现在的lyrics是根据一句话开头到结尾来的，所以如果中间有间奏/断句/几句话/唱的快慢，都会影响到lyrics的同步，有没有好的方法解决这个问题？
 

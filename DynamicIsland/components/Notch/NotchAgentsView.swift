@@ -110,23 +110,20 @@ struct NotchAgentsView: View {
         let codexUsage = agentMonitor.codexUsage
         let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
         let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
-        // When both providers report usage the four badges fill the narrow Home
-        // header, so keep the sparkles icon but drop the "Agents" wordmark rather
-        // than let the badges clip it. The full Agents tab uses `rateLimitRow`
-        // (no eyebrow) and has room, so this only affects the Home embed.
-        let showEyebrowText = !(hasClaude && hasCodex)
         return HStack(spacing: 6) {
             if !showsInputOverlay {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13))
                     .foregroundStyle(NotchDesign.Colors.accent)
-                if showEyebrowText {
-                    NotchMonoEyebrow(text: "Agents")
-                }
+                NotchMonoEyebrow(text: "Agents")
+                    // Keep the wordmark on one line — the rigid badges otherwise
+                    // compress it into "AGE…" / "AGEN\nTS".
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            Spacer()
+            Spacer(minLength: 4)
             if hasClaude || hasCodex {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     if let claudeUsage, hasClaude {
                         claudeUsageBadges(claudeUsage)
                     }
@@ -144,7 +141,7 @@ struct NotchAgentsView: View {
 
     @ViewBuilder
     private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Image("claude-icon")
                 .renderingMode(.template)
                 .resizable()
@@ -163,7 +160,7 @@ struct NotchAgentsView: View {
 
     @ViewBuilder
     private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Image("codex-icon")
                 .renderingMode(.template)
                 .resizable()
@@ -191,8 +188,8 @@ struct NotchAgentsView: View {
             // making the badge taller than its neighbours.
             .lineLimit(1)
             .fixedSize()
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
             .background(Capsule().fill(warn ? NotchDesign.Colors.warning.opacity(0.1) : Color.white.opacity(0.06)))
             .help(help)
     }
