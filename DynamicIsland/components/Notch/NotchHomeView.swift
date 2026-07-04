@@ -442,7 +442,8 @@ struct MusicControlsView: View {
         HStack(alignment: .center, spacing: 10) {
             if !controlLeftIconName.isEmpty {
                 Image(systemName: controlLeftIconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 22, height: 22, alignment: .center)
             }
 
@@ -450,11 +451,13 @@ struct MusicControlsView: View {
 
             if !controlRightIconName.isEmpty {
                 Image(systemName: controlRightIconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 22, height: 22, alignment: .center)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 8)
         .onAppear { syncHUDValueIfNeeded(force: true) }
         .onChange(of: coordinator.sneakPeek.value) { _, _ in
             syncHUDValueIfNeeded(force: false)
