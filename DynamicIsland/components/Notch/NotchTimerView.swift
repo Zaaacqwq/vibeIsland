@@ -201,11 +201,28 @@ struct NotchTimerView: View {
                 }
                 .padding(.horizontal, 2)
             }
+            // Fade the chips out at both ends of the scroll (the band sits on the
+            // black notch panel, so fade to black).
+            .overlay(alignment: .leading) { presetEdgeFade(leading: true) }
+            .overlay(alignment: .trailing) { presetEdgeFade(leading: false) }
             .onHover { hovering in
                 vm.setScrollGestureSuppression(hovering, token: presetScrollSuppressionToken)
+                vm.setTabSwitchSuppression(hovering, token: presetScrollSuppressionToken)
             }
-            .onDisappear { vm.setScrollGestureSuppression(false, token: presetScrollSuppressionToken) }
+            .onDisappear {
+                vm.setScrollGestureSuppression(false, token: presetScrollSuppressionToken)
+                vm.setTabSwitchSuppression(false, token: presetScrollSuppressionToken)
+            }
         }
+    }
+
+    private func presetEdgeFade(leading: Bool) -> some View {
+        LinearGradient(
+            colors: leading ? [Color.black, .clear] : [.clear, Color.black],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .frame(width: 16)
+        .allowsHitTesting(false)
     }
 
     private var quickAddChips: some View {

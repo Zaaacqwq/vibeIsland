@@ -71,6 +71,31 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         isScrollGestureActive = false
     }
 
+    /// Separate from `isScrollGestureActive` (which only blocks the vertical
+    /// scroll-to-close gesture): this blocks the horizontal swipe-to-adjacent-tab
+    /// gesture. Only *horizontally* scrolling areas (timer presets, calendar week
+    /// slider) register here — a vertical list should still let a sideways swipe
+    /// switch tabs.
+    @Published private(set) var isTabSwitchGestureSuppressed: Bool = false
+    private var tabSwitchSuppressionTokens: Set<UUID> = []
+
+    func setTabSwitchSuppression(_ active: Bool, token: UUID) {
+        if active {
+            if tabSwitchSuppressionTokens.insert(token).inserted {
+                isTabSwitchGestureSuppressed = true
+            }
+        } else {
+            if tabSwitchSuppressionTokens.remove(token) != nil {
+                isTabSwitchGestureSuppressed = !tabSwitchSuppressionTokens.isEmpty
+            }
+        }
+    }
+
+    private func resetTabSwitchSuppression() {
+        tabSwitchSuppressionTokens.removeAll()
+        isTabSwitchGestureSuppressed = false
+    }
+
     func setAutoCloseSuppression(_ active: Bool, token: UUID) {
         if active {
             let inserted = autoCloseSuppressionTokens.insert(token).inserted
@@ -345,6 +370,7 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
         closedNotchSize = targetSize
         notchState = .closed
         resetScrollGestureSuppression()
+        resetTabSwitchSuppression()
         resetAutoCloseSuppression()
 
         // Set the current view to shelf if it contains files and the user enables openShelfByDefault

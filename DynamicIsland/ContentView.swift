@@ -2282,6 +2282,11 @@ struct ContentView: View {
         return vm.notchState == .open
             && !Defaults[.enableMinimalisticUI]
             && !hasAnyActivePopovers()
+            // Only *horizontally* scrolling areas (timer presets, calendar week
+            // slider) register here — a sideways scroll there pages that content
+            // instead of switching to the adjacent tab. Vertical lists don't, so a
+            // sideways swipe over them still switches tabs.
+            && !vm.isTabSwitchGestureSuppressed
     }
 
     private func handleMusicControlPlaybackChange(isPlaying: Bool) {
