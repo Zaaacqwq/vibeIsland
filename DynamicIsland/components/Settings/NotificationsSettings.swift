@@ -27,7 +27,20 @@ struct NotificationsSettings: View {
     @Default(.enableNotificationMonitoring) var enableNotificationMonitoring
     @Default(.mutedNotificationApps) var mutedNotificationApps
 
+    private enum SubPage: String, Hashable { case perAppFilter }
+
     var body: some View {
+        NavigationStack {
+            notificationsRoot
+                .navigationDestination(for: SubPage.self) { page in
+                    switch page {
+                    case .perAppFilter: perAppFilterPage
+                    }
+                }
+        }
+    }
+
+    private var notificationsRoot: some View {
         GeistSettingsPage(title: "Notifications", subtitle: "Mirror the macOS Notification Center into the notch. Requires Full Disk Access.") {
             GeistSection {
                 GeistToggleRow(
@@ -38,7 +51,7 @@ struct NotificationsSettings: View {
                 )
                 if enableNotificationMonitoring {
                     GeistToggleRow(title: "Pop up the notch on new notifications", isOn: defaultsBinding(.showNotificationLiveActivity))
-                    GeistToggleRow(title: "Play a sound on new notifications", isOn: defaultsBinding(.notificationSoundEnabled))
+                    GeistToggleRow(title: "Play a sound on new notifications", isOn: defaultsBinding(.notificationSoundEnabled), onPreview: { SoundPreview.playSystem(named: "Tink") })
                     GeistToggleRow(
                         title: "Hide message content",
                         description: "Show only the app and title, never the body.",
@@ -70,19 +83,33 @@ struct NotificationsSettings: View {
                     }
                 }
 
-                GeistSection(
-                    title: "Per-app filter",
-                    footer: "Turn an app off to hide its notifications from the feed and popups."
-                ) {
-                    if monitor.seenApps.isEmpty {
-                        GeistRow(divider: false) {
-                            Text("Apps appear here once they send a notification.")
-                                .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
-                        }
-                    } else {
-                        ForEach(Array(monitor.seenApps.enumerated()), id: \.element) { index, bundleID in
-                            appMuteRow(bundleID, divider: index < monitor.seenApps.count - 1)
-                        }
+                GeistSection {
+                    GeistNavRow(
+                        title: "Per-App Filter",
+                        subtitle: "Choose which apps show notifications",
+                        systemImage: "app.badge",
+                        tint: .red,
+                        value: SubPage.perAppFilter,
+                        divider: false
+                    )
+                }
+            }
+        }
+    }
+
+    private var perAppFilterPage: some View {
+        GeistSettingsPage(title: "Per-App Filter") {
+            GeistSection(
+                footer: "Turn an app off to hide its notifications from the feed and popups."
+            ) {
+                if monitor.seenApps.isEmpty {
+                    GeistRow(divider: false) {
+                        Text("Apps appear here once they send a notification.")
+                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.mute)
+                    }
+                } else {
+                    ForEach(Array(monitor.seenApps.enumerated()), id: \.element) { index, bundleID in
+                        appMuteRow(bundleID, divider: index < monitor.seenApps.count - 1)
                     }
                 }
             }

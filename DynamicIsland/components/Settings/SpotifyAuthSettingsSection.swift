@@ -31,25 +31,7 @@ struct SpotifyAuthSettingsSection: View {
 
     var body: some View {
         Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Sign in to Spotify to capture the `sp_dc` cookie automatically, or paste it in below.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    showingLoginSheet = true
-                } label: {
-                    Label("Sign in with Spotify", systemImage: "person.crop.circle.badge.checkmark")
-                }
-                .buttonStyle(.borderedProminent)
-
-                TextField("sp_dc cookie", text: $spotifySPDCCookie, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption.monospaced())
-                    .lineLimit(2...4)
-                    .textSelection(.enabled)
-            }
-
+            // Status row is always shown.
             HStack(spacing: 10) {
                 Circle()
                     .fill(spotifyAuthManager.isAuthenticated ? Color.green : (hasCookie ? Color.orange : Color.secondary))
@@ -65,51 +47,77 @@ struct SpotifyAuthSettingsSection: View {
                     .foregroundStyle(.red)
             }
 
-            HStack {
-                Button("Paste from Clipboard") {
-                    pasteCookieFromClipboard()
-                }
+            if hasCookie {
+                // Once a cookie is captured, keep it out of sight — just offer
+                // re-validate / clear so the section stays tidy.
+                HStack {
+                    Button(spotifyAuthManager.isAuthorizing ? "Validating..." : "Re-validate") {
+                        Task { await spotifyAuthManager.validateSession() }
+                    }
+                    .disabled(spotifyAuthManager.isAuthorizing)
 
-                Button(spotifyAuthManager.isAuthorizing ? "Validating..." : "Validate Cookie") {
-                    spotifySPDCCookie = SpotifyAuthManager.sanitizeCookie(spotifySPDCCookie)
-                    Task {
-                        await spotifyAuthManager.validateSession()
+                    Button("Clear") {
+                        spotifySPDCCookie = ""
+                        spotifyAuthManager.clearSession()
                     }
                 }
-                .disabled(!hasCookie || spotifyAuthManager.isAuthorizing)
-
-                Button("Clear") {
-                    spotifySPDCCookie = ""
-                    spotifyAuthManager.clearSession()
-                }
-                .disabled(!hasCookie && !spotifyAuthManager.isAuthenticated)
-            }
-
-            DisclosureGroup("Get the cookie manually") {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("1. Open Spotify in a browser and log in")
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sign in to Spotify to capture the `sp_dc` cookie automatically, or paste it in below.")
                         .font(.caption)
-                    Text("2. Developer Tools -> Application/Storage -> Cookies -> https://open.spotify.com")
-                        .font(.caption)
-                    Text("3. Copy the value of `sp_dc` and paste it here")
-                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                    HStack(spacing: 12) {
-                        Link("Open Spotify Web Player", destination: URL(string: "https://open.spotify.com")!)
-                        Link("Method source", destination: URL(string: "https://github.com/Paxsenix0/Spotify-Canvas-API")!)
+                    Button {
+                        showingLoginSheet = true
+                    } label: {
+                        Label("Sign in with Spotify", systemImage: "person.crop.circle.badge.checkmark")
                     }
-                    .font(.caption)
+                    .buttonStyle(.borderedProminent)
+
+                    TextField("sp_dc cookie", text: $spotifySPDCCookie, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption.monospaced())
+                        .lineLimit(2...4)
+                        .textSelection(.enabled)
                 }
-                .padding(.top, 4)
+
+                HStack {
+                    Button("Paste from Clipboard") {
+                        pasteCookieFromClipboard()
+                    }
+
+                    Button(spotifyAuthManager.isAuthorizing ? "Validating..." : "Validate Cookie") {
+                        spotifySPDCCookie = SpotifyAuthManager.sanitizeCookie(spotifySPDCCookie)
+                        Task {
+                            await spotifyAuthManager.validateSession()
+                        }
+                    }
+                    .disabled(!hasCookie || spotifyAuthManager.isAuthorizing)
+                }
+
+                DisclosureGroup("Get the cookie manually") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("1. Open Spotify in a browser and log in")
+                            .font(.caption)
+                        Text("2. Developer Tools -> Application/Storage -> Cookies -> https://open.spotify.com")
+                            .font(.caption)
+                        Text("3. Copy the value of `sp_dc` and paste it here")
+                            .font(.caption)
+
+                        HStack(spacing: 12) {
+                            Link("Open Spotify Web Player", destination: URL(string: "https://open.spotify.com")!)
+                            Link("Method source", destination: URL(string: "https://github.com/Paxsenix0/Spotify-Canvas-API")!)
+                        }
+                        .font(.caption)
+                    }
+                    .padding(.top, 4)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         } header: {
             Text("Spotify Canvas Session")
-        } footer: {
-            Text("VibeIsland uses the local `sp_dc` cookie only to request Spotify's internal web-player token and fetch the matching Canvas for the current track.")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+                .help("VibeIsland uses the local sp_dc cookie only to request Spotify's internal web-player token and fetch the matching Canvas for the current track.")
         }
         .sheet(isPresented: $showingLoginSheet) {
             SpotifyLoginSheet { capturedValue in

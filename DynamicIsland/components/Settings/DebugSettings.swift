@@ -27,6 +27,15 @@ struct DebugSettings: View {
     @Default(.debugTabInsetBorderEnabled) private var debugTabInsetBorderEnabled
     @Default(.debugForcedActivities) private var debugForcedActivities
 
+    @Default(.showPowerStatusNotifications) private var showPowerStatusNotifications
+    @Default(.showChargingBatteryHUD) private var showChargingBatteryHUD
+    @Default(.showLowBatteryHUD) private var showLowBatteryHUD
+    @Default(.showFullBatteryHUD) private var showFullBatteryHUD
+
+    private var chargingEnabled: Bool { showPowerStatusNotifications && showChargingBatteryHUD }
+    private var lowEnabled: Bool { showPowerStatusNotifications && showLowBatteryHUD }
+    private var fullEnabled: Bool { showPowerStatusNotifications && showFullBatteryHUD }
+
     /// Activities that can be previewed with sample data.
     private let previewableActivities: [ClosedNotchActivityKind] = [
         .music, .agent, .timer, .weather, .focus, .recording, .download, .localSend, .privacy, .shelf,
@@ -85,6 +94,36 @@ struct DebugSettings: View {
                     isOn: $debugTabInsetBorderEnabled,
                     divider: false
                 )
+            }
+
+            GeistSection(
+                title: "HUD tests",
+                footer: "Runs the real notch animation on the current target display. Battery tests require the matching HUD to be enabled in Battery settings."
+            ) {
+                GeistRow {
+                    Button { BatteryStatusViewModel.shared.triggerTestHUD(kind: .charging) } label: {
+                        Label("Test charging HUD", systemImage: "bolt.fill")
+                    }
+                    .buttonStyle(.geist).disabled(!chargingEnabled)
+                }
+                GeistRow {
+                    Button { BatteryStatusViewModel.shared.triggerTestHUD(kind: .lowBattery) } label: {
+                        Label("Test low battery HUD", systemImage: "battery.25")
+                    }
+                    .buttonStyle(.geist).disabled(!lowEnabled)
+                }
+                GeistRow {
+                    Button { BatteryStatusViewModel.shared.triggerTestHUD(kind: .fullBattery) } label: {
+                        Label("Test full battery HUD", systemImage: "battery.100")
+                    }
+                    .buttonStyle(.geist).disabled(!fullEnabled)
+                }
+                GeistRow(divider: false) {
+                    Button { BluetoothAudioManager.shared.triggerTestDeviceConnectedHUD() } label: {
+                        Label("Test Bluetooth connection HUD", systemImage: "airpods.pro")
+                    }
+                    .buttonStyle(.geist)
+                }
             }
         }
     }

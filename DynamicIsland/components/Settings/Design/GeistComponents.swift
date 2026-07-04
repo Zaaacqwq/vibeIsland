@@ -60,6 +60,7 @@ struct GeistSection<Content: View>: View {
     var title: String?
     var badge: String?
     var footer: String?
+    var info: String?
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -79,6 +80,9 @@ struct GeistSection<Content: View>: View {
                             .overlay(
                                 Capsule().strokeBorder(Geist.Colors.accent.opacity(0.4), lineWidth: 1)
                             )
+                    }
+                    if let info {
+                        GeistInfoButton(text: info)
                     }
                 }
                 .padding(.leading, Geist.Spacing.xxs)
@@ -174,13 +178,33 @@ struct GeistRowTitle: View {
     }
 }
 
+/// A small speaker button that auditions a sound. Attach next to any sound
+/// setting so the user can hear it without triggering the real event.
+struct GeistPreviewButton: View {
+    var help: String = "Preview sound"
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "play.circle.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(Geist.Colors.accent)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
 /// A labelled switch row (title + optional description + trailing Toggle).
+/// Pass `onPreview` to show a speaker button (e.g. for sound settings).
 struct GeistToggleRow: View {
     let title: String
     var description: String?
     @Binding var isOn: Bool
     var divider: Bool = true
     var info: String?
+    var onPreview: (() -> Void)?
 
     var body: some View {
         GeistRow(divider: divider) {
@@ -195,6 +219,9 @@ struct GeistToggleRow: View {
                     }
                 }
                 Spacer(minLength: Geist.Spacing.sm)
+                if let onPreview {
+                    GeistPreviewButton(action: onPreview)
+                }
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
                     .toggleStyle(.switch)
@@ -336,6 +363,70 @@ struct GeistSegmentedRow<T: Hashable, Options: View>: View {
                     .font(Geist.Typography.body)
             }
         }
+    }
+}
+
+/// A drill-down row: leading colored SF-Symbol tile, title + optional subtitle, and a
+/// trailing chevron. Acts as a `NavigationLink` into a sub-page, mirroring the way
+/// macOS System Settings nests categories (e.g. Accessibility → VoiceOver).
+struct GeistNavRow<V: Hashable>: View {
+    let title: String
+    var subtitle: String?
+    var systemImage: String?
+    var tint: Color = Geist.Colors.accent
+    var badge: String?
+    let value: V
+    var divider: Bool = true
+
+    var body: some View {
+        NavigationLink(value: value) {
+            GeistRow(divider: divider) {
+                HStack(spacing: Geist.Spacing.md) {
+                    if let systemImage {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [tint, tint.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 22, height: 22)
+                            .overlay {
+                                Image(systemName: systemImage)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.white)
+                            }
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                            .font(Geist.Typography.bodyStrong)
+                            .foregroundStyle(Geist.Colors.ink)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(Geist.Typography.caption)
+                                .foregroundStyle(Geist.Colors.body)
+                        }
+                    }
+                    Spacer(minLength: Geist.Spacing.sm)
+                    if let badge {
+                        Text(badge.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Geist.Colors.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(
+                                Capsule().strokeBorder(Geist.Colors.accent.opacity(0.4), lineWidth: 1)
+                            )
+                    }
+                    Image(systemName: "chevron.forward")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Geist.Colors.mute)
+                }
+                .contentShape(Rectangle())
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

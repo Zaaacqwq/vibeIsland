@@ -78,7 +78,6 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var isBridgeReady = false
     @Published private(set) var hookStatus: HookStatus = .unknown
     @Published private(set) var codexHookStatus: HookStatus = .unknown
-    @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var antigravityHookStatus: HookStatus = .unknown
     @Published private(set) var openCodeHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
@@ -345,18 +344,31 @@ final class AgentMonitorManager: ObservableObject {
         NotificationCenter.default.post(name: .vibeIslandAgentDidComplete, object: sessionID)
     }
 
+    // MARK: - Agent sounds
+
+    /// Resolves the sound to play for an agent event: a user-supplied file (when
+    /// set and present on disk) overrides the bundled default.
+    static func resolveAgentSoundURL(customPath: String, bundled: String, ext: String) -> URL? {
+        if !customPath.isEmpty, FileManager.default.fileExists(atPath: customPath) {
+            return URL(fileURLWithPath: customPath)
+        }
+        return Bundle.main.url(forResource: bundled, withExtension: ext)
+    }
+
     // MARK: - Completion sound
 
     private var completionSoundPlayer: AVAudioPlayer?
+    private var completionSoundURL: URL?
 
-    /// Plays a ding when Claude finishes a turn. Lazily loads the bundled
-    /// sound and reuses the player across plays.
+    /// Plays a ding when an agent finishes a turn. Reuses the cached player, but
+    /// rebuilds it when the user swaps in (or clears) a custom sound file.
     private func playCompletionSoundIfEnabled() {
         guard Defaults[.agentCompletionSoundEnabled] else { return }
-        if completionSoundPlayer == nil {
-            guard let url = Bundle.main.url(forResource: "agent-complete", withExtension: "mp3") else { return }
+        guard let url = Self.resolveAgentSoundURL(customPath: Defaults[.agentCompletionSoundPath], bundled: "agent-complete", ext: "mp3") else { return }
+        if completionSoundPlayer == nil || completionSoundURL != url {
             completionSoundPlayer = try? AVAudioPlayer(contentsOf: url)
             completionSoundPlayer?.prepareToPlay()
+            completionSoundURL = url
         }
         completionSoundPlayer?.currentTime = 0
         completionSoundPlayer?.play()
@@ -365,9 +377,10 @@ final class AgentMonitorManager: ObservableObject {
     // MARK: - Input-needed sound
 
     private var inputSoundPlayer: AVAudioPlayer?
+    private var inputSoundURL: URL?
     private var lastInputSoundAt: Date = .distantPast
 
-    /// Plays a notification when Claude needs the user to respond (permission or
+    /// Plays a notification when an agent needs the user to respond (permission or
     /// question — the red "input needed" halo). Throttled so a burst of events
     /// for the same prompt doesn't stack plays.
     private func playInputNeededSoundIfEnabled() {
@@ -376,10 +389,11 @@ final class AgentMonitorManager: ObservableObject {
         guard now.timeIntervalSince(lastInputSoundAt) > 0.5 else { return }
         lastInputSoundAt = now
 
-        if inputSoundPlayer == nil {
-            guard let url = Bundle.main.url(forResource: "agent-input-needed", withExtension: "mp3") else { return }
+        guard let url = Self.resolveAgentSoundURL(customPath: Defaults[.agentInputSoundPath], bundled: "agent-input-needed", ext: "mp3") else { return }
+        if inputSoundPlayer == nil || inputSoundURL != url {
             inputSoundPlayer = try? AVAudioPlayer(contentsOf: url)
             inputSoundPlayer?.prepareToPlay()
+            inputSoundURL = url
         }
         inputSoundPlayer?.currentTime = 0
         inputSoundPlayer?.play()
@@ -772,26 +786,6 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallCodexHooks() {
         applyHookChange(label: "remove Codex hooks", assign: { self.codexHookStatus = $0 }) {
             _ = try CodexHookInstallationManager().uninstall()
-            return false
-        }
-    }
-
-    func refreshGeminiHookStatus() {
-        applyHookChange(label: "check Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().status().managedHooksPresent
-        }
-    }
-
-    func installGeminiHooks() {
-        let binary = bundledHooksBinaryURL
-        applyHookChange(label: "install Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
-        }
-    }
-
-    func uninstallGeminiHooks() {
-        applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            _ = try GeminiHookInstallationManager().uninstall()
             return false
         }
     }

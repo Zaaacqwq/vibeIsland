@@ -827,6 +827,10 @@ extension Defaults.Keys {
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Play a sound when a Claude session needs your input (permission / question).
     static let agentInputSoundEnabled = Key<Bool>("agentInputSoundEnabled", default: true)
+    /// Optional path to a user-supplied completion sound. Empty → bundled `agent-complete.mp3`.
+    static let agentCompletionSoundPath = Key<String>("agentCompletionSoundPath", default: "")
+    /// Optional path to a user-supplied input-needed sound. Empty → bundled `agent-input-needed.mp3`.
+    static let agentInputSoundPath = Key<String>("agentInputSoundPath", default: "")
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.
     static let agentExpandOnComplete = Key<Bool>("agentExpandOnComplete", default: true)
 
