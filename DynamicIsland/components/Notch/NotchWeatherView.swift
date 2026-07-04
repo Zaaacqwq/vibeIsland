@@ -46,28 +46,21 @@ struct NotchWeatherView: View {
     // MARK: - Content
 
     private func content(_ snapshot: WeatherSnapshot) -> some View {
+        // Two stacked `#141414` cards (current conditions over the forecast),
+        // matching the card grammar every other tab uses, with the gap replacing
+        // the old hairline separator.
         VStack(alignment: .leading, spacing: 6) {
             current(snapshot)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .notchCard(radius: NotchDesign.Radius.md)
             if !snapshot.daily.isEmpty {
-                Rectangle()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(height: NotchDesign.hairlineWidth)
                 forecastRow(snapshot)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func locationLabel(_ snapshot: WeatherSnapshot) -> some View {
-        if let location = snapshot.locationName {
-            HStack(spacing: 5) {
-                Image(systemName: "mappin")
-                    .font(NotchDesign.Typography.mono(10))
-                    .foregroundStyle(NotchDesign.Colors.textFaint)
-                Text(location)
-                    .font(NotchDesign.Typography.mono(11))
-                    .foregroundStyle(NotchDesign.Colors.textSecondary)
-                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .notchCard(radius: NotchDesign.Radius.md)
             }
         }
     }
@@ -115,10 +108,7 @@ struct NotchWeatherView: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 6) {
-                locationLabel(snapshot)
-                detailGrid(snapshot)
-            }
+            detailGrid(snapshot)
         }
     }
 
