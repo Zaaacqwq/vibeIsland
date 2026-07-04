@@ -276,22 +276,17 @@ struct CalendarView: View {
         }
     }
 
-    @ViewBuilder
     private var agenda: some View {
-        if filteredEvents.isEmpty {
-            EmptyEventsView(selectedDate: selectedDate)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            CalendarAgendaList(
-                events: filteredEvents,
-                showFullEventTitles: showFullEventTitles,
-                onToggleReminder: { reminderID, completed in
-                    Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
-                }
-            )
-            .id(calendar.startOfDay(for: selectedDate))
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
+        CalendarAgendaList(
+            events: filteredEvents,
+            showFullEventTitles: showFullEventTitles,
+            selectedDate: selectedDate,
+            scrollResetID: calendar.startOfDay(for: selectedDate),
+            onToggleReminder: { reminderID, completed in
+                Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -576,8 +571,6 @@ struct StandaloneCalendarView: View {
                     .foregroundStyle(CalendarStyle.muted)
                     .fixedSize()
                 navButton(icon: "chevron.right", action: showNext)
-                modeToggle
-                    .padding(.leading, 2)
             }
             .frame(maxWidth: .infinity)
         }
@@ -595,52 +588,18 @@ struct StandaloneCalendarView: View {
         .buttonStyle(.plain)
     }
 
-    private var modeToggle: some View {
-        HStack(spacing: 3) {
-            toggleSegment(title: "Week", active: isWeek) { setLayout(.week) }
-            toggleSegment(title: "Month", active: !isWeek) { setLayout(.scrollingMonth) }
-        }
-        .padding(3)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
-    }
-
-    private func toggleSegment(title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(NotchDesign.Typography.voice(10, weight: .medium))
-                .foregroundStyle(active ? CalendarStyle.onAccent : CalendarStyle.muted)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(active ? NotchDesign.Colors.textPrimary : Color.clear)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - Week mode
 
     private var agenda: some View {
-        Group {
-            if filteredEvents.isEmpty {
-                EmptyEventsView(selectedDate: selectedDate)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                CalendarAgendaList(
-                    events: filteredEvents,
-                    showFullEventTitles: showFullEventTitles,
-                    onToggleReminder: { reminderID, completed in
-                        Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
-                    }
-                )
-                // Rebuild the list when the selected day changes so its scroll
-                // position resets to the top; otherwise scrolling one day's list to
-                // the bottom leaves the next day's events showing from the bottom.
-                .id(calendar.startOfDay(for: selectedDate))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        CalendarAgendaList(
+            events: filteredEvents,
+            showFullEventTitles: showFullEventTitles,
+            selectedDate: selectedDate,
+            scrollResetID: calendar.startOfDay(for: selectedDate),
+            onToggleReminder: { reminderID, completed in
+                Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
             }
-        }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -779,11 +738,6 @@ struct StandaloneCalendarView: View {
         withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
     }
 
-    private func setLayout(_ newLayout: CalendarTabLayout) {
-        guard layout != newLayout else { return }
-        withAnimation(.smooth(duration: 0.2)) { layout = newLayout }
-    }
-
     private func showPrevious() {
         isWeek ? shiftWeek(by: -1) : shiftMonth(by: -1)
     }
@@ -837,40 +791,121 @@ private extension Date {
 /// in filled cards. Reminders swap the color bar for a completion toggle.
 private struct CalendarAgendaList: View {
     @Environment(\.openURL) private var openURL
+    private static let topID = "calendar-agenda-top"
+
     let events: [EventModel]
     let showFullEventTitles: Bool
+    let selectedDate: Date
+    let scrollResetID: Date
     let onToggleReminder: (String, Bool) -> Void
 
+    @State private var displayedEvents: [EventModel] = []
+    @State private var displayedDate = Date()
+    @State private var hasSeededContent = false
+    @State private var contentOpacity = 1.0
+    @State private var fadeTask: Task<Void, Never>?
+
+    private var contentIdentity: String {
+        let dayKey = Int(scrollResetID.timeIntervalSinceReferenceDate)
+        let eventKey = events.map(\.id).joined(separator: "|")
+        return "\(dayKey)-\(eventKey)"
+    }
+
+    private var activeEvents: [EventModel] {
+        hasSeededContent ? displayedEvents : events
+    }
+
+    private var activeSelectedDate: Date {
+        hasSeededContent ? displayedDate : selectedDate
+    }
+
     var body: some View {
-        ZStack {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                        row(event)
-                        if index < events.count - 1 {
-                            Rectangle()
-                                .fill(CalendarStyle.hairlineFaint)
-                                .frame(height: 1)
+        agendaContent(events: activeEvents, selectedDate: activeSelectedDate)
+            .opacity(contentOpacity)
+            .clipped()
+            .onAppear(perform: seedContentIfNeeded)
+            .onDisappear { fadeTask?.cancel() }
+            .onChange(of: contentIdentity) { _, _ in
+                fadeToIncomingContent()
+            }
+    }
+
+    @ViewBuilder
+    private func agendaContent(events: [EventModel], selectedDate: Date) -> some View {
+        if events.isEmpty {
+            EmptyEventsView(selectedDate: selectedDate)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollViewReader { proxy in
+                ZStack {
+                    ScrollView {
+                        Color.clear
+                            .frame(height: 0)
+                            .id(Self.topID)
+
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                                row(event)
+                                if index < events.count - 1 {
+                                    Rectangle()
+                                        .fill(CalendarStyle.hairlineFaint)
+                                        .frame(height: 1)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                        .transaction { transaction in
+                            transaction.animation = nil
                         }
                     }
+                    .clipped()
+                    .onChange(of: scrollResetID) { _, _ in
+                        withTransaction(Transaction(animation: nil)) {
+                            proxy.scrollTo(Self.topID, anchor: .top)
+                        }
+                    }
+
+                    // Fade into the card fill — the agenda sits in a `#141414` notchCard,
+                    // so a black fade would smudge dark against the card.
+                    LinearGradient(colors: [NotchDesign.Colors.cardFill.opacity(0.95), .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 16)
+                        .allowsHitTesting(false)
+                        .frame(maxHeight: .infinity, alignment: .top)
+
+                    LinearGradient(colors: [.clear, NotchDesign.Colors.cardFill.opacity(0.95)], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 16)
+                        .allowsHitTesting(false)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
                 }
-                .padding(.vertical, 2)
             }
-            .clipped()
-
-            // Fade into the card fill — the agenda sits in a `#141414` notchCard,
-            // so a black fade would smudge dark against the card.
-            LinearGradient(colors: [NotchDesign.Colors.cardFill.opacity(0.95), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 16)
-                .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .top)
-
-            LinearGradient(colors: [.clear, NotchDesign.Colors.cardFill.opacity(0.95)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 16)
-                .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .bottom)
         }
-        .clipped()
+    }
+
+    private func seedContentIfNeeded() {
+        guard !hasSeededContent else { return }
+        displayedEvents = events
+        displayedDate = selectedDate
+        hasSeededContent = true
+        contentOpacity = 1
+    }
+
+    private func fadeToIncomingContent() {
+        let nextEvents = events
+        let nextDate = selectedDate
+        fadeTask?.cancel()
+        fadeTask = Task { @MainActor in
+            withAnimation(.easeInOut(duration: 0.10)) {
+                contentOpacity = 0
+            }
+            try? await Task.sleep(nanoseconds: 110_000_000)
+            guard !Task.isCancelled else { return }
+            displayedEvents = nextEvents
+            displayedDate = nextDate
+            hasSeededContent = true
+            withAnimation(.easeInOut(duration: 0.16)) {
+                contentOpacity = 1
+            }
+        }
     }
 
     @ViewBuilder
