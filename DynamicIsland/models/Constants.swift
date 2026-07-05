@@ -856,7 +856,10 @@ extension Defaults.Keys {
     static let capsLockIndicatorTintMode = Key<CapsLockIndicatorTintMode>("capsLockIndicatorTintMode", default: .white)
     static let didMigrateCapsLockTintMode = Key<Bool>("didMigrateCapsLockTintMode", default: false)
     static let showCapsLockLabel = Key<Bool>("showCapsLockLabel", default: false)
-    
+
+    // MARK: Input Source Indicator
+    static let enableInputSourceIndicator = Key<Bool>("enableInputSourceIndicator", default: true)
+
     // MARK: ImageService
     static let didClearLegacyURLCacheV1 = Key<Bool>("didClearLegacyURLCacheV1", default: false)
     

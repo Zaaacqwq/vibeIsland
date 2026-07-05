@@ -2653,6 +2653,7 @@ struct LiveActivitiesSettings: View {
     private var indicatorsPage: some View {
         GeistSettingsPage(title: "Indicators") {
             capsLockSection
+            inputSourceSection
             privacyIndicatorsSection
         }
     }
@@ -2806,6 +2807,16 @@ struct LiveActivitiesSettings: View {
                 ForEach(CapsLockIndicatorTintMode.allCases) { Text($0.displayName).tag($0) }
             }
             .disabled(!Defaults[.enableCapsLockIndicator])
+        }
+    }
+
+    @ViewBuilder
+    private var inputSourceSection: some View {
+        GeistSection(
+            title: "Input Method Indicator",
+            footer: "Briefly shows the notch HUD with the input method (输入法) name whenever you switch keyboards."
+        ) {
+            GeistToggleRow(title: "Show Input Method Indicator", isOn: geistBinding(.enableInputSourceIndicator))
         }
     }
 

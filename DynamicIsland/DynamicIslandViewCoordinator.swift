@@ -36,6 +36,7 @@ enum SneakContentType: Equatable {
     case privacy
     case capsLock
     case notification
+    case inputSource
 }
 
 extension SneakContentType {
@@ -55,7 +56,8 @@ extension SneakContentType {
              (.bluetoothAudio, .bluetoothAudio),
              (.privacy, .privacy),
              (.capsLock, .capsLock),
-             (.notification, .notification):
+             (.notification, .notification),
+             (.inputSource, .inputSource):
             return true
         default:
             return false
@@ -280,7 +282,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
             resolvedDuration = duration
         }
         sneakPeekDuration = resolvedDuration
-        let bypassedTypes: [SneakContentType] = [.music, .timer, .reminder, .bluetoothAudio, .notification]
+        let bypassedTypes: [SneakContentType] = [.music, .timer, .reminder, .bluetoothAudio, .notification, .inputSource]
         
         if !bypassedTypes.contains(type) && !Defaults[.enableSystemHUD] {
             return

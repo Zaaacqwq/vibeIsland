@@ -44,6 +44,7 @@ struct InlineHUD: View {
     @Default(.showCapsLockLabel) var showCapsLockLabel
     @Default(.capsLockIndicatorTintMode) var capsLockTintMode
     @ObservedObject var bluetoothManager = BluetoothAudioManager.shared
+    @ObservedObject var inputSourceManager = InputSourceManager.shared
     
     @State private var displayName: String = ""
     
@@ -68,6 +69,10 @@ struct InlineHUD: View {
                 return enableMinimalisticUI ? 48 : 56
             }
 
+            if type == .inputSource {
+                return enableMinimalisticUI ? 48 : 56
+            }
+
             return 92
         }()
 
@@ -82,6 +87,10 @@ struct InlineHUD: View {
                 }
 
                 if type == .capsLock && !showCapsLockLabel {
+                    return enableMinimalisticUI ? 36 : 44
+                }
+
+                if type == .inputSource {
                     return enableMinimalisticUI ? 36 : 44
                 }
 
@@ -110,6 +119,10 @@ struct InlineHUD: View {
                 return 0
             }
 
+            if type == .inputSource {
+                return enableMinimalisticUI ? 120 : 148
+            }
+
             return 92
         }()
 
@@ -130,6 +143,10 @@ struct InlineHUD: View {
 
                 if type == .capsLock {
                     return showCapsLockLabel ? (enableMinimalisticUI ? 60 : 72) : 0
+                }
+
+                if type == .inputSource {
+                    return enableMinimalisticUI ? 104 : 128
                 }
 
                 return 90
@@ -186,6 +203,11 @@ struct InlineHUD: View {
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
                                 .foregroundStyle(capsLockAccentColor)
+                        case .inputSource:
+                            Image(systemName: "keyboard")
+                                .symbolRenderingMode(.hierarchical)
+                                .contentTransition(.interpolate)
+                                .frame(width: 20, height: 15, alignment: .center)
                         default:
                             EmptyView()
                     }
@@ -205,7 +227,7 @@ struct InlineHUD: View {
                             frameWidth: infoWidth
                         )
                     }
-                } else if type != .capsLock {
+                } else if type != .capsLock && type != .inputSource {
                     Text(Type2Name(type))
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -250,6 +272,18 @@ struct InlineHUD: View {
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .contentTransition(.interpolate)
                     }
+                } else if (type == .inputSource) {
+                    Text(inputSourceManager.currentSourceName)
+                        .foregroundStyle(.white)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                        .minimumScaleFactor(0.6)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .contentTransition(.interpolate)
                 } else if (type == .bluetoothAudio) {
                     if hasBatteryLevel {
                         let indicatorSpacing: CGFloat = {
@@ -446,6 +480,8 @@ struct InlineHUD: View {
                 return BluetoothAudioManager.shared.lastConnectedDevice?.name ?? "Bluetooth"
             case .capsLock:
                 return String(localized: "Caps Lock")
+            case .inputSource:
+                return InputSourceManager.shared.currentSourceName
             default:
                 return ""
         }
