@@ -39,9 +39,10 @@ actor WeatherProvider {
         case .wttr:
             return try await fetchWttrSnapshot(location: location, placeName: placeName)
         case .openMeteo:
-            guard let location else {
-                return try await fetchWttrSnapshot(location: nil, placeName: placeName)
-            }
+            // Open-Meteo requires coordinates. The caller is responsible for
+            // supplying one (CoreLocation or IP geolocation); if it couldn't,
+            // surface a clear error rather than silently querying another service.
+            guard let location else { throw WeatherProviderError.noData }
             return try await fetchOpenMeteoSnapshot(location: location, placeName: placeName)
         }
     }

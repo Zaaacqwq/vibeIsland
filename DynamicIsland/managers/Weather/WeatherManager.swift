@@ -36,6 +36,7 @@ final class WeatherManager: ObservableObject {
 
     private let provider = WeatherProvider()
     private let locationProvider = WeatherLocationProvider()
+    private let ipLocationProvider = IPGeolocationProvider()
     private let geocoder = CLGeocoder()
     private var refreshTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -102,11 +103,13 @@ final class WeatherManager: ObservableObject {
         let status = locationProvider.authorizationStatus
         locationDenied = (status == .denied || status == .restricted)
 
-        let location = await locationProvider.currentLocation()
+        // Prefer a precise CoreLocation fix; fall back to IP-based geolocation so
+        // Open-Meteo (which requires coordinates) never has to degrade to wttr.in.
+        let location = await resolveLocation()
         let placeName = await resolvePlaceName(for: location)
-        let primary = Defaults[.weatherProviderSource]
+        let source = Defaults[.weatherProviderSource]
         do {
-            let result = try await fetchWithFallback(location: location, primary: primary, placeName: placeName)
+            let result = try await provider.fetchSnapshot(location: location, source: source, placeName: placeName)
             snapshot = result
             lastError = nil
         } catch {
@@ -114,16 +117,13 @@ final class WeatherManager: ObservableObject {
         }
     }
 
-    private func fetchWithFallback(location: CLLocation?, primary: WeatherProviderSource, placeName: String?) async throws -> WeatherSnapshot {
-        do {
-            return try await provider.fetchSnapshot(location: location, source: primary, placeName: placeName)
-        } catch {
-            // Open-Meteo can fail without a location; fall back to wttr.in.
-            if primary == .openMeteo {
-                return try await provider.fetchSnapshot(location: location, source: .wttr, placeName: placeName)
-            }
-            throw error
+    /// Resolves the current location, preferring a precise CoreLocation fix and
+    /// falling back to IP-based geolocation when no fix is available.
+    private func resolveLocation() async -> CLLocation? {
+        if let location = await locationProvider.currentLocation() {
+            return location
         }
+        return await ipLocationProvider.currentLocation()
     }
 
     /// Reverse-geocodes the coordinate into a human-readable place name (e.g. a
