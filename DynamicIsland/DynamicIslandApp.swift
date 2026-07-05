@@ -48,22 +48,22 @@ struct DynamicNotchApp: App {
             CheckForUpdatesView(updater: updaterController.updater)
             Divider()
             Button("Restart VibeIsland") {
-                guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
-
                 let workspace = NSWorkspace.shared
 
-                if let appURL = workspace.urlForApplication(withBundleIdentifier: bundleIdentifier)
-                {
+                // Relaunch the exact bundle that is currently running. Do NOT resolve
+                // the bundle identifier through LaunchServices — that can return a
+                // stale/older registered copy (e.g. one still in /Applications),
+                // which is why a restart could come back on an outdated version.
+                let appURL = Bundle.main.bundleURL
 
-                    let configuration = NSWorkspace.OpenConfiguration()
-                    configuration.createsNewApplicationInstance = true
-                    // Tell the freshly-spawned instance to skip the single-instance
-                    // guard: it is launched intentionally while this (old) instance
-                    // is still alive, so the guard would otherwise terminate it.
-                    configuration.arguments = [SingleInstanceGuard.restartArgument]
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.createsNewApplicationInstance = true
+                // Tell the freshly-spawned instance to skip the single-instance
+                // guard: it is launched intentionally while this (old) instance
+                // is still alive, so the guard would otherwise terminate it.
+                configuration.arguments = [SingleInstanceGuard.restartArgument]
 
-                    workspace.openApplication(at: appURL, configuration: configuration)
-                }
+                workspace.openApplication(at: appURL, configuration: configuration)
 
                 NSApplication.shared.terminate(self)
             }
