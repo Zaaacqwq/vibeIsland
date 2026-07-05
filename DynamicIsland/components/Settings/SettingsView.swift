@@ -424,18 +424,6 @@ struct SettingsView: View {
             sidebarIcon(for: tab)
             Text(tab.title)
                 .font(Geist.Typography.bodyStrong)
-            if tab == .downloads {
-                Spacer()
-                Text("BETA")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue)
-                    )
-            }
         }
         .padding(.vertical, 4)
     }
@@ -711,6 +699,7 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .devices, title: "Use circular battery indicator", keywords: ["battery", "circular"], highlightID: SettingsTab.devices.highlightID(for: "Use circular battery indicator")),
             SettingsSearchEntry(tab: .devices, title: "Show battery percentage text in HUD", keywords: ["battery text"], highlightID: SettingsTab.devices.highlightID(for: "Show battery percentage text in HUD")),
             SettingsSearchEntry(tab: .devices, title: "Scroll device name in HUD", keywords: ["marquee", "device name"], highlightID: SettingsTab.devices.highlightID(for: "Scroll device name in HUD")),
+            SettingsSearchEntry(tab: .devices, title: "Show AirPods listening mode changes", keywords: ["airpods", "listening", "noise", "transparency", "adaptive"], highlightID: SettingsTab.devices.highlightID(for: "Show AirPods listening mode changes")),
             SettingsSearchEntry(tab: .devices, title: "Use 3D Bluetooth HUD icon", keywords: ["bluetooth", "3d", "animation", "mov"], highlightID: SettingsTab.devices.highlightID(for: "Use 3D Bluetooth HUD icon")),
             SettingsSearchEntry(tab: .devices, title: "Color-coded battery display", keywords: ["color", "battery"], highlightID: SettingsTab.devices.highlightID(for: "Color-coded battery display")),
             SettingsSearchEntry(tab: .hudAndOSD, title: "Color-coded volume display", keywords: ["volume", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Color-coded volume display")),
@@ -1670,7 +1659,8 @@ private struct DevicesSettingsView: View {
                 GeistToggleRow(title: "Show Bluetooth device connections", isOn: geistBinding(.showBluetoothDeviceConnections))
                 GeistToggleRow(title: "Use circular battery indicator", isOn: geistBinding(.useCircularBluetoothBatteryIndicator))
                 GeistToggleRow(title: "Show battery percentage text in HUD", isOn: geistBinding(.showBluetoothBatteryPercentageText))
-                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee), divider: false)
+                GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee))
+                GeistToggleRow(title: "Show AirPods listening mode changes", isOn: geistBinding(.showAirPodsListeningModeChanges), divider: false)
             }
 
             GeistSection(title: "Battery Indicator Styling", footer: batteryFooter) {
@@ -2002,7 +1992,7 @@ struct Media: View {
 
     @ViewBuilder
     private var fullscreenSections: some View {
-        GeistSection(title: "Fullscreen", badge: "Beta") {
+        GeistSection(title: "Fullscreen") {
             GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
                 Text("Always hide in fullscreen").tag(HideNotchOption.always)
                 Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
