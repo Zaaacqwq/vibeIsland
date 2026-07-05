@@ -2836,7 +2836,6 @@ struct LiveActivitiesSettings: View {
             footer: "Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs."
         ) {
             GeistToggleRow(title: "Enable Camera Detection", isOn: geistBinding(.enableCameraDetection))
-            GeistToggleRow(title: "Enable Microphone Detection", isOn: geistBinding(.enableMicrophoneDetection), divider: privacyManager.isMonitoring)
             if privacyManager.isMonitoring {
                 GeistLabeledRow(title: "Camera Status") {
                     if privacyManager.cameraActive {
@@ -2845,6 +2844,9 @@ struct LiveActivitiesSettings: View {
                         statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
                     }
                 }
+            }
+            GeistToggleRow(title: "Enable Microphone Detection", isOn: geistBinding(.enableMicrophoneDetection), divider: privacyManager.isMonitoring)
+            if privacyManager.isMonitoring {
                 GeistLabeledRow(title: "Microphone Status", divider: false) {
                     if privacyManager.microphoneActive {
                         statusLabel(dot: .yellow, text: "Microphone Active", color: .yellow)
