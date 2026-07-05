@@ -411,8 +411,13 @@ struct MusicControlsView: View {
     }
 
     private var playbackControls: some View {
-        HStack(spacing: 20) {
-            ForEach(Array(displayedSlots.enumerated()), id: \.offset) { _, slot in
+        // Drop empty slots entirely instead of rendering them as greedy Spacers.
+        // A lone `.none` Spacer eats all horizontal slack and shoves the remaining
+        // buttons to one side (e.g. only 4 active controls). The `.center` frame
+        // below keeps the real buttons centered regardless of how many there are.
+        let controls = displayedSlots.filter { $0 != .none }
+        return HStack(spacing: 20) {
+            ForEach(Array(controls.enumerated()), id: \.offset) { _, slot in
                 slotView(for: slot)
             }
         }

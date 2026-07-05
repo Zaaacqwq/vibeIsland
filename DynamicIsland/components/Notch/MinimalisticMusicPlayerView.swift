@@ -707,8 +707,12 @@ private struct MinimalisticReminderDetailsView: View {
     // MARK: - Playback Controls (Larger)
     
     private var playbackControls: some View {
-        HStack(spacing: 10) {
-            ForEach(Array(displayedSlots.enumerated()), id: \.offset) { _, slot in
+        // Drop empty slots instead of rendering them as greedy Spacers; a lone
+        // `.none` Spacer would shove the remaining buttons off-center (see
+        // NotchHomeView.playbackControls). The `.center` frame keeps them centered.
+        let controls = displayedSlots.filter { $0 != .none }
+        return HStack(spacing: 10) {
+            ForEach(Array(controls.enumerated()), id: \.offset) { _, slot in
                 slotView(for: slot)
             }
         }

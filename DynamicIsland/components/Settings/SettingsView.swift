@@ -1818,43 +1818,33 @@ struct Media: View {
         return nil
     }
 
-    private enum SubPage: String, Hashable, CaseIterable, Identifiable {
-        case nowPlaying, sneakLyrics, controls, appearance, fullscreen
+    // Now Playing, Appearance, and Fullscreen are rendered inline on the Media page,
+    // so they are not part of the drill-down navigation. Only these remain nav rows.
+    private enum SubPage: String, Hashable, Identifiable {
+        case sneakLyrics, controls
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .nowPlaying: return String(localized: "Now Playing")
             case .sneakLyrics: return String(localized: "Sneak Peek & Lyrics")
             case .controls: return String(localized: "Controls")
-            case .appearance: return String(localized: "Appearance")
-            case .fullscreen: return String(localized: "Fullscreen")
             }
         }
         var subtitle: String {
             switch self {
-            case .nowPlaying: return String(localized: "Source & Dynamic Island visibility")
             case .sneakLyrics: return String(localized: "Track peeks and synced lyrics")
             case .controls: return String(localized: "Skip behavior and custom buttons")
-            case .appearance: return String(localized: "Waveform, colors, and album art")
-            case .fullscreen: return String(localized: "Hide the island in fullscreen")
             }
         }
         var systemImage: String {
             switch self {
-            case .nowPlaying: return "play.fill"
             case .sneakLyrics: return "quote.bubble"
             case .controls: return "slider.horizontal.3"
-            case .appearance: return "paintbrush"
-            case .fullscreen: return "arrow.up.left.and.arrow.down.right"
             }
         }
         var tint: Color {
             switch self {
-            case .nowPlaying: return .green
             case .sneakLyrics: return .pink
             case .controls: return .blue
-            case .appearance: return .purple
-            case .fullscreen: return .indigo
             }
         }
     }
@@ -1862,19 +1852,18 @@ struct Media: View {
     var body: some View {
         NavigationStack {
             GeistSettingsPage(title: "Media") {
+                // Now Playing and Appearance are shown inline (no drill-down);
+                // the remaining pages stay as navigation rows in original order.
+                nowPlayingSections
+
                 GeistSection {
-                    let pages = SubPage.allCases
-                    ForEach(Array(pages.enumerated()), id: \.element) { index, page in
-                        GeistNavRow(
-                            title: page.title,
-                            subtitle: page.subtitle,
-                            systemImage: page.systemImage,
-                            tint: page.tint,
-                            value: page,
-                            divider: index != pages.count - 1
-                        )
-                    }
+                    navRow(.sneakLyrics, divider: true)
+                    navRow(.controls, divider: false)
                 }
+
+                appearanceSections
+
+                fullscreenSections
             }
             .navigationDestination(for: SubPage.self) { page in
                 subPage(page)
@@ -1882,52 +1871,64 @@ struct Media: View {
         }
     }
 
+    private func navRow(_ page: SubPage, divider: Bool) -> some View {
+        GeistNavRow(
+            title: page.title,
+            subtitle: page.subtitle,
+            systemImage: page.systemImage,
+            tint: page.tint,
+            value: page,
+            divider: divider
+        )
+    }
+
     @ViewBuilder
     private func subPage(_ page: SubPage) -> some View {
         switch page {
-        case .nowPlaying: nowPlayingPage
         case .sneakLyrics: sneakLyricsPage
         case .controls: controlsPage
-        case .appearance: appearancePage
-        case .fullscreen: fullscreenPage
         }
     }
 
-    private var nowPlayingPage: some View {
-        GeistSettingsPage(title: "Now Playing") {
-            GeistSection(
-                title: "Live Activity",
-                footer: "Shows the current track as a closed-notch live activity."
-            ) {
-                GeistToggleRow(title: "Enable music live activity", isOn: $coordinator.musicLiveActivityEnabled.animation(), divider: false)
-            }
+    @ViewBuilder
+    private var nowPlayingSections: some View {
+        GeistSection(
+            title: "Live Activity",
+            footer: "Shows the current track as a closed-notch live activity."
+        ) {
+            GeistToggleRow(title: "Enable music live activity", isOn: $coordinator.musicLiveActivityEnabled.animation(), divider: false)
+        }
 
-            GeistSection(title: "Media Source") {
-                GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false, info: "'Now Playing' was the only option on previous versions and works with all media apps. It follows the system Now Playing target — scrubbing the timeline may not work if the active app (e.g. Amazon Music) doesn't support remote seek.") {
-                    ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
-                }
-                .onChange(of: mediaController) { _, _ in
-                    NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
-                }
+        GeistSection(title: "Media Source") {
+            GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false, info: "'Now Playing' was the only option on previous versions and works with all media apps. It follows the system Now Playing target — scrubbing the timeline may not work if the active app (e.g. Amazon Music) doesn't support remote seek.") {
+                ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
             }
-            mediaSourceFooter()
-
-            if mediaController == .spotify {
-                SpotifyAuthSettingsSection()
+            .onChange(of: mediaController) { _, _ in
+                NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
             }
+        }
+        mediaSourceFooter()
 
-            GeistSection(title: "Dynamic Island Visibility") {
-                GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
-                    .disabled(enableMinimalisticUI)
-                GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer)
-                    .disabled(enableMinimalisticUI || !showStandardMediaControls)
-                GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: visibilityNote != nil, info: "Shows the current track title and artist beside the closed notch pill.")
-                if let visibilityNote {
-                    GeistRow(divider: false) {
-                        Text(visibilityNote)
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        if mediaController == .spotify {
+            SpotifyAuthSettingsSection()
+        }
+
+        GeistSection(title: "Dynamic Island Visibility") {
+            GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
+                .disabled(enableMinimalisticUI)
+            GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer)
+                .disabled(enableMinimalisticUI || !showStandardMediaControls)
+            GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: true, info: "Shows the current track title and artist in the closed notch bar. Only takes effect on displays without a physical notch (external monitors or non-notch Macs) — on a notched built-in display the physical notch covers this area, so it stays hidden.")
+            GeistRow(divider: visibilityNote != nil) {
+                Text("Only appears on displays without a physical notch (external monitors or non-notch Macs). The built-in notched display hides it.")
+                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let visibilityNote {
+                GeistRow(divider: false) {
+                    Text(visibilityNote)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -1989,33 +1990,31 @@ struct Media: View {
         }
     }
 
-    private var appearancePage: some View {
-        GeistSettingsPage(title: "Appearance") {
-            GeistSection(title: "Appearance") {
-                GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), info: "Shows a live waveform driven by system audio in the music live activity.")
-                GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
-                GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
-                GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")
-                GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
-                GeistSliderRow(title: "Album art parallax", valueLabel: parallaxEffectIntensity == 0 ? "Off" : String(format: "%.0f", parallaxEffectIntensity), value: $parallaxEffectIntensity, range: 0...20, step: 1, info: "3D tilt of the album art as you move the pointer. Set to Off to disable.")
-                GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
-                    ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
+    @ViewBuilder
+    private var appearanceSections: some View {
+        GeistSection(title: "Appearance") {
+            GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), info: "Shows a live waveform driven by system audio in the music live activity.")
+            GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
+            GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
+            GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")
+            GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
+            GeistSliderRow(title: "Album art parallax", valueLabel: parallaxEffectIntensity == 0 ? "Off" : String(format: "%.0f", parallaxEffectIntensity), value: $parallaxEffectIntensity, range: 0...20, step: 1, info: "3D tilt of the album art as you move the pointer. Set to Off to disable.")
+            GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
+                ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
         }
     }
 
-    private var fullscreenPage: some View {
-        GeistSettingsPage(title: "Fullscreen") {
-            GeistSection(title: "Fullscreen", badge: "Beta") {
-                GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
-                    Text("Always hide in fullscreen").tag(HideNotchOption.always)
-                    Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
-                    Text("Never hide").tag(HideNotchOption.never)
-                }
-                .onChange(of: hideNotchOption) {
-                    Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
-                }
+    @ViewBuilder
+    private var fullscreenSections: some View {
+        GeistSection(title: "Fullscreen", badge: "Beta") {
+            GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
+                Text("Always hide in fullscreen").tag(HideNotchOption.always)
+                Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
+                Text("Never hide").tag(HideNotchOption.never)
+            }
+            .onChange(of: hideNotchOption) {
+                Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
             }
         }
     }

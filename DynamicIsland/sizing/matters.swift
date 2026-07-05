@@ -281,6 +281,9 @@ func shouldUseDynamicIslandMode(for screenName: String?) -> Bool {
 /// minimalistic UI and Dynamic Island pill mode, per the feature scope.
 @MainActor
 func closedNotchLyricsBandActive(for screenName: String?) -> Bool {
+    // `enableLyrics` is the master switch (toggled by the notch lyrics button).
+    // Disabling it hides both the open-notch/home lyrics and this closed-notch band.
+    guard Defaults[.enableLyrics] else { return false }
     guard Defaults[.showLyricsInClosedNotch] else { return false }
     guard !Defaults[.enableMinimalisticUI] else { return false }
     guard !shouldUseDynamicIslandMode(for: screenName) else { return false }
