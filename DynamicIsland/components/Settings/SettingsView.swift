@@ -2574,29 +2574,33 @@ struct LiveActivitiesSettings: View {
     }
 
     private enum SubPage: String, Hashable, CaseIterable, Identifiable {
-        case recordingFocus, indicators
+        case privacy, focus, indicators
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .recordingFocus: return String(localized: "Recording & Focus")
+            case .privacy: return String(localized: "Privacy")
+            case .focus: return String(localized: "Focus")
             case .indicators: return String(localized: "Indicators")
             }
         }
         var subtitle: String {
             switch self {
-            case .recordingFocus: return String(localized: "Screen recording and Focus detection")
-            case .indicators: return String(localized: "Caps Lock, camera, and microphone")
+            case .privacy: return String(localized: "Camera, microphone, and screen recording")
+            case .focus: return String(localized: "Focus / Do Not Disturb detection")
+            case .indicators: return String(localized: "Caps Lock and input method")
             }
         }
         var systemImage: String {
             switch self {
-            case .recordingFocus: return "record.circle"
-            case .indicators: return "dot.radiowaves.left.and.right"
+            case .privacy: return "hand.raised.fill"
+            case .focus: return "moon.fill"
+            case .indicators: return "keyboard"
             }
         }
         var tint: Color {
             switch self {
-            case .recordingFocus: return .red
+            case .privacy: return .red
+            case .focus: return .purple
             case .indicators: return .green
             }
         }
@@ -2634,14 +2638,21 @@ struct LiveActivitiesSettings: View {
     @ViewBuilder
     private func subPage(_ page: SubPage) -> some View {
         switch page {
-        case .recordingFocus: recordingFocusPage
+        case .privacy: privacyPage
+        case .focus: focusPage
         case .indicators: indicatorsPage
         }
     }
 
-    private var recordingFocusPage: some View {
-        GeistSettingsPage(title: "Recording & Focus") {
+    private var privacyPage: some View {
+        GeistSettingsPage(title: "Privacy") {
+            privacyIndicatorsSection
             screenRecordingSection
+        }
+    }
+
+    private var focusPage: some View {
+        GeistSettingsPage(title: "Focus") {
             if !fullDiskAccessPermission.isAuthorized {
                 fullDiskCallout
             }
@@ -2654,7 +2665,6 @@ struct LiveActivitiesSettings: View {
         GeistSettingsPage(title: "Indicators") {
             capsLockSection
             inputSourceSection
-            privacyIndicatorsSection
         }
     }
 
@@ -2823,7 +2833,7 @@ struct LiveActivitiesSettings: View {
     @ViewBuilder
     private var privacyIndicatorsSection: some View {
         GeistSection(
-            title: "Privacy Indicators",
+            title: "Camera & Microphone",
             footer: "Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs."
         ) {
             GeistToggleRow(title: "Enable Camera Detection", isOn: geistBinding(.enableCameraDetection))
