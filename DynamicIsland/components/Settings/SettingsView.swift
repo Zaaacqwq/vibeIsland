@@ -933,15 +933,13 @@ struct GeneralSettings: View {
                     title: "UI Mode",
                     footer: "Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations."
                 ) {
-                    GeistToggleRow(title: "Enable Minimalistic UI", isOn: $enableMinimalisticUI)
+                    GeistToggleRow(title: "Enable Minimalistic UI", isOn: $enableMinimalisticUI, divider: false)
                         .onChange(of: enableMinimalisticUI) { _, newValue in
                             if newValue {
                                 // Auto-enable simpler animation mode
                                 Defaults[.useModernCloseAnimation] = true
                             }
                         }
-                    GeistToggleRow(title: "Show battery percentage inside icon", isOn: geistBinding(.showBatteryPercentInside), divider: false)
-                        .disabled(!enableMinimalisticUI)
                 }
 
                 systemFeatures()
@@ -1140,6 +1138,7 @@ struct AccessibilitySettings: View {
 }
 
 struct Charge: View {
+    @Default(.enableMinimalisticUI) private var enableMinimalisticUI
     @Default(.showPowerStatusNotifications) private var showPowerStatusNotifications
     @Default(.showChargingBatteryHUD) private var showChargingBatteryHUD
     @Default(.showLowBatteryHUD) private var showLowBatteryHUD
@@ -1206,7 +1205,9 @@ struct Charge: View {
 
                 GeistSection(title: "Battery Information") {
                     GeistToggleRow(title: "Show battery percentage", isOn: geistBinding(.showBatteryPercentage))
-                    GeistToggleRow(title: "Show power status icons", isOn: geistBinding(.showPowerStatusIcons), divider: false)
+                    GeistToggleRow(title: "Show power status icons", isOn: geistBinding(.showPowerStatusIcons))
+                    GeistToggleRow(title: "Show battery percentage inside icon", isOn: geistBinding(.showBatteryPercentInside), divider: false)
+                        .disabled(!enableMinimalisticUI)
                 }
 
                 GeistSection(
