@@ -711,17 +711,11 @@ struct NotchHomeView: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var musicManager = MusicManager.shared
     @Default(.showStandardMediaControls) private var showStandardMediaControls
-    @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     let albumArtNamespace: Namespace.ID
     @State private var calendarScrollSuppressionToken = UUID()
 
     private let homeCardContentPadding: CGFloat = 5
 
-    /// Whether the music player should actively display (enabled AND has real content).
-    private var shouldShowMusicPlayer: Bool {
-        showStandardMediaControls && (!autoHideInactiveNotchMediaPlayer || musicManager.hasActiveSession)
-    }
-    
     var body: some View {
         Group {
             if !coordinator.firstLaunch {
@@ -740,10 +734,9 @@ struct NotchHomeView: View {
                 MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
             } else {
                 // Normal mode: Show full music player with optional calendar and webcam.
-                // When the Agents panel is shown, keep music as a persistent left
-                // panel (whenever media controls are enabled) rather than auto-hiding
-                // it while idle, so the home tab keeps its music + agents split.
-                if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
+                // The media player is a persistent left panel whenever media controls
+                // are enabled — it stays visible even while playback is idle.
+                if showStandardMediaControls {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
                         // Fill the full (fixed) panel height so the media and
                         // agents cards are always the SAME height — a two-column
@@ -770,7 +763,7 @@ struct NotchHomeView: View {
                         .notchCard(radius: NotchDesign.Radius.lg)
                 } else if Defaults[.showCalendar] {
                     Group {
-                        if shouldShowMusicPlayer {
+                        if showStandardMediaControls {
                             CalendarView()
                         } else {
                             StandaloneCalendarView()

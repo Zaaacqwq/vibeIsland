@@ -629,7 +629,6 @@ extension Defaults.Keys {
     static let musicSkipBehavior = Key<MusicSkipBehavior>("musicSkipBehavior", default: .track)
     static let musicControlWindowEnabled = Key<Bool>("musicControlWindowEnabled", default: false)
     static let showStandardMediaControls = Key<Bool>("showStandardMediaControls", default: true)
-    static let autoHideInactiveNotchMediaPlayer = Key<Bool>("autoHideInactiveNotchMediaPlayer", default: true)
     static let cachedMusicLiveActivityPreference = Key<Bool?>("cachedMusicLiveActivityPreference", default: nil)
     static let cachedMusicControlWindowPreference = Key<Bool?>("cachedMusicControlWindowPreference", default: nil)
     
@@ -833,6 +832,8 @@ extension Defaults.Keys {
     static let agentInputSoundPath = Key<String>("agentInputSoundPath", default: "")
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.
     static let agentExpandOnComplete = Key<Bool>("agentExpandOnComplete", default: true)
+    /// Pop up the notch when an agent needs your input (permission / question prompt).
+    static let agentExpandOnInputNeeded = Key<Bool>("agentExpandOnInputNeeded", default: true)
 
     // MARK: Screen Recording Detection Feature
     static let enableScreenRecordingDetection = Key<Bool>("enableScreenRecordingDetection", default: true)

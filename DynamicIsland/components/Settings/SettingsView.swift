@@ -1788,7 +1788,6 @@ struct Media: View {
     @Default(.musicControlWindowEnabled) private var musicControlWindowEnabled
     @Default(.showSneakPeekOnTrackChange) private var showSneakPeekOnTrackChange
     @Default(.showStandardMediaControls) private var showStandardMediaControls
-    @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     @Default(.parallaxEffectIntensity) private var parallaxEffectIntensity
     @Default(.enableLyrics) private var enableLyrics
     @Default(.showLyricsInClosedNotch) private var showLyricsInClosedNotch
@@ -1812,9 +1811,6 @@ struct Media: View {
         }
         if standardControlsSuppressed {
             return "Standard notch media controls are hidden. Re-enable the toggle above to restore them."
-        }
-        if !autoHideInactiveNotchMediaPlayer {
-            return "When disabled, the notch music player stays visible with placeholder metadata even when playback is inactive."
         }
         return nil
     }
@@ -1917,8 +1913,6 @@ struct Media: View {
         GeistSection(title: "Dynamic Island Visibility") {
             GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
                 .disabled(enableMinimalisticUI)
-            GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer)
-                .disabled(enableMinimalisticUI || !showStandardMediaControls)
             GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: true, info: "Shows the current track title and artist in the closed notch bar. Only takes effect on displays without a physical notch (external monitors or non-notch Macs) — on a notched built-in display the physical notch covers this area, so it stays hidden.")
             GeistRow(divider: visibilityNote != nil) {
                 Text("Only appears on displays without a physical notch (external monitors or non-notch Macs). The built-in notched display hides it.")
