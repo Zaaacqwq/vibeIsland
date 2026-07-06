@@ -2919,22 +2919,3 @@ private func musicMeasureText(_ text: String, font: MusicSupplementFont) -> CGFl
     let attributes: [NSAttributedString.Key: Any] = [.font: font]
     return CGFloat(ceil(NSAttributedString(string: text, attributes: attributes).size().width))
 }
-
-struct FullScreenDropDelegate: DropDelegate {
-    @Binding var isTargeted: Bool
-    let onDrop: () -> Void
-
-    func dropEntered(info _: DropInfo) {
-        isTargeted = true
-    }
-
-    func dropExited(info _: DropInfo) {
-        isTargeted = false
-    }
-
-    func performDrop(info _: DropInfo) -> Bool {
-        isTargeted = false
-        onDrop()
-        return true
-    }
-}

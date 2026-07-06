@@ -38,11 +38,3 @@ struct CPULoadBreakdown: Equatable {
         return (userFraction, systemFraction, idleFraction)
     }
 }
-
-struct LoadAverage: Equatable {
-    var oneMinute: Double
-    var fiveMinutes: Double
-    var fifteenMinutes: Double
-    
-    static let zero = LoadAverage(oneMinute: 0, fiveMinutes: 0, fifteenMinutes: 0)
-}

@@ -18,14 +18,13 @@ jump-back to the terminal).
 - Media controls and live activities for playback, focus, recording, battery,
   and more.
 - System insight: CPU, GPU, memory, network, and disk.
-- Productivity tools: timers, clipboard history, color picker, calendar, an
-  embedded terminal, and a file shelf.
+- Productivity tools: timers, calendar, and a file shelf.
 - Customizable layout, animations, and hover behavior.
 
 ## Requirements
 
 - macOS 14+ (Apple Silicon or Intel)
-- Full Xcode (the project builds a Metal shader via SwiftTerm)
+- Full Xcode
 
 ## Build & run
 

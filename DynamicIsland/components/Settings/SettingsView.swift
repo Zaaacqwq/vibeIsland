@@ -2048,32 +2048,6 @@ struct CalendarSettings: View {
     @Default(.selectedCalendarApp) private var selectedCalendarApp
     @Default(.fantasticalDefaultView) private var fantasticalDefaultView
 
-    private enum CalendarLookaheadOption: String, CaseIterable, Identifiable {
-        case mins15 = "15m"
-        case mins30 = "30m"
-        case hour1 = "1h"
-        case hours3 = "3h"
-        case hours6 = "6h"
-        case hours12 = "12h"
-        case restOfDay = "rest_of_day"
-        case allTime = "all_time"
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .mins15: return "15 mins"
-            case .mins30: return "30 mins"
-            case .hour1: return "1 hour"
-            case .hours3: return "3 hours"
-            case .hours6: return "6 hours"
-            case .hours12: return "12 hours"
-            case .restOfDay: return "Rest of the day"
-            case .allTime: return "All time"
-            }
-        }
-    }
-
     private enum SubPage: String, Hashable { case selectCalendars }
 
     var body: some View {

@@ -56,24 +56,6 @@
       }
     },
     {
-      "identity" : "open-meteo",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/open-meteo/open-meteo",
-      "state" : {
-        "revision" : "f18ccb781804c444b87e6175a4b62ecfbe0212dc",
-        "version" : "1.4.16"
-      }
-    },
-    {
-      "identity" : "pow",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/EmergeTools/Pow",
-      "state" : {
-        "revision" : "a504eb6d144bcf49f4f33029a2795345cb39e6b4",
-        "version" : "1.0.5"
-      }
-    },
-    {
       "identity" : "skylightwindow",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Lakr233/SkyLightWindow",
@@ -92,15 +74,6 @@
       }
     },
     {
-      "identity" : "swift-argument-parser",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-argument-parser",
-      "state" : {
-        "revision" : "626b5b7b2f45e1b0b1c6f4a309296d1d21d7311b",
-        "version" : "1.7.1"
-      }
-    },
-    {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
@@ -116,15 +89,6 @@
       "state" : {
         "revision" : "f99ae8aa18f0cf0d53481901f88a0991dc3bd4a2",
         "version" : "601.0.1"
-      }
-    },
-    {
-      "identity" : "swiftterm",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/migueldeicaza/SwiftTerm",
-      "state" : {
-        "revision" : "8e7a1e154f470e19c709a00a8768df348ba5fc43",
-        "version" : "1.13.0"
       }
     },
     {

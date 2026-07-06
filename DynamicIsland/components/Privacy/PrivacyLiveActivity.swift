@@ -19,6 +19,18 @@
 import SwiftUI
 import Defaults
 
+enum PrivacyIndicatorType {
+    case camera
+    case microphone
+
+    var icon: String {
+        switch self {
+        case .camera: return "video.fill"
+        case .microphone: return "mic.fill"
+        }
+    }
+}
+
 struct PrivacyLiveActivity: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var privacyManager = PrivacyIndicatorManager.shared

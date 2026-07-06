@@ -159,33 +159,6 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
     }
 }
 
-enum NotesLayoutState: Equatable {
-    case list
-    case split
-    case editor
-
-    var preferredHeight: CGFloat {
-        switch self {
-        case .list:
-            return 240
-        case .split:
-            return 260
-        case .editor:
-            return 320
-        }
-    }
-}
-
-enum SettingsEnum {
-    case general
-    case about
-    case charge
-    case download
-    case mediaPlayback
-    case hud
-    case shelf
-}
-
 enum DownloadIndicatorStyle: String, Defaults.Serializable {
     case progress = "Progress"
     case percentage = "Percentage"
@@ -201,12 +174,6 @@ enum DownloadIndicatorStyle: String, Defaults.Serializable {
                 return String(localized: "Circle")
         }
     }
-}
-
-enum DownloadIconStyle: String, Defaults.Serializable {
-    case onlyAppIcon = "Only app icon"
-    case onlyIcon = "Only download icon"
-    case iconAndAppIcon = "Icon and app icon"
 }
 
 enum WindowHeightMode: String, Defaults.Serializable {
@@ -248,43 +215,6 @@ enum GlassCustomizationMode: String, CaseIterable, Defaults.Serializable, Identi
                 return String(localized: "Standard")
             case .customLiquid:
                 return String(localized: "Custom Liquid")
-        }
-    }
-}
-
-enum TemperatureUnit: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case celsius = "Celsius"
-    case fahrenheit = "Fahrenheit"
-
-    var id: String { rawValue }
-
-    var usesMetricSystem: Bool { self == .celsius }
-
-    var symbol: String {
-        switch self {
-        case .celsius: return "°C"
-        case .fahrenheit: return "°F"
-        }
-    }
-
-    var openMeteoTemperatureParameter: String? {
-        switch self {
-        case .celsius: return nil
-        case .fahrenheit: return "fahrenheit"
-        }
-    }
-}
-
-enum TimerInputStyle: String, CaseIterable, Defaults.Serializable, Identifiable {
-    case ruler = "Ruler"
-    case manual = "Manual"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .ruler: return String(localized: "Ruler")
-        case .manual: return String(localized: "Manual")
         }
     }
 }

@@ -78,25 +78,3 @@ actor YouTubeMusicAuthManager {
         authenticationTask = nil
     }
 }
-
-// MARK: - Authentication State
-enum AuthenticationState: Sendable {
-    case unauthenticated
-    case authenticating
-    case authenticated(String)
-    case failed(Error)
-    
-    var isAuthenticated: Bool {
-        if case .authenticated = self {
-            return true
-        }
-        return false
-    }
-    
-    var token: String? {
-        if case .authenticated(let token) = self {
-            return token
-        }
-        return nil
-    }
-}
