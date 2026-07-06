@@ -68,6 +68,11 @@ struct AgentsSettings: View {
                     if completionSoundEnabled {
                         agentSoundRow(title: "Completion sound", path: $completionSoundPath, bundled: "agent-complete")
                     }
+                    GeistToggleRow(
+                        title: "Pop up the notch when an agent needs input",
+                        description: "Surface the notch for permission and question prompts so you can approve or answer without switching apps.",
+                        isOn: geistBinding(.agentExpandOnInputNeeded)
+                    )
                     GeistToggleRow(title: "Expand the notch to Agents when an agent finishes", isOn: geistBinding(.agentExpandOnComplete), divider: false)
                 }
             }

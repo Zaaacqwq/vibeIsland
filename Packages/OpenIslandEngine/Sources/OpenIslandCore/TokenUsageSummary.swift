@@ -5,6 +5,22 @@ import Foundation
 /// double-counts: for Claude, `input` is the uncached prompt and cache is
 /// tracked separately; for Codex, the cached slice of the prompt lands in
 /// `cacheRead` and the reasoning slice of the output lands in `reasoning`.
+public enum AgentUsageProviderID: String, CaseIterable, Codable, Sendable, Identifiable {
+    case summary
+    case claude
+    case codex
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .summary: return "Summary"
+        case .claude: return "Claude"
+        case .codex: return "Codex"
+        }
+    }
+}
+
 public struct TokenBreakdown: Equatable, Codable, Sendable {
     public var input: Int
     public var output: Int
@@ -58,6 +74,50 @@ public struct TokenBreakdown: Equatable, Codable, Sendable {
     }
 }
 
+public struct ModelTokenUsageSummary: Equatable, Codable, Sendable, Identifiable {
+    public var model: String
+    public var breakdown: TokenBreakdown
+    public var costUSD: Double
+
+    public var id: String { model }
+
+    public init(model: String, breakdown: TokenBreakdown, costUSD: Double) {
+        self.model = model
+        self.breakdown = breakdown
+        self.costUSD = costUSD
+    }
+}
+
+public struct ProviderTokenUsageSummary: Equatable, Codable, Sendable, Identifiable {
+    public var id: AgentUsageProviderID
+    public var breakdown: TokenBreakdown
+    public var costUSD: Double
+    public var activeSeconds: TimeInterval
+    public var windowDays: Int
+    public var generatedAt: Date
+    public var models: [ModelTokenUsageSummary]
+
+    public init(
+        id: AgentUsageProviderID,
+        breakdown: TokenBreakdown,
+        costUSD: Double,
+        activeSeconds: TimeInterval,
+        windowDays: Int,
+        generatedAt: Date,
+        models: [ModelTokenUsageSummary] = []
+    ) {
+        self.id = id
+        self.breakdown = breakdown
+        self.costUSD = costUSD
+        self.activeSeconds = activeSeconds
+        self.windowDays = windowDays
+        self.generatedAt = generatedAt
+        self.models = models
+    }
+
+    public var isEmpty: Bool { breakdown.isEmpty }
+}
+
 /// A rolling-window summary of token usage, cost, and active time across all
 /// tracked coding agents. Rendered by the Agents tab's "Token Usage" card.
 public struct TokenUsageSummary: Equatable, Codable, Sendable {
@@ -95,6 +155,20 @@ public struct TokenUsageSummary: Equatable, Codable, Sendable {
     }
 
     public var isEmpty: Bool { breakdown.isEmpty }
+}
+
+public struct AgentUsageSummary: Equatable, Codable, Sendable {
+    public var total: TokenUsageSummary
+    public var providers: [ProviderTokenUsageSummary]
+
+    public init(total: TokenUsageSummary, providers: [ProviderTokenUsageSummary]) {
+        self.total = total
+        self.providers = providers
+    }
+
+    public func provider(_ id: AgentUsageProviderID) -> ProviderTokenUsageSummary? {
+        providers.first { $0.id == id }
+    }
 }
 
 /// Pure display formatters, factored out so they are unit-testable without any

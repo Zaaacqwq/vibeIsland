@@ -179,7 +179,7 @@ final class TimerControlWindowManager {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         window.ignoresMouseEvents = false
         window.isMovable = false
         window.alphaValue = 0
@@ -215,7 +215,12 @@ final class TimerControlWindowManager {
 
         let clampedOriginX = max(screenFrame.minX + 8, min(rawOriginX, screenFrame.maxX - size.width - 8))
 
-        return NSRect(x: clampedOriginX, y: originY, width: size.width, height: size.height)
+        return NSRect(
+            x: clampedOriginX.rounded(),
+            y: originY.rounded(),
+            width: size.width.rounded(),
+            height: size.height.rounded()
+        )
     }
 
     private func initialFrame(for targetFrame: NSRect, metrics: TimerControlWindowMetrics) -> NSRect {

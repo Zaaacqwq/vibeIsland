@@ -140,6 +140,9 @@ struct ShelfView: View {
                 Text(itemSummary)
                     .font(NotchDesign.Typography.mono(10, weight: .medium))
                     .foregroundStyle(NotchDesign.Colors.textFaint)
+                if !tvm.isEmpty {
+                    clearAllButton
+                }
             }
 
             if tvm.isEmpty {
@@ -169,6 +172,23 @@ struct ShelfView: View {
 
     private var itemSummary: String {
         tvm.items.isEmpty ? "0 items" : "\(tvm.items.count) items"
+    }
+
+    private var clearAllButton: some View {
+        Button {
+            ShelfSelectionModel.shared.clear()
+            tvm.removeAll()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "trash")
+                    .font(.system(size: 9, weight: .semibold))
+                Text("Clear all")
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+            }
+            .foregroundStyle(NotchDesign.Colors.textFaint)
+        }
+        .buttonStyle(.plain)
+        .help("Remove all files from the shelf")
     }
 
     private var emptyDropHint: some View {

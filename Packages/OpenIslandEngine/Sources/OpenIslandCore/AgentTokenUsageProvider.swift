@@ -7,11 +7,18 @@ public struct AgentUsageContribution: Sendable {
     public var breakdown: TokenBreakdown
     public var costUSD: Double
     public var activeSeconds: Double
+    public var models: [ModelTokenUsageSummary]
 
-    public init(breakdown: TokenBreakdown = .zero, costUSD: Double = 0, activeSeconds: Double = 0) {
+    public init(
+        breakdown: TokenBreakdown = .zero,
+        costUSD: Double = 0,
+        activeSeconds: Double = 0,
+        models: [ModelTokenUsageSummary] = []
+    ) {
         self.breakdown = breakdown
         self.costUSD = costUSD
         self.activeSeconds = activeSeconds
+        self.models = models
     }
 
     public static let empty = AgentUsageContribution()
@@ -22,6 +29,7 @@ public struct AgentUsageContribution: Sendable {
 /// hold a `FileManager`); the provider owns thread-safety and only runs them
 /// serially on one background thread.
 public protocol TokenUsageAggregating {
+    var providerID: AgentUsageProviderID { get }
     func aggregate(since cutoff: Date, now: Date) -> AgentUsageContribution
 }
 
@@ -46,25 +54,44 @@ public final class AgentTokenUsageProvider: @unchecked Sendable {
     }
 
     public func snapshot(now: Date = .now) -> TokenUsageSummary {
+        detailedSnapshot(now: now).total
+    }
+
+    public func detailedSnapshot(now: Date = .now) -> AgentUsageSummary {
         let cutoff = now.addingTimeInterval(-Double(windowDays) * 86_400)
         var breakdown = TokenBreakdown.zero
         var cost = 0.0
         var activeSeconds = 0.0
+        var providers: [ProviderTokenUsageSummary] = []
 
         for aggregator in aggregators {
             let contribution = aggregator.aggregate(since: cutoff, now: now)
             breakdown += contribution.breakdown
             cost += contribution.costUSD
             activeSeconds += contribution.activeSeconds
+
+            providers.append(
+                ProviderTokenUsageSummary(
+                    id: aggregator.providerID,
+                    breakdown: contribution.breakdown,
+                    costUSD: contribution.costUSD,
+                    activeSeconds: contribution.activeSeconds,
+                    windowDays: windowDays,
+                    generatedAt: now,
+                    models: contribution.models
+                )
+            )
         }
 
-        return TokenUsageSummary(
+        let total = TokenUsageSummary(
             breakdown: breakdown,
             costUSD: cost,
             activeSeconds: activeSeconds,
             windowDays: windowDays,
             generatedAt: now
         )
+
+        return AgentUsageSummary(total: total, providers: providers)
     }
 
     /// Active time for one session's message timestamps: sort, then sum the span

@@ -67,6 +67,15 @@ final class ShelfStateViewModel: ObservableObject {
         items.removeAll { $0.id == item.id }
     }
 
+    /// Clears the whole shelf in one action, releasing each item's stored data.
+    func removeAll() {
+        guard !items.isEmpty else { return }
+        for item in items {
+            item.cleanupStoredData()
+        }
+        items = []
+    }
+
     func updateBookmark(for item: ShelfItem, bookmark: Data) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         if case .file = items[idx].kind {

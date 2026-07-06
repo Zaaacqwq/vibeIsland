@@ -93,8 +93,26 @@ public enum ClaudeUsageLoader {
 
         return ClaudeUsageWindow(
             usedPercentage: rawPercentage,
-            resetsAt: date(from: window["resets_at"])
+            resetsAt: resetDate(in: window)
         )
+    }
+
+    private static func resetDate(in window: [String: Any]) -> Date? {
+        let absoluteKeys = ["resets_at", "reset_at", "resetsAt", "resetAt"]
+        for key in absoluteKeys {
+            if let date = date(from: window[key]) {
+                return date
+            }
+        }
+
+        let relativeKeys = ["resets_in_seconds", "reset_after_seconds", "resetsInSeconds", "resetAfterSeconds"]
+        for key in relativeKeys {
+            if let seconds = number(from: window[key]) {
+                return Date().addingTimeInterval(seconds)
+            }
+        }
+
+        return nil
     }
 
     private static func number(from value: Any?) -> Double? {

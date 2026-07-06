@@ -97,6 +97,9 @@ final class AgentMonitorManager: ObservableObject {
     /// aggregated from local transcripts. `nil` until the first aggregation
     /// finishes; drives the Agents tab's "Token Usage" card.
     @Published private(set) var tokenUsage: TokenUsageSummary?
+    /// Detailed rolling usage split by provider, used by the Agents tab's
+    /// switchable provider cards while preserving the aggregate summary above.
+    @Published private(set) var detailedTokenUsage: AgentUsageSummary?
     /// Whether an aggregation pass is currently running (spins the card's
     /// refresh control).
     @Published private(set) var isRefreshingTokenUsage = false
@@ -186,9 +189,10 @@ final class AgentMonitorManager: ObservableObject {
 
         let provider = tokenUsageProvider
         Task.detached(priority: .utility) {
-            let summary = provider.snapshot()
+            let summary = provider.detailedSnapshot()
             await MainActor.run {
-                self.tokenUsage = summary
+                self.detailedTokenUsage = summary
+                self.tokenUsage = summary.total
                 self.lastTokenUsageRefresh = Date()
                 self.isRefreshingTokenUsage = false
             }
@@ -333,6 +337,7 @@ final class AgentMonitorManager: ObservableObject {
 
     private func postNeedsInput(sessionID: String) {
         guard Defaults[.enableAgentMonitoring] else { return }
+        guard Defaults[.agentExpandOnInputNeeded] else { return }
         NotificationCenter.default.post(name: .vibeIslandAgentNeedsInput, object: sessionID)
     }
 

@@ -186,9 +186,11 @@ struct NotchAgentsView: View {
         // (`NotchHeaderContextWidget`), so the tab body keeps only the detailed
         // token-usage panel and lets it own the column.
         VStack(alignment: .leading, spacing: 10) {
-            if let usage = agentMonitor.tokenUsage, !usage.isEmpty {
-                NotchTokenUsageCard(
-                    usage: usage,
+            if agentMonitor.detailedTokenUsage != nil || agentMonitor.tokenUsage != nil || agentMonitor.usage != nil || agentMonitor.codexUsage != nil {
+                AgentProviderUsagePager(
+                    summary: agentMonitor.detailedTokenUsage,
+                    claudeUsage: agentMonitor.usage,
+                    codexUsage: agentMonitor.codexUsage,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )
@@ -197,6 +199,14 @@ struct NotchAgentsView: View {
                     .font(NotchDesign.Typography.mono(11))
                     .foregroundStyle(NotchDesign.Colors.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                AgentProviderUsagePager(
+                    summary: nil,
+                    claudeUsage: nil,
+                    codexUsage: nil,
+                    isRefreshing: agentMonitor.isRefreshingTokenUsage,
+                    onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
+                )
             }
             Spacer(minLength: 0)
         }

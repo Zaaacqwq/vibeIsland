@@ -393,17 +393,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.alphaValue = 0
         }
         
-        // Use the same centering logic as updateWindowSizeIfNeeded()
+        // Use the same centering logic as updateWindowSizeIfNeeded(), snapped
+        // to whole pixels to avoid blur on scaled displays.
         let screenFrame = screen.frame
         let centerX = screenFrame.origin.x + (screenFrame.width / 2)
-        let newX = centerX - (window.frame.width / 2)
-        let newY = screenFrame.origin.y + screenFrame.height - window.frame.height
-        
+        let roundedWidth = window.frame.width.rounded()
+        let roundedHeight = window.frame.height.rounded()
+        let newX = (centerX - (roundedWidth / 2)).rounded()
+        let newY = (screenFrame.origin.y + screenFrame.height - roundedHeight).rounded()
+
         window.setFrame(NSRect(
             x: newX,
             y: newY,
-            width: window.frame.width,
-            height: window.frame.height
+            width: roundedWidth,
+            height: roundedHeight
         ), display: false)
         
         if changeAlpha {
@@ -425,17 +428,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func calculateRequiredNotchSize() -> CGSize {
         // Check if inline sneak peek is showing and notch is closed
-        let isInlineSneakPeekActive = vm.notchState == .closed && 
-                                      coordinator.expandingView.show && 
-                                      (coordinator.expandingView.type == .music || coordinator.expandingView.type == .timer) && 
-                                      Defaults[.enableSneakPeek] && 
-                                      Defaults[.sneakPeekStyles] == .inline
-        
+        let airPodsListeningModeSneakActive = vm.notchState == .closed &&
+                                      coordinator.sneakPeek.show &&
+                                      coordinator.sneakPeek.type == .bluetoothAudio &&
+                                      coordinator.sneakPeek.value < 0 &&
+                                      AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
+        let isInlineSneakPeekActive = vm.notchState == .closed &&
+                                      Defaults[.enableSneakPeek] &&
+                                      (
+                                          coordinator.expandingView.show &&
+                                          (coordinator.expandingView.type == .music || coordinator.expandingView.type == .timer) &&
+                                          Defaults[.sneakPeekStyles] == .inline ||
+                                          airPodsListeningModeSneakActive
+                                      )
+
         // If inline sneak peek is active, use a wider width to accommodate the expanded content
         if isInlineSneakPeekActive {
             // Calculate required width for inline sneak peek:
             // Album art (~32) + Middle section (380) + Visualizer (~32) + horizontal padding (28) + clip shape margin (12)
-            let inlineSneakPeekWidth: CGFloat = 460
+            let inlineSneakPeekWidth: CGFloat = airPodsListeningModeSneakActive
+                ? InlineHUD.airPodsListeningModeWidth(
+                    closedNotchWidth: vm.closedNotchSize.width,
+                    minimalistic: Defaults[.enableMinimalisticUI]
+                )
+                : 460
             return CGSize(width: inlineSneakPeekWidth, height: vm.effectiveClosedNotchHeight)
         }
 
@@ -526,12 +542,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func resizeWindow(_ window: NSWindow, on screen: NSScreen, to size: CGSize, animated: Bool) {
         let screenFrame = screen.frame
-        // Clamp width to screen width so the notch never extends beyond screen edges on scaled displays
-        let clampedWidth = min(size.width, screenFrame.width)
-        let clampedHeight = min(size.height, screenFrame.height)
+        // Clamp width to screen width and snap to whole pixels so the notch never
+        // extends beyond screen edges or blurs on scaled displays.
+        let clampedWidth = min(size.width, screenFrame.width).rounded()
+        let clampedHeight = min(size.height, screenFrame.height).rounded()
         let centerX = screenFrame.midX
-        let newX = centerX - (clampedWidth / 2)
-        let newY = screenFrame.origin.y + screenFrame.height - clampedHeight
+        let newX = (centerX - (clampedWidth / 2)).rounded()
+        let newY = (screenFrame.origin.y + screenFrame.height - clampedHeight).rounded()
         let targetFrame = NSRect(x: newX, y: newY, width: clampedWidth, height: clampedHeight)
 
         window.setFrame(targetFrame, display: true)

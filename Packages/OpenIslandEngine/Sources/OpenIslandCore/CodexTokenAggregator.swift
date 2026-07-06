@@ -9,6 +9,8 @@ import Foundation
 /// mutually-exclusive segments the summary expects. The model id comes from a
 /// `turn_context` line.
 public struct CodexTokenAggregator: TokenUsageAggregating {
+    public let providerID: AgentUsageProviderID = .codex
+
     private let rootURL: URL
     private let fileManager: FileManager
 
@@ -38,6 +40,8 @@ public struct CodexTokenAggregator: TokenUsageAggregating {
         var breakdown = TokenBreakdown.zero
         var cost = 0.0
         var activeSeconds = 0.0
+        var modelBreakdowns: [String: TokenBreakdown] = [:]
+        var modelCosts: [String: Double] = [:]
 
         for case let fileURL as URL in enumerator {
             guard fileURL.pathExtension == "jsonl",
@@ -90,10 +94,21 @@ public struct CodexTokenAggregator: TokenUsageAggregating {
             )
             guard !fileBreakdown.isEmpty else { continue }
 
+            let fileCost = ModelPricing.cost(model: model, breakdown: fileBreakdown)
             breakdown += fileBreakdown
-            cost += ModelPricing.cost(model: model, breakdown: fileBreakdown)
+            cost += fileCost
+            modelBreakdowns[model, default: .zero] += fileBreakdown
+            modelCosts[model, default: 0] += fileCost
         }
 
-        return AgentUsageContribution(breakdown: breakdown, costUSD: cost, activeSeconds: activeSeconds)
+        let models = modelBreakdowns.map { model, breakdown in
+            ModelTokenUsageSummary(model: model, breakdown: breakdown, costUSD: modelCosts[model] ?? 0)
+        }
+        .sorted { lhs, rhs in
+            if lhs.costUSD == rhs.costUSD { return lhs.breakdown.nonCacheTokens > rhs.breakdown.nonCacheTokens }
+            return lhs.costUSD > rhs.costUSD
+        }
+
+        return AgentUsageContribution(breakdown: breakdown, costUSD: cost, activeSeconds: activeSeconds, models: models)
     }
 }

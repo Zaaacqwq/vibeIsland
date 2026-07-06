@@ -8,6 +8,8 @@ import Foundation
 /// transcript does not double-count. Reasoning is always 0 (Claude reports no
 /// separate reasoning token field).
 public struct ClaudeTokenAggregator: TokenUsageAggregating {
+    public let providerID: AgentUsageProviderID = .claude
+
     private let rootURL: URL
     private let fileManager: FileManager
 
@@ -33,6 +35,8 @@ public struct ClaudeTokenAggregator: TokenUsageAggregating {
         var cost = 0.0
         var activeSeconds = 0.0
         var seen = Set<String>()
+        var modelBreakdowns: [String: TokenBreakdown] = [:]
+        var modelCosts: [String: Double] = [:]
 
         for case let fileURL as URL in enumerator {
             guard fileURL.pathExtension == "jsonl",
@@ -78,13 +82,24 @@ public struct ClaudeTokenAggregator: TokenUsageAggregating {
                 guard !lineBreakdown.isEmpty else { return }
 
                 breakdown += lineBreakdown
-                let model = message["model"] as? String ?? ""
-                cost += ModelPricing.cost(model: model, breakdown: lineBreakdown)
+                let model = message["model"] as? String ?? "unknown"
+                let lineCost = ModelPricing.cost(model: model, breakdown: lineBreakdown)
+                cost += lineCost
+                modelBreakdowns[model, default: .zero] += lineBreakdown
+                modelCosts[model, default: 0] += lineCost
             }
 
             activeSeconds += AgentTokenUsageProvider.sessionActiveSeconds(timestamps: timestamps)
         }
 
-        return AgentUsageContribution(breakdown: breakdown, costUSD: cost, activeSeconds: activeSeconds)
+        let models = modelBreakdowns.map { model, breakdown in
+            ModelTokenUsageSummary(model: model, breakdown: breakdown, costUSD: modelCosts[model] ?? 0)
+        }
+        .sorted { lhs, rhs in
+            if lhs.costUSD == rhs.costUSD { return lhs.breakdown.nonCacheTokens > rhs.breakdown.nonCacheTokens }
+            return lhs.costUSD > rhs.costUSD
+        }
+
+        return AgentUsageContribution(breakdown: breakdown, costUSD: cost, activeSeconds: activeSeconds, models: models)
     }
 }
