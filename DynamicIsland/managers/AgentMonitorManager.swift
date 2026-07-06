@@ -78,7 +78,6 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var isBridgeReady = false
     @Published private(set) var hookStatus: HookStatus = .unknown
     @Published private(set) var codexHookStatus: HookStatus = .unknown
-    @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var antigravityHookStatus: HookStatus = .unknown
     @Published private(set) var openCodeHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
@@ -93,6 +92,17 @@ final class AgentMonitorManager: ObservableObject {
     /// no install step is needed — we read the most recent rollout under
     /// `~/.codex/sessions`. `nil` until a rollout with rate limits is found.
     @Published private(set) var codexUsage: CodexUsageSnapshot?
+
+    /// Rolling 14-day token usage / cost / cache summary across all agents,
+    /// aggregated from local transcripts. `nil` until the first aggregation
+    /// finishes; drives the Agents tab's "Token Usage" card.
+    @Published private(set) var tokenUsage: TokenUsageSummary?
+    /// Detailed rolling usage split by provider, used by the Agents tab's
+    /// switchable provider cards while preserving the aggregate summary above.
+    @Published private(set) var detailedTokenUsage: AgentUsageSummary?
+    /// Whether an aggregation pass is currently running (spins the card's
+    /// refresh control).
+    @Published private(set) var isRefreshingTokenUsage = false
 
     /// The single session currently demanding attention (permission/answer),
     /// if any — drives the closed-pill live activity.
@@ -121,6 +131,9 @@ final class AgentMonitorManager: ObservableObject {
     private var bridgeTask: Task<Void, Never>?
     private var reconnectTask: Task<Void, Never>?
     private var state = SessionState()
+    private let tokenUsageProvider = AgentTokenUsageProvider()
+    private var lastTokenUsageRefresh: Date?
+    private static let tokenUsageTTL: TimeInterval = 60
     private var hasStarted = false
     private var livenessTimer: Timer?
     /// Lightweight in-memory watchdog (no `ps`) that completes idle Antigravity
@@ -157,7 +170,33 @@ final class AgentMonitorManager: ObservableObject {
         connectObserver()
         refreshHookStatus()
         startLivenessMonitor()
+        refreshTokenUsage()
         AgentInputHotkeyMonitor.shared.start()
+    }
+
+    // MARK: - Token usage
+
+    /// Recomputes the rolling token-usage summary off the main thread. Honors a
+    /// short TTL so opening the Agents tab repeatedly doesn't re-walk every
+    /// transcript; pass `force: true` for the card's manual refresh button.
+    func refreshTokenUsage(force: Bool = false) {
+        if !force, let last = lastTokenUsageRefresh,
+           Date().timeIntervalSince(last) < Self.tokenUsageTTL {
+            return
+        }
+        guard !isRefreshingTokenUsage else { return }
+        isRefreshingTokenUsage = true
+
+        let provider = tokenUsageProvider
+        Task.detached(priority: .utility) {
+            let summary = provider.detailedSnapshot()
+            await MainActor.run {
+                self.detailedTokenUsage = summary
+                self.tokenUsage = summary.total
+                self.lastTokenUsageRefresh = Date()
+                self.isRefreshingTokenUsage = false
+            }
+        }
     }
 
     func stop() {
@@ -298,6 +337,7 @@ final class AgentMonitorManager: ObservableObject {
 
     private func postNeedsInput(sessionID: String) {
         guard Defaults[.enableAgentMonitoring] else { return }
+        guard Defaults[.agentExpandOnInputNeeded] else { return }
         NotificationCenter.default.post(name: .vibeIslandAgentNeedsInput, object: sessionID)
     }
 
@@ -309,18 +349,31 @@ final class AgentMonitorManager: ObservableObject {
         NotificationCenter.default.post(name: .vibeIslandAgentDidComplete, object: sessionID)
     }
 
+    // MARK: - Agent sounds
+
+    /// Resolves the sound to play for an agent event: a user-supplied file (when
+    /// set and present on disk) overrides the bundled default.
+    static func resolveAgentSoundURL(customPath: String, bundled: String, ext: String) -> URL? {
+        if !customPath.isEmpty, FileManager.default.fileExists(atPath: customPath) {
+            return URL(fileURLWithPath: customPath)
+        }
+        return Bundle.main.url(forResource: bundled, withExtension: ext)
+    }
+
     // MARK: - Completion sound
 
     private var completionSoundPlayer: AVAudioPlayer?
+    private var completionSoundURL: URL?
 
-    /// Plays a ding when Claude finishes a turn. Lazily loads the bundled
-    /// sound and reuses the player across plays.
+    /// Plays a ding when an agent finishes a turn. Reuses the cached player, but
+    /// rebuilds it when the user swaps in (or clears) a custom sound file.
     private func playCompletionSoundIfEnabled() {
         guard Defaults[.agentCompletionSoundEnabled] else { return }
-        if completionSoundPlayer == nil {
-            guard let url = Bundle.main.url(forResource: "agent-complete", withExtension: "mp3") else { return }
+        guard let url = Self.resolveAgentSoundURL(customPath: Defaults[.agentCompletionSoundPath], bundled: "agent-complete", ext: "mp3") else { return }
+        if completionSoundPlayer == nil || completionSoundURL != url {
             completionSoundPlayer = try? AVAudioPlayer(contentsOf: url)
             completionSoundPlayer?.prepareToPlay()
+            completionSoundURL = url
         }
         completionSoundPlayer?.currentTime = 0
         completionSoundPlayer?.play()
@@ -329,9 +382,10 @@ final class AgentMonitorManager: ObservableObject {
     // MARK: - Input-needed sound
 
     private var inputSoundPlayer: AVAudioPlayer?
+    private var inputSoundURL: URL?
     private var lastInputSoundAt: Date = .distantPast
 
-    /// Plays a notification when Claude needs the user to respond (permission or
+    /// Plays a notification when an agent needs the user to respond (permission or
     /// question — the red "input needed" halo). Throttled so a burst of events
     /// for the same prompt doesn't stack plays.
     private func playInputNeededSoundIfEnabled() {
@@ -340,10 +394,11 @@ final class AgentMonitorManager: ObservableObject {
         guard now.timeIntervalSince(lastInputSoundAt) > 0.5 else { return }
         lastInputSoundAt = now
 
-        if inputSoundPlayer == nil {
-            guard let url = Bundle.main.url(forResource: "agent-input-needed", withExtension: "mp3") else { return }
+        guard let url = Self.resolveAgentSoundURL(customPath: Defaults[.agentInputSoundPath], bundled: "agent-input-needed", ext: "mp3") else { return }
+        if inputSoundPlayer == nil || inputSoundURL != url {
             inputSoundPlayer = try? AVAudioPlayer(contentsOf: url)
             inputSoundPlayer?.prepareToPlay()
+            inputSoundURL = url
         }
         inputSoundPlayer?.currentTime = 0
         inputSoundPlayer?.play()
@@ -736,26 +791,6 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallCodexHooks() {
         applyHookChange(label: "remove Codex hooks", assign: { self.codexHookStatus = $0 }) {
             _ = try CodexHookInstallationManager().uninstall()
-            return false
-        }
-    }
-
-    func refreshGeminiHookStatus() {
-        applyHookChange(label: "check Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().status().managedHooksPresent
-        }
-    }
-
-    func installGeminiHooks() {
-        let binary = bundledHooksBinaryURL
-        applyHookChange(label: "install Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
-        }
-    }
-
-    func uninstallGeminiHooks() {
-        applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            _ = try GeminiHookInstallationManager().uninstall()
             return false
         }
     }

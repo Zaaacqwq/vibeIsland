@@ -36,8 +36,8 @@ struct NotchNotificationCenterView: View {
             header
             content
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        // Uniform tab insets + height budget come from the shared tab container
+        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onHover { updateScrollSuppression(for: $0) }

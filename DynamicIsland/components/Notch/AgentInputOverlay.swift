@@ -30,12 +30,6 @@ struct AgentInputOverlay: View {
     @State private var freeformText: String = ""
     @FocusState private var inputFocused: Bool
 
-    private enum Palette {
-        static let orange = Color(red: 1.0, green: 0.56, blue: 0.22)
-        static let teal = Color(red: 0.18, green: 0.7, blue: 0.9)
-        static let muted = Color(white: 0.66)
-    }
-
     var body: some View {
         Group {
             if let permission = session.permissionRequest {
@@ -74,7 +68,7 @@ struct AgentInputOverlay: View {
         } label: {
             Image(systemName: "chevron.up")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Palette.muted)
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
                 .frame(width: 22, height: 22)
                 .background(Circle().fill(Color.white.opacity(0.1)))
         }
@@ -98,26 +92,26 @@ struct AgentInputOverlay: View {
 
     @ViewBuilder
     private func permissionCard(_ permission: PermissionRequest) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Circle().fill(Palette.orange).frame(width: 8, height: 8)
-                Text("Permission Request")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
+                // Amber pulsing dot — the handoff's shared "needs permission"
+                // signature (same signal as the collapsed pill and the tab row).
+                NotchPulsingDot(color: NotchDesign.Colors.warning, size: 8)
+                NotchMonoEyebrow(text: "Needs permission")
             }
             .padding(.trailing, 28)
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.orange)
+                    .foregroundStyle(NotchDesign.Colors.warning)
                 Text(permission.title.isEmpty ? "Tool use" : permission.title)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Palette.orange)
+                    .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
                 if !permission.affectedPath.isEmpty, permission.affectedPath != permission.title {
                     Text(permission.affectedPath)
-                        .font(.system(size: 14, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .font(NotchDesign.Typography.mono(13))
+                        .foregroundStyle(NotchDesign.Colors.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -137,32 +131,42 @@ struct AgentInputOverlay: View {
             }
 
             HStack(spacing: 10) {
-                actionButton(title: permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle,
-                             shortcut: "⌘N",
-                             foreground: .white,
-                             background: Color.white.opacity(0.12)) {
+                permissionButton(title: permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle,
+                                 shortcut: "⌘N",
+                                 kind: .deny) {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: false)
                 }
-                actionButton(title: permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle,
-                             shortcut: "⌘Y",
-                             foreground: .black,
-                             background: Color.white.opacity(0.92)) {
+                permissionButton(title: permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle,
+                                 shortcut: "⌘Y",
+                                 kind: .allow) {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: true)
                 }
             }
         }
     }
 
-    private func actionButton(title: String, shortcut: String, foreground: Color, background: Color, action: @escaping () -> Void) -> some View {
+    private enum PermissionButtonKind { case allow, deny }
+
+    /// Allow = green fill / black text; Deny = red outline — matching the inline
+    /// approve/deny grammar in the Agents tab list.
+    private func permissionButton(title: String, shortcut: String, kind: PermissionButtonKind, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Text(title).font(.system(size: 14, weight: .semibold))
-                Text(shortcut).font(.system(size: 12, weight: .medium)).opacity(0.6)
+                Text(title).font(NotchDesign.Typography.voice(13, weight: .semibold))
+                Text(shortcut).font(NotchDesign.Typography.mono(11)).opacity(0.55)
             }
-            .foregroundStyle(foreground)
+            .foregroundStyle(kind == .allow ? .black : NotchDesign.Colors.danger)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(background))
+            .padding(.vertical, 9)
+            .background {
+                if kind == .allow {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(NotchDesign.Colors.success)
+                } else {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(NotchDesign.Colors.danger.opacity(0.4), lineWidth: 1)
+                }
+            }
         }
         .buttonStyle(.plain)
     }
@@ -172,20 +176,18 @@ struct AgentInputOverlay: View {
     @ViewBuilder
     private func questionCard(_ prompt: QuestionPrompt) -> some View {
         let options = questionOptions(prompt)
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: "bubble.left.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Palette.teal)
-                Text("Claude asks")
+                Image(systemName: "questionmark.bubble")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.teal)
+                    .foregroundStyle(NotchDesign.Colors.accent)
+                NotchMonoEyebrow(text: "Claude asks")
             }
             .padding(.trailing, 28)
 
             Text(questionText(prompt))
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
+                .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -214,28 +216,35 @@ struct AgentInputOverlay: View {
                 agentMonitor.answerQuestion(sessionID: session.id, optionLabel: option.label)
             }
         } label: {
-            HStack(spacing: 10) {
-                HStack(spacing: 1) {
-                    Image(systemName: "command").font(.system(size: 9, weight: .bold))
-                    Text("\(index + 1)").font(.system(size: 12, weight: .bold))
-                }
-                .foregroundStyle(Palette.teal)
-                .frame(width: 32, height: 28)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.teal.opacity(0.18)))
+            HStack(spacing: 9) {
+                // Circular numeral badge — the same option grammar the Agents
+                // tab list uses, so an expanded question reads identically.
+                Text("\(index + 1)")
+                    .font(NotchDesign.Typography.voice(10, weight: .bold))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
 
                 Text(option.label)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.white)
+                    .font(NotchDesign.Typography.voice(13, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
                     .lineLimit(1)
                 if option.allowsFreeform {
-                    Image(systemName: "pencil").font(.system(size: 11)).foregroundStyle(Palette.teal)
+                    Image(systemName: "pencil").font(.system(size: 10)).foregroundStyle(NotchDesign.Colors.accent)
                 }
                 Spacer(minLength: 0)
+                // Subtle mono shortcut hint (the ⌘1…9 hotkeys live in the global
+                // monitor); only the first nine options have a keyboard binding.
+                if index < 9 {
+                    Text("⌘\(index + 1)")
+                        .font(NotchDesign.Typography.mono(10))
+                        .foregroundStyle(NotchDesign.Colors.textTertiary)
+                }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 9)
             .padding(.horizontal, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Palette.teal.opacity(0.10)))
+            .notchCard(radius: 8, fill: NotchDesign.Colors.sunken)
         }
         .buttonStyle(.plain)
     }
@@ -245,34 +254,34 @@ struct AgentInputOverlay: View {
         VStack(alignment: .leading, spacing: 8) {
             TextField(option.label.isEmpty ? "Type your answer…" : option.label, text: $freeformText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 15))
-                .foregroundStyle(.white)
-                .tint(Palette.teal)
+                .font(NotchDesign.Typography.voice(14))
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
+                .tint(NotchDesign.Colors.accent)
                 .focused($inputFocused)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
-                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Palette.teal.opacity(0.12)))
-                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Palette.teal.opacity(0.4), lineWidth: 1))
+                .background(NotchDesign.Colors.sunken, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(NotchDesign.Colors.accent.opacity(0.35), lineWidth: 1))
                 .onSubmit { submitFreeform() }
                 .onAppear { focusInput() }
 
             HStack(spacing: 8) {
                 Button { freeformOption = nil } label: {
                     Text("Back")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .font(NotchDesign.Typography.voice(13, weight: .semibold))
+                        .foregroundStyle(NotchDesign.Colors.textPrimary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.12)))
+                        .padding(.vertical, 9)
+                        .background(Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 Button { submitFreeform() } label: {
                     Text("Submit")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(NotchDesign.Typography.voice(13, weight: .semibold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.92)))
+                        .padding(.vertical, 9)
+                        .background(NotchDesign.Colors.accent, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(freeformText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -317,7 +326,7 @@ private struct DiffView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         Text(line.isEmpty ? " " : line)
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .font(NotchDesign.Typography.mono(11))
                             .foregroundStyle(color(for: line))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 8)
@@ -327,27 +336,31 @@ private struct DiffView: View {
                 }
                 .padding(.vertical, 4)
             }
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.05)))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(NotchDesign.Colors.sunken)
+            .clipShape(RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous)
+                    .strokeBorder(NotchDesign.Colors.hairline, lineWidth: NotchDesign.hairlineWidth)
+            }
 
             if adds > 0 || removes > 0 {
                 Text("+\(adds) -\(removes)")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                    .foregroundStyle(Color(white: 0.5))
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
                     .padding(.leading, 2)
             }
         }
     }
 
     private func color(for line: String) -> Color {
-        if line.hasPrefix("+") { return Color(red: 0.45, green: 0.85, blue: 0.52) }
-        if line.hasPrefix("-") { return Color(red: 0.95, green: 0.45, blue: 0.45) }
-        return Color(white: 0.78)
+        if line.hasPrefix("+") { return NotchDesign.Colors.success }
+        if line.hasPrefix("-") { return NotchDesign.Colors.danger }
+        return NotchDesign.Colors.textSecondary
     }
 
     private func background(for line: String) -> Color {
-        if line.hasPrefix("+") { return Color.green.opacity(0.10) }
-        if line.hasPrefix("-") { return Color.red.opacity(0.12) }
+        if line.hasPrefix("+") { return NotchDesign.Colors.success.opacity(0.10) }
+        if line.hasPrefix("-") { return NotchDesign.Colors.danger.opacity(0.12) }
         return .clear
     }
 }

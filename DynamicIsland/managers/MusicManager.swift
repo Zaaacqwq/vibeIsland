@@ -509,10 +509,13 @@ class MusicManager: ObservableObject {
     @Published var showLyrics: Bool = false
     @Published var currentLyricIndex: Int = -1
 
-    /// Lyrics should be fetched and synced when *either* the open-notch lyrics
-    /// feature or the closed-notch lyrics band is enabled.
+    /// `enableLyrics` is the master lyrics switch (toggled by the notch lyrics
+    /// button). When it is off, both the open-notch/home lyrics and the
+    /// closed-notch band are hidden, so there is nothing to fetch or sync.
+    /// `showLyricsInClosedNotch` only selects *where* lyrics appear while the
+    /// master is on, so it does not need to gate fetching here.
     var lyricsFeatureEnabled: Bool {
-        Defaults[.enableLyrics] || Defaults[.showLyricsInClosedNotch]
+        Defaults[.enableLyrics]
     }
 
     /// Placeholder shown while a lyrics fetch is in flight.

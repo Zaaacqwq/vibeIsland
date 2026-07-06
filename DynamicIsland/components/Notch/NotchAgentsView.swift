@@ -31,13 +31,21 @@ struct NotchAgentsView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
 
-    private let claudeColor = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
-    private let codexColor = Color(red: 16.0 / 255.0, green: 163.0 / 255.0, blue: 127.0 / 255.0)
+    // The full Agents tab (overlay + two-column) fills the shared tab container
+    // from ContentView, which already applies uniform insets and the shared
+    // height budget (`NotchDesign.TabInset`). Only the Home-embed branch below
+    // keeps its own padding, since it renders inside a Home card, not the tab.
 
     // Suppress the notch's scroll-to-close gesture while hovering the list, so
     // scrolling pages through sessions instead of closing the notch.
     @State private var scrollSuppressionToken = UUID()
     @State private var isSuppressingScroll = false
+
+    /// Edge-fade heights for the session lists. Rows are inset by the same amount
+    /// so the first/last clear the fade at rest; the compact Home embed uses a
+    /// smaller fade than the full tab.
+    private let homeListFadeHeight: CGFloat = 12
+    private let fullListFadeHeight: CGFloat = 16
 
     var body: some View {
         // Stays a `Group` (not a ZStack): a ZStack with the maxHeight:.infinity
@@ -49,34 +57,46 @@ struct NotchAgentsView: View {
         // list when `activeInputSession` toggles — an internal swap, not a tab switch.
         Group {
             if showsInputOverlay, let active = agentMonitor.activeInputSession {
-                // The approve/ask overlay lives inside the Agents tab so it sits
-                // at the normal tab height (content scrolls) — no notch-height
-                // jump, hence no open/close glitch.
+                // The approve/ask overlay fills (nearly) the whole content region
+                // so a long diff / option list has room and no dead-black band
+                // sits beneath it. Its content scrolls, so this never grows the
+                // notch past the cap.
                 AgentInputOverlay(session: active)
                     .id(active.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.opacity)
+            } else if showsInputOverlay {
+                // Full Agents tab: two columns — session list on the left (~60%),
+                // rate-limit + token-usage panels stacked on the right (~40%).
+                GeometryReader { geo in
+                    let gap: CGFloat = 12
+                    let leftWidth = max(0, (geo.size.width - gap) * 0.5)
+                    HStack(alignment: .top, spacing: gap) {
+                        sessionColumn
+                            .frame(width: leftWidth, alignment: .top)
+                        usageColumn
+                            .frame(maxWidth: .infinity, alignment: .top)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
+                // Home embed: intrinsic height, eyebrow header + compact session
+                // list. Its parent card owns the height (maxHeight nil).
                 VStack(alignment: .leading, spacing: 8) {
                     header
                     content
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .top)
             }
         }
-        // Fill the height ONLY as the full Agents tab (so the empty-state moon
-        // centers nicely). When embedded in the Home tab (showsInputOverlay ==
-        // false) do NOT fill: the empty state's Spacers would otherwise expand
-        // into maxHeight:.infinity and inflate Home taller than every other tab.
-        // Without a max, the panel defers to the music player's height instead.
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: showsInputOverlay ? CGFloat.infinity : nil,
-            alignment: .top
-        )
         .contentShape(Rectangle())
         .onHover { updateScrollSuppression(for: $0) }
-        .onAppear { agentMonitor.refreshHookStatus() }
+        .onAppear {
+            agentMonitor.refreshHookStatus()
+            if showsInputOverlay { agentMonitor.refreshTokenUsage() }
+        }
         .onDisappear { updateScrollSuppression(for: false) }
         .animation(.smooth(duration: 0.25), value: agentMonitor.activeInputSession?.id)
     }
@@ -87,162 +107,197 @@ struct NotchAgentsView: View {
         vm.setScrollGestureSuppression(hovering, token: scrollSuppressionToken)
     }
 
+    /// Home-embed has no tab pill of its own (the shared header only shows
+    /// "Home" as active), so it needs its own mono "AGENTS" eyebrow. The full
+    /// Agents tab is already identified by the shared header's active tab
+    /// pill, so its own content starts straight with the usage badges.
     private var header: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(claudeColor)
-            Text("Agents")
-                .font(.headline)
-                .foregroundStyle(.white)
-            Spacer()
-            let claudeUsage = agentMonitor.usage
-            let codexUsage = agentMonitor.codexUsage
-            let hasClaude = claudeUsage.map { !$0.isEmpty } ?? false
-            let hasCodex = codexUsage.map { !$0.isEmpty } ?? false
-            if hasClaude || hasCodex {
-                HStack(spacing: 10) {
-                    if let claudeUsage, hasClaude {
-                        claudeUsageBadges(claudeUsage)
-                    }
-                    if let codexUsage, hasCodex {
-                        codexUsageBadges(codexUsage)
-                    }
-                }
+        let badges = AgentUsageBadges(claude: agentMonitor.usage, codex: agentMonitor.codexUsage)
+        return HStack(spacing: 6) {
+            if !showsInputOverlay {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13))
+                    .foregroundStyle(NotchDesign.Colors.accent)
+                NotchMonoEyebrow(text: "Agents")
+                    // Keep the wordmark on one line — the rigid badges otherwise
+                    // compress it into "AGE…" / "AGEN\nTS".
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Spacer(minLength: 4)
+            if badges.hasAny {
+                badges
             } else if !agentMonitor.isBridgeReady {
                 Text("Connecting…")
-                    .font(.caption2)
-                    .foregroundStyle(.gray)
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
             }
         }
     }
 
-    @ViewBuilder
-    private func claudeUsageBadges(_ usage: ClaudeUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "sparkle")
-                .font(.system(size: 9))
-                .foregroundStyle(claudeColor)
-                .help("Claude usage")
-            if let five = usage.fiveHour {
-                usageBadge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
-            }
-            if let week = usage.sevenDay {
-                usageBadge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func codexUsageBadges(_ usage: CodexUsageSnapshot) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "chevron.left.forwardslash.chevron.right")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(codexColor)
-                .help("Codex usage")
-            ForEach(usage.windows) { window in
-                usageBadge(
-                    title: window.label,
-                    percent: window.roundedUsedPercentage,
-                    warn: window.usedPercentage >= 80,
-                    help: "Codex \(window.label) limit used"
-                )
-            }
-        }
-    }
-
-    private func usageBadge(title: String, percent: Int, warn: Bool, help: String) -> some View {
-        Text("\(title) \(percent)%")
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(warn ? .orange : .gray)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.white.opacity(0.07)))
-            .help(help)
-    }
-
+    /// Home-embed content: compact session list, no usage panels.
     @ViewBuilder
     private var content: some View {
         if agentMonitor.sessions.isEmpty {
             emptyState
         } else {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     ForEach(agentMonitor.sessions) { session in
-                        AgentSessionRow(session: session, accent: claudeColor)
+                        AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: true)
                     }
                 }
+                // Inset the rows by the fade height so the short list's first and
+                // last rows clear the fade at rest instead of sitting dimmed under
+                // it — the fade then only bites into the padding / while scrolling.
+                .padding(.vertical, homeListFadeHeight)
             }
+            // Home embed sits on the lighter card fill, not the black panel, so
+            // fade to the card colour (a black fade would read as a dark band).
+            .notchListEdgeFade(color: NotchDesign.Colors.cardFill, height: homeListFadeHeight)
+        }
+    }
+
+    /// Left column of the full tab: the scrollable session list, or the centered
+    /// empty / hook-setup state when there are none.
+    @ViewBuilder
+    private var sessionColumn: some View {
+        if agentMonitor.sessions.isEmpty {
+            emptyState
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 9) {
+                    ForEach(agentMonitor.sessions) { session in
+                        AgentSessionRow(session: session, accent: NotchDesign.Colors.accent, compact: false)
+                    }
+                }
+                // Keep the first row aligned with the usage column; only inset the
+                // bottom so the last row clears the bottom fade at rest.
+                .padding(.bottom, fullListFadeHeight)
+            }
+            .notchListEdgeFade(height: fullListFadeHeight, showsTop: false)
+        }
+    }
+
+    /// Right column of the full tab: a bare rate-limit line above the token-usage
+    /// card, sized to fit without scrolling.
+    private var usageColumn: some View {
+        // The compact rate-limit badges now live in the open-notch header
+        // (`NotchHeaderContextWidget`), so the tab body keeps only the detailed
+        // token-usage panel and lets it own the column.
+        VStack(alignment: .leading, spacing: 10) {
+            if agentMonitor.detailedTokenUsage != nil || agentMonitor.tokenUsage != nil || agentMonitor.usage != nil || agentMonitor.codexUsage != nil {
+                AgentProviderUsagePager(
+                    summary: agentMonitor.detailedTokenUsage,
+                    claudeUsage: agentMonitor.usage,
+                    codexUsage: agentMonitor.codexUsage,
+                    isRefreshing: agentMonitor.isRefreshingTokenUsage,
+                    onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
+                )
+            } else if !agentMonitor.isBridgeReady {
+                Text("Connecting…")
+                    .font(NotchDesign.Typography.mono(11))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                AgentProviderUsagePager(
+                    summary: nil,
+                    claudeUsage: nil,
+                    codexUsage: nil,
+                    isRefreshing: agentMonitor.isRefreshingTokenUsage,
+                    onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
+                )
+            }
+            Spacer(minLength: 0)
         }
     }
 
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 10) {
-            // Only stretch to vertically center the moon in the full Agents tab.
-            // In the Home embed (showsInputOverlay == false) these Spacers would
-            // expand to fill the HStack's proposed height and balloon Home taller
-            // than the other tabs whenever there are no sessions — so omit them
-            // and let the panel take its natural (compact) height there.
-            if showsInputOverlay { Spacer() }
+            // Center the empty state in the full Agents tab. The Home embed stays
+            // compact here; its parent owns the card height.
+            if showsInputOverlay {
+                Spacer()
+            }
             switch agentMonitor.hookStatus {
             case .installed, .unknown:
                 Image(systemName: "moon.zzz")
-                    .font(.title2)
-                    .foregroundStyle(.gray)
-                Text("No active Claude sessions")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                Text("Start `claude` in a terminal to see it here.")
-                    .font(.caption2)
-                    .foregroundStyle(.gray.opacity(0.7))
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(NotchDesign.Colors.textTertiary)
+                Text("No active sessions")
+                    .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
+                Text("$ claude")
+                    .font(NotchDesign.Typography.mono(12))
+                    .foregroundStyle(NotchDesign.Colors.textFaint)
             case .notInstalled:
                 Image(systemName: "wrench.and.screwdriver")
-                    .font(.title2)
-                    .foregroundStyle(claudeColor)
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(NotchDesign.Colors.accent)
                 Text("Set up Claude Code")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text("Install hooks so VibeIsland can track your Claude sessions.")
-                    .font(.caption2)
+                    .font(NotchDesign.Typography.voice(15, weight: .semibold))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
+                Text("Install hooks so VibeIsland can track your sessions.")
+                    .font(NotchDesign.Typography.voice(12))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                 Button {
                     agentMonitor.installHooks()
                 } label: {
                     Text("Install hooks")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(claudeColor.opacity(0.85)))
-                        .foregroundStyle(.white)
+                        .font(NotchDesign.Typography.voice(12, weight: .semibold))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(Capsule().fill(NotchDesign.Colors.accent))
+                        .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
             }
-            if showsInputOverlay { Spacer() }
+            if showsInputOverlay {
+                Spacer()
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: showsInputOverlay ? .infinity : nil)
     }
 }
 
 /// A single session row: status glyph, title/summary, and contextual actions.
+/// `compact` is the Home-embed sizing (smaller ring/type, sunken `#0b0b0b`
+/// fill nested inside the outer `#141414` card); the full Agents tab uses the
+/// larger sizing directly on the card fill (no outer wrapper there).
 private struct AgentSessionRow: View {
     let session: AgentSession
     let accent: Color
+    var compact: Bool = true
     @ObservedObject private var agentMonitor = AgentMonitorManager.shared
+
+    private var ringSize: CGFloat { compact ? 14 : 15 }
+    private var titleFont: Font { NotchDesign.Typography.voice(compact ? 12 : 12.5, weight: .medium) }
+    private var statusFont: Font { NotchDesign.Typography.mono(compact ? 10 : 10) }
+    private var rowPadding: EdgeInsets { compact ? EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10) : EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12) }
+    private var rowRadius: CGFloat { compact ? NotchDesign.Radius.sm : NotchDesign.Radius.md }
+    private var rowFill: Color { compact ? NotchDesign.Colors.sunken : NotchDesign.Colors.cardFill }
+    private var rowGap: CGFloat { compact ? 9 : 11 }
+
+    private var isAwaitingPermission: Bool { session.permissionRequest != nil }
+
+    private var borderColor: Color {
+        isAwaitingPermission ? NotchDesign.Colors.warning.opacity(compact ? 0.22 : 0.28) : NotchDesign.Colors.hairline
+    }
 
     var body: some View {
         let halo = agentMonitor.haloState(for: session)
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                HaloRingView(state: halo, size: 18)
-                VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: rowGap) {
+                HaloRingView(state: halo, size: ringSize)
+                VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                     Text(session.title.isEmpty ? "Claude session" : session.title)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white)
+                        .font(titleFont)
+                        .foregroundStyle(NotchDesign.Colors.textPrimary)
                         .lineLimit(1)
                     Text(halo.label)
-                        .font(.system(size: 9))
+                        .font(statusFont)
                         .foregroundStyle(halo.color)
                 }
                 Spacer()
@@ -263,7 +318,7 @@ private struct AgentSessionRow: View {
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(.gray)
+                            .foregroundStyle(NotchDesign.Colors.textTertiary)
                     }
                     .buttonStyle(.plain)
                     .help("Jump back to the external terminal")
@@ -277,8 +332,12 @@ private struct AgentSessionRow: View {
                 questionActions(question, sessionID: session.id)
             }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
+        .padding(rowPadding)
+        .background(rowFill, in: RoundedRectangle(cornerRadius: rowRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: rowRadius, style: .continuous)
+                .strokeBorder(borderColor, lineWidth: 1)
+        }
     }
 
     @ViewBuilder
@@ -286,31 +345,34 @@ private struct AgentSessionRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if !permission.summary.isEmpty {
                 Text(permission.summary)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.gray)
+                    .font(statusFont)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(2)
             }
-            HStack(spacing: 6) {
+            HStack(spacing: compact ? 6 : 8) {
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: true)
                 } label: {
                     Text(permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.green.opacity(0.8)))
-                        .foregroundStyle(.white)
+                        .padding(.vertical, compact ? 6 : 8)
+                        .background(NotchDesign.Colors.success, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                        .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: false)
                 } label: {
                     Text(permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.red.opacity(0.7)))
-                        .foregroundStyle(.white)
+                        .padding(.vertical, compact ? 6 : 8)
+                        .background {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .strokeBorder(NotchDesign.Colors.danger.opacity(0.4), lineWidth: 1)
+                        }
+                        .foregroundStyle(NotchDesign.Colors.danger)
                 }
                 .buttonStyle(.plain)
             }
@@ -322,8 +384,8 @@ private struct AgentSessionRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if !prompt.title.isEmpty {
                 Text(prompt.title)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.gray)
+                    .font(statusFont)
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(2)
             }
             if let options = prompt.questions.first?.options, !options.isEmpty {
@@ -351,25 +413,29 @@ private struct AgentSessionRow: View {
 
     private func optionButton(index: Int, label: String, allowsFreeform: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 9) {
                 Text("\(index + 1)")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 15, height: 15)
-                    .background(Circle().fill(Color.white.opacity(0.15)))
+                    .font(NotchDesign.Typography.voice(10, weight: .bold))
+                    .foregroundStyle(NotchDesign.Colors.textSecondary)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white)
+                    .font(NotchDesign.Typography.voice(12, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
                     .lineLimit(1)
                 if allowsFreeform {
-                    Image(systemName: "pencil").font(.system(size: 9)).foregroundStyle(.white.opacity(0.7))
+                    Image(systemName: "pencil").font(.system(size: 9)).foregroundStyle(NotchDesign.Colors.textSecondary)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Capsule().fill(Color.white.opacity(0.10)))
+            .background(NotchDesign.Colors.sunken, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(NotchDesign.Colors.hairline, lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
     }

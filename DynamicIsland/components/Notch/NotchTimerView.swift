@@ -26,18 +26,18 @@ import AppKit
 /// white text, accent-driven) — intentionally separate from the Geist settings
 /// design system.
 private enum TimerStyle {
-    static let cardFill = Color.white.opacity(0.05)
-    static let cardStroke = Color.white.opacity(0.08)
-    static let fieldFill = Color.white.opacity(0.08)
-    static let controlFill = Color.white.opacity(0.14)
+    static let cardFill = NotchDesign.Colors.cardFill
+    static let cardStroke = NotchDesign.Colors.hairline
+    static let fieldFill = NotchDesign.Colors.sunken
+    static let controlFill = NotchDesign.Colors.cardFillRaised
     static let chipFill = Color.white.opacity(0.06)
-    static let muted = Color.white.opacity(0.6)
+    static let muted = NotchDesign.Colors.textTertiary
 
-    static let cardRadius: CGFloat = 16
-    static let controlRadius: CGFloat = 12
-    static let controlSize: CGFloat = 44
+    static let cardRadius = NotchDesign.Radius.xl
+    static let controlRadius = NotchDesign.Radius.md
+    static let controlSize: CGFloat = 36
 
-    static let startGreen = Color(red: 0.142, green: 0.633, blue: 0.265)
+    static let startGreen = NotchDesign.Colors.success
 
     /// Quick-add increments (minutes) offered when no presets are shown.
     static let quickAddMinutes: [Int] = [1, 5, 10, 30]
@@ -62,14 +62,17 @@ struct NotchTimerView: View {
     @State private var customSeconds: Int = 0
     @State private var isSyncingCustomDuration = false
     @State private var lockedAccentColor: Color?
+    // Suppress the notch's scroll-to-close gesture while hovering the preset
+    // strip, so left/right scrolling browses presets instead of closing.
+    @State private var presetScrollSuppressionToken = UUID()
 
     var body: some View {
         Group {
             if enableTimerFeature {
                 content
-                    .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
+                    // Uniform tab insets + height budget come from the shared tab
+                    // container in ContentView (`NotchDesign.TabInset`); fill it.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     // No root `.transition`: the tab switcher owns the directional
                     // slide; a blur transition here would override it.
                     .onAppear { syncCustomDuration(with: customTimerDuration) }
@@ -90,41 +93,68 @@ struct NotchTimerView: View {
         }
     }
 
-    @ViewBuilder
     private var content: some View {
-        if timerManager.isTimerActive {
-            activeTimerCard
-        } else {
-            idleComposer
+        ZStack(alignment: .top) {
+            if timerManager.isTimerActive {
+                activeTimerCard
+                    .id("timer-active")
+                    .transition(timerStateTransition)
+            } else {
+                idleComposer
+                    .id("timer-idle")
+                    .transition(timerStateTransition)
+            }
         }
+        // Match the ambient `.smooth` that TimerManager.startTimer uses when it
+        // flips `isTimerActive` (which drives the window/tab resize). Sharing one
+        // curve keeps the countdown travelling with the card instead of settling
+        // on a faster timeline than the frame around it.
+        .animation(.smooth, value: timerManager.isTimerActive)
+    }
+
+    private var timerStateTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        )
     }
 
     // MARK: - Idle
 
     private var idleComposer: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             inputSection
                 .frame(maxWidth: .infinity)
 
             bottomChipRow
         }
-        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var inputSection: some View {
-        HStack(alignment: .center, spacing: 12) {
-            DurationInputRow(
-                hours: $customHours,
-                minutes: $customMinutes,
-                seconds: $customSeconds
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                NotchMonoEyebrow(text: "Set duration")
+                Spacer()
+                Text(formattedCustomDuration)
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textFaint)
+            }
 
-            startButton
-                .frame(width: 132)
-            resetButton
+            HStack(alignment: .center, spacing: 10) {
+                DurationInputRow(
+                    hours: $customHours,
+                    minutes: $customMinutes,
+                    seconds: $customSeconds
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                startButton
+                    .frame(width: 108)
+                resetButton
+            }
         }
-        .padding(12)
+        .padding(10)
         .background(card)
     }
 
@@ -132,17 +162,23 @@ struct NotchTimerView: View {
     /// the right. Without presets: quick-add chips fill the row.
     @ViewBuilder
     private var bottomChipRow: some View {
-        HStack(alignment: .center, spacing: 12) {
-            if showTimerPresetsInNotchTab {
-                presetChipsArea
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                quickAddChips
-            } else {
-                quickAddChips
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        GeometryReader { geo in
+            HStack(alignment: .center, spacing: 12) {
+                if showTimerPresetsInNotchTab {
+                    // Presets stay on a single row, capped at half the notch width;
+                    // overflow scrolls horizontally (see presetChipsArea).
+                    presetChipsArea
+                        .frame(maxWidth: geo.size.width * 0.5, alignment: .leading)
+                    Spacer(minLength: 0)
+                    quickAddChips
+                } else {
+                    quickAddChips
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
-        .frame(height: 46)
+        .frame(height: 30)
     }
 
     @ViewBuilder
@@ -165,7 +201,28 @@ struct NotchTimerView: View {
                 }
                 .padding(.horizontal, 2)
             }
+            // Fade the chips out at both ends of the scroll (the band sits on the
+            // black notch panel, so fade to black).
+            .overlay(alignment: .leading) { presetEdgeFade(leading: true) }
+            .overlay(alignment: .trailing) { presetEdgeFade(leading: false) }
+            .onHover { hovering in
+                vm.setScrollGestureSuppression(hovering, token: presetScrollSuppressionToken)
+                vm.setTabSwitchSuppression(hovering, token: presetScrollSuppressionToken)
+            }
+            .onDisappear {
+                vm.setScrollGestureSuppression(false, token: presetScrollSuppressionToken)
+                vm.setTabSwitchSuppression(false, token: presetScrollSuppressionToken)
+            }
         }
+    }
+
+    private func presetEdgeFade(leading: Bool) -> some View {
+        LinearGradient(
+            colors: leading ? [Color.black, .clear] : [.clear, Color.black],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .frame(width: 16)
+        .allowsHitTesting(false)
     }
 
     private var quickAddChips: some View {
@@ -180,34 +237,42 @@ struct NotchTimerView: View {
     // MARK: - Active
 
     private var activeTimerCard: some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 16) {
-                controlCluster
+        HStack(alignment: .center, spacing: 14) {
+            heroCountdown
 
-                VStack(alignment: .leading, spacing: 6) {
-                    MarqueeText(
-                        .constant(timerDisplayName),
-                        font: .system(size: 20, weight: .semibold),
-                        nsFont: .title3,
-                        textColor: .white,
-                        minDuration: 0.2,
-                        frameWidth: 220
-                    )
-                    .frame(height: 26, alignment: .leading)
-
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    NotchMonoEyebrow(text: "Running")
                     if let status = timerStatusText {
                         statusBadge(status)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
-                heroCountdown
+                MarqueeText(
+                    .constant(timerDisplayName),
+                    font: NotchDesign.Typography.voice(17, weight: .semibold),
+                    nsFont: .title3,
+                    textColor: NotchDesign.Colors.textPrimary,
+                    minDuration: 0.2,
+                    frameWidth: 220
+                )
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
+                .frame(height: 24, alignment: .leading)
+
+                progressBar
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            progressBar
+            controlCluster
         }
-        .frame(maxWidth: .infinity, maxHeight: maxTabContentHeight, alignment: .center)
-        .padding(.horizontal, 4)
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .background(card)
+        // Resolve the whole card's geometry as one unit before the tab's `.move`
+        // transition offsets it. Its observable-driven children (countdown ring,
+        // marquee name) each re-render mid-transition; without this they snap to
+        // their final position and "appear in place" while the card slides in.
+        .geometryGroup()
     }
 
     @ViewBuilder
@@ -255,8 +320,6 @@ struct NotchTimerView: View {
             Text(timerManager.formattedRemainingTime())
                 .font(.system(size: 40, weight: .black, design: .monospaced))
                 .foregroundStyle(timerManager.isOvertime ? Color.red : .white)
-                .contentTransition(.numericText())
-                .animation(.smooth(duration: 0.25), value: timerManager.remainingTime)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(alignment: .trailing)
@@ -304,10 +367,10 @@ struct NotchTimerView: View {
     private var startButton: some View {
         Button(action: startCustomTimer) {
             Label(String(localized: "Start"), systemImage: "play.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.white)
+                .font(NotchDesign.Typography.voice(13, weight: .semibold))
+                .foregroundStyle(Color.black)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 7)
                 .background(
                     RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous)
                         .fill(TimerStyle.startGreen.opacity(isStartDisabled ? 0.5 : 1))
@@ -322,9 +385,9 @@ struct NotchTimerView: View {
     private var resetButton: some View {
         Button(action: resetCustomTimerInputs) {
             Image(systemName: "arrow.counterclockwise")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .frame(width: 46, height: 44)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
+                .frame(width: 38, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous)
                         .fill(TimerStyle.controlFill)
@@ -348,7 +411,7 @@ struct NotchTimerView: View {
 
     private func statusBadge(_ text: String) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(NotchDesign.Typography.mono(10, weight: .medium))
             .foregroundStyle(timerStatusColor)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -411,18 +474,6 @@ struct NotchTimerView: View {
 
     // MARK: - Derived values
 
-    private var resolvedNotchHeight: CGFloat {
-        let height = vm.notchSize.height
-        return height > 0 ? height : openNotchSize.height
-    }
-
-    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
-
-    private var maxTabContentHeight: CGFloat {
-        let available = resolvedNotchHeight - headerHeight - 36
-        return max(130, available)
-    }
-
     private func lockAccentColorIfNeeded() {
         if timerManager.isTimerActive { lockedAccentColor = resolvedAccentColor }
     }
@@ -465,6 +516,17 @@ struct NotchTimerView: View {
 
     private var customDurationInSeconds: TimeInterval {
         TimeInterval(customHours * 3600 + customMinutes * 60 + customSeconds)
+    }
+
+    private var formattedCustomDuration: String {
+        let total = Int(customDurationInSeconds)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
@@ -510,21 +572,19 @@ private struct TimerProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: 9)
+                .stroke(Color.white.opacity(0.12), lineWidth: 6)
             Circle()
                 .trim(from: 0, to: clampedProgress)
-                .stroke(tint, style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                .stroke(tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.smooth(duration: 0.3), value: clampedProgress)
             Text(timeText)
-                .font(.system(size: 27, weight: .black, design: .monospaced))
+                .font(NotchDesign.Typography.mono(20, weight: .semibold))
                 .foregroundStyle(isOvertime ? Color.red : .white)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-                .contentTransition(.numericText())
-                .animation(.smooth(duration: 0.25), value: remainingTime)
         }
-        .frame(width: 112, height: 112)
+        .frame(width: 84, height: 84)
     }
 }
 
@@ -534,10 +594,10 @@ private struct DurationInputRow: View {
     @Binding var hours: Int
     @Binding var minutes: Int
     @Binding var seconds: Int
-    var fieldWidth: CGFloat = 62
+    var fieldWidth: CGFloat = 54
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: 6) {
             DurationField(label: String(localized: "Hours"), value: $hours, range: 0...23, width: fieldWidth)
             colon
             DurationField(label: String(localized: "Minutes"), value: $minutes, range: 0...59, width: fieldWidth)
@@ -548,9 +608,9 @@ private struct DurationInputRow: View {
 
     private var colon: some View {
         Text(":")
-            .font(.system(size: 24, weight: .black, design: .monospaced))
+            .font(NotchDesign.Typography.mono(20, weight: .semibold))
             .foregroundStyle(TimerStyle.muted)
-            .padding(.bottom, 18)
+            .padding(.bottom, 14)
     }
 }
 
@@ -561,24 +621,35 @@ private struct DurationField: View {
     var width: CGFloat = 62
 
     var body: some View {
-        VStack(spacing: 5) {
-            TextField("00", text: binding)
-                .font(.system(size: 25, weight: .semibold, design: .monospaced))
-                .multilineTextAlignment(.center)
-                .textFieldStyle(.plain)
-                .foregroundColor(.white)
-                .tint(.white)
-                .lineLimit(1)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(width: width, height: 48)
-                // Background fill (not a clipShape) so tall glyphs are never clipped.
-                .background(
-                    RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous)
-                        .fill(TimerStyle.fieldFill)
-                )
+        VStack(spacing: 3) {
+            ZStack {
+                // Display layer: a plain SwiftUI Text centers perfectly in the box
+                // (unlike NSTextField, which top-aligns its line box). The digits
+                // shown here are always the committed value, so they stay centered.
+                Text(String(format: "%02d", value))
+                    .font(NotchDesign.Typography.mono(22, weight: .semibold))
+                    .foregroundColor(.white)
+
+                // Input layer: an invisible TextField on top captures typing. Its
+                // own glyphs are clear (the centered Text above is what you see);
+                // the tint keeps a visible caret while editing.
+                TextField("", text: binding)
+                    .font(NotchDesign.Typography.mono(22, weight: .semibold))
+                    .multilineTextAlignment(.center)
+                    .textFieldStyle(.plain)
+                    .foregroundColor(.clear)
+                    .tint(.white)
+                    .lineLimit(1)
+            }
+            .frame(width: width, height: 38)
+            // Background fill (not a clipShape) so tall glyphs are never clipped.
+            .background(
+                RoundedRectangle(cornerRadius: TimerStyle.controlRadius, style: .continuous)
+                    .fill(TimerStyle.fieldFill)
+            )
 
             Text(label)
-                .font(.caption)
+                .font(NotchDesign.Typography.mono(9))
                 .foregroundStyle(TimerStyle.muted)
         }
     }
@@ -609,10 +680,10 @@ private struct QuickAddChip: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .font(NotchDesign.Typography.mono(11, weight: .medium))
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
                 .background(
                     Capsule().fill(isHovering ? tint.opacity(0.45) : TimerStyle.chipFill)
                 )
@@ -634,28 +705,24 @@ private struct TimerPresetChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 9) {
+            HStack(spacing: 7) {
                 Circle()
-                    .fill(preset.color.gradient)
-                    .frame(width: 22, height: 22)
-                    .overlay(
-                        Image(systemName: isActive ? "checkmark" : "play.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                    )
+                    .fill(preset.color)
+                    .frame(width: 8, height: 8)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(preset.name)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text(preset.formattedDuration)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(TimerStyle.muted)
-                }
+                // Name + duration inline on a single line (was stacked two rows).
+                Text(preset.name)
+                    .font(NotchDesign.Typography.voice(11, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textPrimary)
+                    .lineLimit(1)
+                Text(preset.formattedDuration)
+                    .font(NotchDesign.Typography.mono(9, weight: .medium))
+                    .foregroundStyle(TimerStyle.muted)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            .fixedSize()
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
                 Capsule().fill(isActive ? preset.color.opacity(0.22) : (isHovering ? Color.white.opacity(0.12) : TimerStyle.chipFill))
             )

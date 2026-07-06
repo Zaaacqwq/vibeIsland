@@ -24,6 +24,17 @@ import SwiftUI
 import AppKit
 import Defaults
 
+struct AirPodsListeningModeSymbol: View {
+    let mode: AirPodsListeningMode
+
+    var body: some View {
+        Image(systemName: mode.sfSymbol)
+            .symbolRenderingMode(.hierarchical)
+            .contentTransition(.interpolate)
+            .frame(width: 20, height: 15, alignment: .center)
+    }
+}
+
 struct InlineHUD: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @Binding var type: SneakContentType
@@ -44,12 +55,25 @@ struct InlineHUD: View {
     @Default(.showCapsLockLabel) var showCapsLockLabel
     @Default(.capsLockIndicatorTintMode) var capsLockTintMode
     @ObservedObject var bluetoothManager = BluetoothAudioManager.shared
-    
+    @ObservedObject var inputSourceManager = InputSourceManager.shared
+
     @State private var displayName: String = ""
-    
+
+    static func airPodsListeningModeWidth(
+        closedNotchWidth: CGFloat,
+        minimalistic: Bool
+    ) -> CGFloat {
+        let leadingWidth: CGFloat = minimalistic ? 36 : 44
+        let trailingWidth: CGFloat = minimalistic ? 156 : 196
+        return leadingWidth + max(0, closedNotchWidth) + trailingWidth
+    }
+
     var body: some View {
         let useCircularIndicator = useCircularBluetoothBatteryIndicator
-        let hasBatteryLevel = value > 0
+        let listeningModeEvent = bluetoothManager.activeListeningModeEvent
+        let listeningMode = listeningModeEvent?.mode ?? (type == .bluetoothAudio && value < 0 ? AirPodsListeningMode.fromHUDSymbol(icon) : nil)
+        let isListeningModeEvent = type == .bluetoothAudio && listeningMode != nil
+        let hasBatteryLevel = value > 0 && !isListeningModeEvent
         let capsLockAccentColor = capsLockTintMode.color
 
         // Widths stay constant whether hovered or not so HUD text/icons do
@@ -58,6 +82,9 @@ struct InlineHUD: View {
         // minimalistic open notch (420pt) on wider hardware notches.
         let baseInfoWidth: CGFloat = {
             if type == .bluetoothAudio {
+                if isListeningModeEvent {
+                    return enableMinimalisticUI ? 36 : 44
+                }
                 if showBluetoothDeviceNameMarquee {
                     return enableMinimalisticUI ? 96 : 132
                 }
@@ -68,6 +95,10 @@ struct InlineHUD: View {
                 return enableMinimalisticUI ? 48 : 56
             }
 
+            if type == .inputSource {
+                return enableMinimalisticUI ? 48 : 56
+            }
+
             return 92
         }()
 
@@ -75,6 +106,9 @@ struct InlineHUD: View {
             let width = baseInfoWidth + gestureProgress / 2
             let minimum: CGFloat = {
                 if type == .bluetoothAudio {
+                    if isListeningModeEvent {
+                        return enableMinimalisticUI ? 32 : 40
+                    }
                     if showBluetoothDeviceNameMarquee {
                         return enableMinimalisticUI ? 84 : 112
                     }
@@ -85,6 +119,10 @@ struct InlineHUD: View {
                     return enableMinimalisticUI ? 36 : 44
                 }
 
+                if type == .inputSource {
+                    return enableMinimalisticUI ? 36 : 44
+                }
+
                 return 88
             }()
             return max(width, minimum)
@@ -92,6 +130,9 @@ struct InlineHUD: View {
 
         let baseTrailingWidth: CGFloat = {
             if type == .bluetoothAudio {
+                if isListeningModeEvent {
+                    return enableMinimalisticUI ? 156 : 196
+                }
                 if !hasBatteryLevel {
                     return showBluetoothDeviceNameMarquee ? (enableMinimalisticUI ? 88 : 110) : (enableMinimalisticUI ? 66 : 80)
                 }
@@ -110,6 +151,10 @@ struct InlineHUD: View {
                 return 0
             }
 
+            if type == .inputSource {
+                return enableMinimalisticUI ? 120 : 148
+            }
+
             return 92
         }()
 
@@ -117,6 +162,9 @@ struct InlineHUD: View {
             let width = baseTrailingWidth + gestureProgress / 2
             let minimum: CGFloat = {
                 if type == .bluetoothAudio {
+                    if isListeningModeEvent {
+                        return enableMinimalisticUI ? 144 : 184
+                    }
                     if !hasBatteryLevel {
                         return showBluetoothDeviceNameMarquee ? (enableMinimalisticUI ? 80 : 102) : (enableMinimalisticUI ? 56 : 80)
                     }
@@ -130,6 +178,10 @@ struct InlineHUD: View {
 
                 if type == .capsLock {
                     return showCapsLockLabel ? (enableMinimalisticUI ? 60 : 72) : 0
+                }
+
+                if type == .inputSource {
+                    return enableMinimalisticUI ? 104 : 128
                 }
 
                 return 90
@@ -176,16 +228,25 @@ struct InlineHUD: View {
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
                         case .bluetoothAudio:
-                            Image(systemName: icon.isEmpty ? "dot.radiowaves.left.and.right" : icon)
-                                .symbolRenderingMode(.hierarchical)
-                                .contentTransition(.interpolate)
-                                .frame(width: 20, height: 15, alignment: .center)
+                            if let listeningMode {
+                                AirPodsListeningModeSymbol(mode: listeningMode)
+                            } else {
+                                Image(systemName: icon.isEmpty ? "dot.radiowaves.left.and.right" : icon)
+                                    .symbolRenderingMode(.hierarchical)
+                                    .contentTransition(.interpolate)
+                                    .frame(width: 20, height: 15, alignment: .center)
+                            }
                         case .capsLock:
                             Image(systemName: "capslock.fill")
                                 .symbolRenderingMode(.hierarchical)
                                 .contentTransition(.interpolate)
                                 .frame(width: 20, height: 15, alignment: .center)
                                 .foregroundStyle(capsLockAccentColor)
+                        case .inputSource:
+                            Image(systemName: "keyboard")
+                                .symbolRenderingMode(.hierarchical)
+                                .contentTransition(.interpolate)
+                                .frame(width: 20, height: 15, alignment: .center)
                         default:
                             EmptyView()
                     }
@@ -195,7 +256,9 @@ struct InlineHUD: View {
                 
                 // Use marquee text for device names to handle long names
                 if type == .bluetoothAudio {
-                    if showBluetoothDeviceNameMarquee {
+                    if isListeningModeEvent {
+                        EmptyView()
+                    } else if showBluetoothDeviceNameMarquee {
                         MarqueeText(
                             $displayName,
                             font: .system(size: 13, weight: .medium),
@@ -205,7 +268,7 @@ struct InlineHUD: View {
                             frameWidth: infoWidth
                         )
                     }
-                } else if type != .capsLock {
+                } else if type != .capsLock && type != .inputSource {
                     Text(Type2Name(type))
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -219,7 +282,7 @@ struct InlineHUD: View {
             
             Rectangle()
                 .fill(.black)
-                .frame(width: vm.closedNotchSize.width - 20)
+                .frame(width: isListeningModeEvent ? vm.closedNotchSize.width : vm.closedNotchSize.width - 20)
             
             HStack {
                 if (type == .mic) {
@@ -250,8 +313,31 @@ struct InlineHUD: View {
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .contentTransition(.interpolate)
                     }
+                } else if (type == .inputSource) {
+                    Text(inputSourceManager.currentSourceName)
+                        .foregroundStyle(.white)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                        .minimumScaleFactor(0.6)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .contentTransition(.interpolate)
                 } else if (type == .bluetoothAudio) {
-                    if hasBatteryLevel {
+                    if let listeningMode {
+                        Text(listeningMode.displayName)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .allowsTightening(true)
+                            .minimumScaleFactor(0.72)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.leading, 10)
+                    } else if hasBatteryLevel {
                         let indicatorSpacing: CGFloat = {
                             if useCircularIndicator {
                                 return showBluetoothBatteryPercentageText ? 8 : 2
@@ -446,6 +532,8 @@ struct InlineHUD: View {
                 return BluetoothAudioManager.shared.lastConnectedDevice?.name ?? "Bluetooth"
             case .capsLock:
                 return String(localized: "Caps Lock")
+            case .inputSource:
+                return InputSourceManager.shared.currentSourceName
             default:
                 return ""
         }

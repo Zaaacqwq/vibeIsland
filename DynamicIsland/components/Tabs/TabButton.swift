@@ -30,8 +30,15 @@ struct TabButton: View {
     
     var body: some View {
         Button(action: onClick) {
-            Image(systemName: icon)
-                .contentShape(Capsule())
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                if selected {
+                    Text(label)
+                        .font(NotchDesign.Typography.voice(12, weight: .medium))
+                }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }

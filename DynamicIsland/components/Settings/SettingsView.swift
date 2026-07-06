@@ -47,6 +47,7 @@ private enum SettingsTabGroup: String, CaseIterable, Identifiable {
 
 private enum SettingsTab: String, CaseIterable, Identifiable {
     case general
+    case accessibility
     case liveActivities
     case appearance
     case media
@@ -69,7 +70,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     /// Which sidebar group this tab belongs to.
     var group: SettingsTabGroup {
         switch self {
-        case .general, .appearance:            return .core
+        case .general, .appearance, .accessibility: return .core
         case .media, .liveActivities:          return .mediaAndLiveActivities
         case .hudAndOSD, .devices, .battery:   return .hudsAndHardware
         case .timer, .calendar:                return .productivity
@@ -82,6 +83,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .accessibility: return String(localized: "Accessibility")
         case .general: return String(localized: "General")
         case .liveActivities: return String(localized: "Live Activities")
         case .appearance: return String(localized: "Appearance")
@@ -104,21 +106,22 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .accessibility: return "accessibility"
         case .general: return "gear"
-        case .liveActivities: return "waveform.path.ecg"
-        case .appearance: return "paintpalette"
-        case .media: return "play.laptopcomputer"
+        case .liveActivities: return "waveform"
+        case .appearance: return "paintbrush"
+        case .media: return "play.fill"
         case .devices: return "headphones"
         case .timer: return "timer"
         case .calendar: return "calendar"
-        case .hudAndOSD: return "dial.medium.fill"
-        case .battery: return "battery.100.bolt"
+        case .hudAndOSD: return "slider.horizontal.3"
+        case .battery: return "battery.100"
         case .downloads: return "square.and.arrow.down"
-        case .shelf: return "books.vertical"
+        case .shelf: return "tray.full"
         case .shortcuts: return "keyboard"
         case .agents: return "sparkles"
-        case .notifications: return "bell.fill"
-        case .weather: return "cloud.sun.fill"
+        case .notifications: return "bell"
+        case .weather: return "cloud.sun"
         case .debug: return "ladybug"
         case .about: return "info.circle"
         }
@@ -126,6 +129,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
 
     var tint: Color {
         switch self {
+        case .accessibility: return Color(red: 0.0, green: 0.48, blue: 1.0)
         case .general: return .blue
         case .liveActivities: return .pink
         case .appearance: return .purple
@@ -420,18 +424,6 @@ struct SettingsView: View {
             sidebarIcon(for: tab)
             Text(tab.title)
                 .font(Geist.Typography.bodyStrong)
-            if tab == .downloads {
-                Spacer()
-                Text("BETA")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.blue)
-                    )
-            }
         }
         .padding(.vertical, 4)
     }
@@ -444,6 +436,7 @@ struct SettingsView: View {
             // Core
             .general,
             .appearance,
+            .accessibility,
             // Media & Live Activities
             .media,
             .liveActivities,
@@ -658,10 +651,11 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .general, title: "Show on a specific display", keywords: ["preferred screen", "display picker"], highlightID: SettingsTab.general.highlightID(for: "Show on a specific display")),
             SettingsSearchEntry(tab: .general, title: "Automatically switch displays", keywords: ["auto switch", "displays"], highlightID: SettingsTab.general.highlightID(for: "Automatically switch displays")),
             SettingsSearchEntry(tab: .general, title: "Hide Dynamic Island during screenshots & recordings", keywords: ["privacy", "screenshot", "recording"], highlightID: SettingsTab.general.highlightID(for: "Hide Dynamic Island during screenshots & recordings")),
-            SettingsSearchEntry(tab: .general, title: "Enable gestures", keywords: ["gestures", "trackpad"], highlightID: SettingsTab.general.highlightID(for: "Enable gestures")),
-            SettingsSearchEntry(tab: .general, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.general.highlightID(for: "Close gesture")),
-            SettingsSearchEntry(tab: .general, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.general.highlightID(for: "Reverse swipe gestures")),
-            SettingsSearchEntry(tab: .general, title: "Reverse scroll gestures", keywords: ["reverse", "scroll", "open", "close"], highlightID: SettingsTab.general.highlightID(for: "Reverse scroll gestures")),
+            SettingsSearchEntry(tab: .general, title: "Show tab info in notch header", keywords: ["notch header", "header stats", "cpu", "ram", "context widgets", "tab behaviour"], highlightID: SettingsTab.general.highlightID(for: "Show tab info in notch header")),
+            SettingsSearchEntry(tab: .accessibility, title: "Enable gestures", keywords: ["gestures", "trackpad", "accessibility"], highlightID: SettingsTab.accessibility.highlightID(for: "Enable gestures")),
+            SettingsSearchEntry(tab: .accessibility, title: "Close gesture", keywords: ["pinch", "swipe"], highlightID: SettingsTab.accessibility.highlightID(for: "Close gesture")),
+            SettingsSearchEntry(tab: .accessibility, title: "Reverse swipe gestures", keywords: ["reverse", "swipe", "media"], highlightID: SettingsTab.accessibility.highlightID(for: "Reverse swipe gestures")),
+            SettingsSearchEntry(tab: .accessibility, title: "Reverse scroll gestures", keywords: ["reverse", "scroll", "open", "close"], highlightID: SettingsTab.accessibility.highlightID(for: "Reverse scroll gestures")),
             SettingsSearchEntry(tab: .general, title: "Extend hover area", keywords: ["hover", "cursor"], highlightID: SettingsTab.general.highlightID(for: "Extend hover area")),
             SettingsSearchEntry(tab: .general, title: "Enable haptics", keywords: ["haptic", "feedback"], highlightID: SettingsTab.general.highlightID(for: "Enable haptics")),
             SettingsSearchEntry(tab: .general, title: "Open notch on hover", keywords: ["hover to open", "auto open"], highlightID: SettingsTab.general.highlightID(for: "Open notch on hover")),
@@ -691,9 +685,10 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .battery, title: "Charging duration", keywords: ["charging", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Charging duration")),
             SettingsSearchEntry(tab: .battery, title: "Low battery duration", keywords: ["low battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Low battery duration")),
             SettingsSearchEntry(tab: .battery, title: "Full battery duration", keywords: ["full battery", "duration", "seconds"], highlightID: SettingsTab.battery.highlightID(for: "Full battery duration")),
-            SettingsSearchEntry(tab: .battery, title: "Test charging HUD", keywords: ["battery", "test", "charging", "preview"], highlightID: nil),
-            SettingsSearchEntry(tab: .battery, title: "Test low battery HUD", keywords: ["battery", "test", "low", "preview"], highlightID: nil),
-            SettingsSearchEntry(tab: .battery, title: "Test full battery HUD", keywords: ["battery", "test", "full", "preview"], highlightID: nil),
+            SettingsSearchEntry(tab: .debug, title: "Test charging HUD", keywords: ["battery", "test", "charging", "preview", "debug"], highlightID: nil),
+            SettingsSearchEntry(tab: .debug, title: "Test low battery HUD", keywords: ["battery", "test", "low", "preview", "debug"], highlightID: nil),
+            SettingsSearchEntry(tab: .debug, title: "Test full battery HUD", keywords: ["battery", "test", "full", "preview", "debug"], highlightID: nil),
+            SettingsSearchEntry(tab: .debug, title: "Test Bluetooth connection HUD", keywords: ["bluetooth", "test", "connection", "airpods", "preview", "debug"], highlightID: nil),
             SettingsSearchEntry(tab: .battery, title: "Low battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Low battery style")),
             SettingsSearchEntry(tab: .battery, title: "Low battery threshold", keywords: ["battery", "threshold", "percent"], highlightID: SettingsTab.battery.highlightID(for: "Low battery threshold")),
             SettingsSearchEntry(tab: .battery, title: "Full battery style", keywords: ["battery", "style", "compact", "standard"], highlightID: SettingsTab.battery.highlightID(for: "Full battery style")),
@@ -704,6 +699,7 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .devices, title: "Use circular battery indicator", keywords: ["battery", "circular"], highlightID: SettingsTab.devices.highlightID(for: "Use circular battery indicator")),
             SettingsSearchEntry(tab: .devices, title: "Show battery percentage text in HUD", keywords: ["battery text"], highlightID: SettingsTab.devices.highlightID(for: "Show battery percentage text in HUD")),
             SettingsSearchEntry(tab: .devices, title: "Scroll device name in HUD", keywords: ["marquee", "device name"], highlightID: SettingsTab.devices.highlightID(for: "Scroll device name in HUD")),
+            SettingsSearchEntry(tab: .devices, title: "Show AirPods listening mode changes", keywords: ["airpods", "listening", "noise", "transparency", "adaptive"], highlightID: SettingsTab.devices.highlightID(for: "Show AirPods listening mode changes")),
             SettingsSearchEntry(tab: .devices, title: "Use 3D Bluetooth HUD icon", keywords: ["bluetooth", "3d", "animation", "mov"], highlightID: SettingsTab.devices.highlightID(for: "Use 3D Bluetooth HUD icon")),
             SettingsSearchEntry(tab: .devices, title: "Color-coded battery display", keywords: ["color", "battery"], highlightID: SettingsTab.devices.highlightID(for: "Color-coded battery display")),
             SettingsSearchEntry(tab: .hudAndOSD, title: "Color-coded volume display", keywords: ["volume", "color"], highlightID: SettingsTab.hudAndOSD.highlightID(for: "Color-coded volume display")),
@@ -776,7 +772,7 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .media, title: "Enable player color tinting", keywords: ["tint", "album color", "player"], highlightID: SettingsTab.media.highlightID(for: "Enable player color tinting")),
             SettingsSearchEntry(tab: .media, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable blur effect behind album art")),
             SettingsSearchEntry(tab: .media, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.media.highlightID(for: "Slider color")),
-            SettingsSearchEntry(tab: .appearance, title: "Real-time audio waveform", keywords: ["waveform", "audio", "visualizer", "spectrum"], highlightID: SettingsTab.appearance.highlightID(for: "Real-time audio waveform")),
+            SettingsSearchEntry(tab: .media, title: "Real-time audio waveform", keywords: ["waveform", "audio", "visualizer", "spectrum"], highlightID: SettingsTab.media.highlightID(for: "Real-time audio waveform")),
             SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
             SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
@@ -805,6 +801,10 @@ struct SettingsView: View {
     @ViewBuilder
     private func detailView(for tab: SettingsTab) -> some View {
         switch tab {
+        case .accessibility:
+            SettingsForm(tab: .accessibility) {
+                AccessibilitySettings()
+            }
         case .general:
             SettingsForm(tab: .general) {
                 GeneralSettings()
@@ -887,7 +887,6 @@ struct GeneralSettings: View {
     @State private var screens: [String] = NSScreen.screens.compactMap { $0.localizedName }
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
-    @Default(.gestureSensitivity) var gestureSensitivity
     @Default(.minimumHoverDuration) var minimumHoverDuration
     @Default(.nonNotchHeight) var nonNotchHeight
     @Default(.nonNotchHeightMode) var nonNotchHeightMode
@@ -895,52 +894,100 @@ struct GeneralSettings: View {
     @Default(.notchHeightMode) var notchHeightMode
     @Default(.showOnAllDisplays) var showOnAllDisplays
     @Default(.automaticallySwitchDisplay) var automaticallySwitchDisplay
-    @Default(.enableGestures) var enableGestures
     @Default(.openNotchOnHover) var openNotchOnHover
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
-    @Default(.enableHorizontalTabGestures) var enableHorizontalTabGestures
-    @Default(.reverseSwipeGestures) var reverseSwipeGestures
-    @Default(.reverseScrollGestures) var reverseScrollGestures
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
+    @Default(.showHeaderContextWidgets) private var showHeaderContextWidgets
+    @Default(.homeHeaderStats) private var homeHeaderStats
 
-    private var gestureSensitivityLabel: String {
-        gestureSensitivity == 100 ? "High" : gestureSensitivity == 200 ? "Medium" : "Low"
+    private enum SubPage: String, Hashable { case notchHeader }
+
+    /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
+    /// in canonical `allCases` order so the header layout stays stable.
+    private func homeStatBinding(_ kind: HeaderStatKind) -> Binding<Bool> {
+        Binding(
+            get: { homeHeaderStats.contains(kind) },
+            set: { isOn in
+                var selected = Set(homeHeaderStats)
+                if isOn { selected.insert(kind) } else { selected.remove(kind) }
+                homeHeaderStats = HeaderStatKind.allCases.filter { selected.contains($0) }
+            }
+        )
     }
 
     var body: some View {
-        GeistSettingsPage(title: "General") {
-            GeistSection(
-                title: "UI Mode",
-                footer: "Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations."
-            ) {
-                GeistToggleRow(title: "Enable Minimalistic UI", isOn: $enableMinimalisticUI)
-                    .onChange(of: enableMinimalisticUI) { _, newValue in
-                        if newValue {
-                            // Auto-enable simpler animation mode
-                            Defaults[.useModernCloseAnimation] = true
+        NavigationStack {
+            GeistSettingsPage(title: "General") {
+                GeistSection(
+                    title: "UI Mode",
+                    footer: "Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations."
+                ) {
+                    GeistToggleRow(title: "Enable Minimalistic UI", isOn: $enableMinimalisticUI, divider: false)
+                        .onChange(of: enableMinimalisticUI) { _, newValue in
+                            if newValue {
+                                // Auto-enable simpler animation mode
+                                Defaults[.useModernCloseAnimation] = true
+                            }
                         }
+                }
+
+                systemFeatures()
+
+                notchHeightSection()
+
+                notchBehaviour()
+
+                GeistSection {
+                    GeistNavRow(
+                        title: "Notch header",
+                        subtitle: "Tab-aware info shown on the right of the open notch",
+                        systemImage: "menubar.rectangle",
+                        tint: .blue,
+                        value: SubPage.notchHeader,
+                        divider: false
+                    )
+                }
+            }
+            .toolbar {
+                Button("Quit app") {
+                    NSApp.terminate(self)
+                }
+                .controlSize(.extraLarge)
+            }
+            .onChange(of: openNotchOnHover) {
+                if !openNotchOnHover {
+                    // Gestures live in the Accessibility tab now; keep the invariant.
+                    Defaults[.enableGestures] = true
+                }
+            }
+            .navigationDestination(for: SubPage.self) { page in
+                switch page {
+                case .notchHeader: notchHeaderPage
+                }
+            }
+        }
+    }
+
+    private var notchHeaderPage: some View {
+        GeistSettingsPage(title: "Notch header") {
+            GeistSection {
+                GeistToggleRow(title: "Show tab info in notch header", isOn: geistBinding(.showHeaderContextWidgets), divider: false, info: "Fills the open notch's right side with info for the active tab — Home CPU/RAM, Shelf device name, Agents usage, Calendar's next event, and Weather location.")
+            }
+
+            if showHeaderContextWidgets {
+                GeistSection(
+                    title: "Home header stats",
+                    footer: "Keep it to about 3 at a time — the notch header has limited room, and more may not fit."
+                ) {
+                    let kinds = HeaderStatKind.allCases
+                    ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
+                        GeistToggleRow(
+                            title: kind.settingsTitle,
+                            isOn: homeStatBinding(kind),
+                            divider: index != kinds.count - 1
+                        )
                     }
-                GeistToggleRow(title: "Show battery percentage inside icon", isOn: geistBinding(.showBatteryPercentInside), divider: false)
-                    .disabled(!enableMinimalisticUI)
-            }
-
-            systemFeatures()
-
-            notchHeightSection()
-
-            notchBehaviour()
-
-            gestureControls()
-        }
-        .toolbar {
-            Button("Quit app") {
-                NSApp.terminate(self)
-            }
-            .controlSize(.extraLarge)
-        }
-        .onChange(of: openNotchOnHover) {
-            if !openNotchOnHover {
-                enableGestures = true
+                }
             }
         }
     }
@@ -1021,36 +1068,8 @@ struct GeneralSettings: View {
     }
 
     @ViewBuilder
-    func gestureControls() -> some View {
-        GeistSection(
-            title: "Gesture control",
-            badge: "Beta",
-            footer: "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled."
-        ) {
-            GeistToggleRow(title: "Enable gestures", isOn: $enableGestures, divider: enableGestures)
-                .disabled(!openNotchOnHover)
-            if enableGestures {
-                GeistToggleRow(title: "Tab change with horizontal gestures", isOn: $enableHorizontalTabGestures)
-                if enableHorizontalTabGestures {
-                    GeistToggleRow(title: "Reverse swipe gestures", isOn: geistBinding(.reverseSwipeGestures))
-                }
-                GeistToggleRow(title: "Close gesture", isOn: geistBinding(.closeGestureEnabled))
-                GeistSliderRow(
-                    title: "Gesture sensitivity",
-                    valueLabel: gestureSensitivityLabel,
-                    value: $gestureSensitivity, range: 100...300, step: 100
-                )
-                GeistToggleRow(title: "Reverse open/close scroll gestures", isOn: $reverseScrollGestures, divider: false)
-            }
-        }
-    }
-
-    @ViewBuilder
     func notchBehaviour() -> some View {
-        GeistSection(
-            title: "Notch behavior",
-            footer: "When \"Hide until hovered\" is enabled, the notch slides up and hides on external (non-notch) displays until you hover over it."
-        ) {
+        GeistSection(title: "Notch behavior") {
             GeistToggleRow(title: "Extend hover area", isOn: geistBinding(.extendHoverArea), info: "Enlarges the invisible hover zone around the notch so it's easier to trigger.")
             GeistToggleRow(title: "Enable haptics", isOn: geistBinding(.enableHaptics), info: "Plays trackpad haptic feedback when the notch opens and closes.")
             GeistToggleRow(title: "Open notch on hover", isOn: geistBinding(.openNotchOnHover), info: "Expands the notch automatically when the pointer hovers over it, instead of requiring a click.")
@@ -1063,13 +1082,52 @@ struct GeneralSettings: View {
                     onChange: { NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil) }
                 )
             }
-            GeistToggleRow(title: "Hide until hovered on non-notch displays", isOn: $hideNonNotchUntilHover, divider: false)
+            GeistToggleRow(title: "Hide until hovered on non-notch displays", isOn: $hideNonNotchUntilHover, divider: false, info: "When enabled, the notch slides up and hides on external (non-notch) displays until you hover over it.")
+        }
+    }
+}
+
+/// The **Accessibility** tab: trackpad gesture controls for the notch.
+struct AccessibilitySettings: View {
+    @Default(.gestureSensitivity) var gestureSensitivity
+    @Default(.enableGestures) var enableGestures
+    @Default(.openNotchOnHover) var openNotchOnHover
+    @Default(.enableHorizontalTabGestures) var enableHorizontalTabGestures
+    @Default(.reverseScrollGestures) var reverseScrollGestures
+
+    private var gestureSensitivityLabel: String {
+        gestureSensitivity == 100 ? "High" : gestureSensitivity == 200 ? "Medium" : "Low"
+    }
+
+    var body: some View {
+        GeistSettingsPage(title: "Accessibility") {
+            GeistSection(
+                title: "Gesture control",
+                badge: "Beta",
+                footer: "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled."
+            ) {
+                GeistToggleRow(title: "Enable gestures", isOn: $enableGestures, divider: enableGestures)
+                    .disabled(!openNotchOnHover)
+                if enableGestures {
+                    GeistToggleRow(title: "Tab change with horizontal gestures", isOn: $enableHorizontalTabGestures)
+                    if enableHorizontalTabGestures {
+                        GeistToggleRow(title: "Reverse swipe gestures", isOn: geistBinding(.reverseSwipeGestures))
+                    }
+                    GeistToggleRow(title: "Close gesture", isOn: geistBinding(.closeGestureEnabled))
+                    GeistSliderRow(
+                        title: "Gesture sensitivity",
+                        valueLabel: gestureSensitivityLabel,
+                        value: $gestureSensitivity, range: 100...300, step: 100
+                    )
+                    GeistToggleRow(title: "Reverse open/close scroll gestures", isOn: $reverseScrollGestures, divider: false)
+                }
+            }
         }
     }
 }
 
 struct Charge: View {
-    @ObservedObject private var batteryStatusViewModel = BatteryStatusViewModel.shared
+    @Default(.enableMinimalisticUI) private var enableMinimalisticUI
     @Default(.showPowerStatusNotifications) private var showPowerStatusNotifications
     @Default(.showChargingBatteryHUD) private var showChargingBatteryHUD
     @Default(.showLowBatteryHUD) private var showLowBatteryHUD
@@ -1131,12 +1189,14 @@ struct Charge: View {
                 GeistSection(title: "General") {
                     GeistToggleRow(title: "Show battery indicator", isOn: geistBinding(.showBatteryIndicator))
                     GeistToggleRow(title: "Show power status notifications", isOn: $showPowerStatusNotifications)
-                    GeistToggleRow(title: "Play low battery alert sound", isOn: geistBinding(.playLowBatteryAlertSound), divider: false)
+                    GeistToggleRow(title: "Play low battery alert sound", isOn: geistBinding(.playLowBatteryAlertSound), divider: false, onPreview: { SoundPreview.play(bundled: "lowbattery", ext: "mp3") })
                 }
 
                 GeistSection(title: "Battery Information") {
                     GeistToggleRow(title: "Show battery percentage", isOn: geistBinding(.showBatteryPercentage))
-                    GeistToggleRow(title: "Show power status icons", isOn: geistBinding(.showPowerStatusIcons), divider: false)
+                    GeistToggleRow(title: "Show power status icons", isOn: geistBinding(.showPowerStatusIcons))
+                    GeistToggleRow(title: "Show battery percentage inside icon", isOn: geistBinding(.showBatteryPercentInside), divider: false)
+                        .disabled(!enableMinimalisticUI)
                 }
 
                 GeistSection(
@@ -1155,30 +1215,6 @@ struct Charge: View {
                         .disabled(!lowEnabled).opacity(sectionOpacity(lowEnabled))
                     GeistSliderRow(title: "Full battery duration", valueLabel: "\(fullBatteryHUDDuration)s", value: fullBatteryDurationBinding, range: 1...10, step: 1, divider: false)
                         .disabled(!fullEnabled).opacity(sectionOpacity(fullEnabled))
-                }
-
-                GeistSection(
-                    title: "HUD Tests",
-                    footer: "Runs the real notch animation on the current target display. If an external screen is using Dynamic Island mode, the battery HUD is sent there first."
-                ) {
-                    GeistRow {
-                        Button { batteryStatusViewModel.triggerTestHUD(kind: .charging) } label: {
-                            Label("Test charging HUD", systemImage: "bolt.fill")
-                        }
-                        .buttonStyle(.geist).disabled(!chargingEnabled)
-                    }
-                    GeistRow {
-                        Button { batteryStatusViewModel.triggerTestHUD(kind: .lowBattery) } label: {
-                            Label("Test low battery HUD", systemImage: "battery.25")
-                        }
-                        .buttonStyle(.geist).disabled(!lowEnabled)
-                    }
-                    GeistRow(divider: false) {
-                        Button { batteryStatusViewModel.triggerTestHUD(kind: .fullBattery) } label: {
-                            Label("Test full battery HUD", systemImage: "battery.100")
-                        }
-                        .buttonStyle(.geist).disabled(!fullEnabled)
-                    }
                 }
 
                 GeistSection(title: "Low Battery") {
@@ -1332,72 +1368,6 @@ struct Downloads: View {
     }
 }
 
-final class HUDPreviewViewModel: ObservableObject {
-    @Published var level: Float = 0
-    @Published var iconName: String = "speaker.wave.3.fill"
-
-    private var cancellables = Set<AnyCancellable>()
-
-    init() {
-        setup()
-    }
-
-    private func setup() {
-        // Ensure controllers are active
-        SystemVolumeController.shared.start()
-        SystemBrightnessController.shared.start()
-        SystemKeyboardBacklightController.shared.start()
-
-        // Initial state from volume
-        let vol = SystemVolumeController.shared.currentVolume
-        self.level = vol
-        if vol <= 0.01 { self.iconName = "speaker.slash.fill" }
-        else if vol < 0.33 { self.iconName = "speaker.wave.1.fill" }
-        else if vol < 0.66 { self.iconName = "speaker.wave.2.fill" }
-        else { self.iconName = "speaker.wave.3.fill" }
-
-        // Listeners
-        NotificationCenter.default.publisher(for: .systemVolumeDidChange)
-            .compactMap { $0.userInfo }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] info in
-                guard let self else { return }
-                if let vol = info["value"] as? Float {
-                    self.level = vol
-                    if vol <= 0.01 { self.iconName = "speaker.slash.fill" }
-                    else if vol < 0.33 { self.iconName = "speaker.wave.1.fill" }
-                    else if vol < 0.66 { self.iconName = "speaker.wave.2.fill" }
-                    else { self.iconName = "speaker.wave.3.fill" }
-                }
-            }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .systemBrightnessDidChange)
-            .compactMap { $0.userInfo }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] info in
-                guard let self else { return }
-                if let val = info["value"] as? Float {
-                    self.level = val
-                    self.iconName = "sun.max.fill"
-                }
-            }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .keyboardBacklightDidChange)
-            .compactMap { $0.userInfo }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] info in
-                guard let self else { return }
-                if let val = info["value"] as? Float {
-                    self.level = val
-                    self.iconName = val > 0.5 ? "light.max" : "light.min"
-                }
-            }
-            .store(in: &cancellables)
-    }
-}
-
 private struct HUDAndOSDSettingsView: View {
     @State private var selectedTab: Tab = {
         if Defaults[.enableSystemHUD] { return .hud }
@@ -1429,7 +1399,6 @@ private struct HUDAndOSDSettingsView: View {
     @Default(.circularHUDSize) var circularHUDSize
     @Default(.circularHUDStrokeWidth) var circularHUDStrokeWidth
     @Default(.circularHUDUseAccentColor) var circularHUDUseAccentColor
-    @StateObject private var previewModel = HUDPreviewViewModel()
     @ObservedObject private var accessibilityPermission = AccessibilityPermissionStore.shared
 
     private enum Tab: String, CaseIterable, Identifiable {
@@ -1439,10 +1408,16 @@ private struct HUDAndOSDSettingsView: View {
         case circular = "Circular"
 
         var id: String { rawValue }
-    }
 
-    private var paneBackgroundColor: Color {
-        Color(nsColor: .controlBackgroundColor)
+        /// Compact label for the segmented style picker.
+        var shortTitle: String {
+            switch self {
+            case .hud: return String(localized: "Notch")
+            case .osd: return String(localized: "OSD")
+            case .vertical: return String(localized: "Vertical")
+            case .circular: return String(localized: "Circular")
+            }
+        }
     }
 
     private var liquidVariantRange: ClosedRange<Double> {
@@ -1466,164 +1441,18 @@ private struct HUDAndOSDSettingsView: View {
         )
     }
 
+    /// Selecting a style enables it and disables the others — HUD styles are
+    /// mutually exclusive. The picked style's settings render inline below.
+    private var styleBinding: Binding<Tab> {
+        Binding(get: { selectedTab }, set: { activate($0) })
+    }
+
     var body: some View {
         GeistSettingsPage(title: "Controls") {
-            ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Geist.Spacing.sm) {
-                HUDSelectionCard(
-                    title: String(localized: "Dynamic Island"),
-                    isSelected: selectedTab == .hud,
-                    action: {
-                        selectedTab = .hud
-                        enableSystemHUD = true
-                        enableCustomOSD = false
-                        enableVerticalHUD = false
-                        enableCircularHUD = false
-                    }
-                ) {
-                    VStack {
-                        Capsule()
-                            .fill(Color.black)
-                            .frame(width: 64, height: 20)
-                            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-                            .overlay {
-                                HStack(spacing: 6) {
-                                    Image(systemName: previewModel.iconName)
-                                        .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .frame(width: 12)
-
-                                    GeometryReader { geo in
-                                        Capsule()
-                                            .fill(Color.white.opacity(0.2))
-                                            .overlay(alignment: .leading) {
-                                                Capsule()
-                                                    .fill(Color.white)
-                                                    .frame(width: geo.size.width * CGFloat(previewModel.level))
-                                                    .animation(.spring(response: 0.3), value: previewModel.level)
-                                            }
-                                    }
-                                    .frame(height: 4)
-                                }
-                                .padding(.horizontal, 8)
-                            }
-                    }
+            GeistSection(footer: "Only one HUD style can be active at a time.") {
+                GeistSegmentedRow(title: "HUD style", selection: styleBinding, divider: false) {
+                    ForEach(Tab.allCases) { Text($0.shortTitle).tag($0) }
                 }
-
-                HUDSelectionCard(
-                    title: String(localized: "Custom OSD"),
-                    isSelected: selectedTab == .osd,
-                    action: {
-                        selectedTab = .osd
-                        enableCustomOSD = true
-                        enableSystemHUD = false
-                        enableVerticalHUD = false
-                        enableCircularHUD = false
-                    }
-                ) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(.white.opacity(0.1), lineWidth: 1)
-                        }
-                        .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
-                        .overlay {
-                            VStack(spacing: 6) {
-                                Image(systemName: previewModel.iconName)
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(.secondary)
-                                    .symbolRenderingMode(.hierarchical)
-                                    .contentTransition(.symbolEffect(.replace))
-
-                                GeometryReader { geo in
-                                    Capsule()
-                                        .fill(Color.secondary.opacity(0.2))
-                                        .overlay(alignment: .leading) {
-                                            Capsule()
-                                                .fill(Color.primary)
-                                                .frame(width: geo.size.width * CGFloat(previewModel.level))
-                                                .animation(.spring(response: 0.3), value: previewModel.level)
-                                        }
-                                }
-                                .frame(width: 36, height: 4)
-                            }
-                        }
-                        .frame(width: 44, height: 44)
-                }
-
-                HUDSelectionCard(
-                    title: String(localized: "Vertical Bar"),
-                    isSelected: selectedTab == .vertical,
-                    action: {
-                        selectedTab = .vertical
-                        enableVerticalHUD = true
-                        enableSystemHUD = false
-                        enableCustomOSD = false
-                        enableCircularHUD = false
-                    }
-                ) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.ultraThinMaterial)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(.white.opacity(0.1), lineWidth: 1)
-                        }
-                        .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
-                        .overlay {
-                            VStack {
-                                GeometryReader { geo in
-                                    VStack {
-                                        Spacer()
-                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .fill(Color.white)
-                                            .frame(height: max(0, geo.size.height * CGFloat(previewModel.level)))
-                                            .animation(.spring(response: 0.3), value: previewModel.level)
-                                    }
-                                }
-                                .mask(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                                .padding(.bottom, 2)
-
-                                Image(systemName: previewModel.iconName)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(previewModel.level > 0.15 ? .black : .secondary)
-                                    .symbolRenderingMode(.hierarchical)
-                                    .contentTransition(.symbolEffect(.replace))
-                            }
-                            .padding(4)
-                        }
-                        .frame(width: 22, height: 54)
-                }
-
-                HUDSelectionCard(
-                    title: String(localized: "Circular"),
-                    isSelected: selectedTab == .circular,
-                    action: {
-                        selectedTab = .circular
-                        enableCircularHUD = true
-                        enableSystemHUD = false
-                        enableCustomOSD = false
-                        enableVerticalHUD = false
-                    }
-                ) {
-                    ZStack {
-                        Circle()
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 4)
-                        Circle()
-                            .trim(from: 0, to: CGFloat(previewModel.level))
-                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                            .animation(.spring(response: 0.3), value: previewModel.level)
-                        Image(systemName: previewModel.iconName)
-                            .font(.system(size: 16))
-                            .foregroundStyle(.primary)
-                            .symbolRenderingMode(.hierarchical)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                    .frame(width: 44, height: 44)
-                }
-            }
-            .padding(.top, 8)
             }
 
             switch selectedTab {
@@ -1633,25 +1462,10 @@ private struct HUDAndOSDSettingsView: View {
                 if #available(macOS 15.0, *) {
                     CustomOSDSettings()
                 } else {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.orange)
-
-                        Text("macOS 15 or later required")
-                            .font(.headline)
-
-                        Text("Custom OSD feature requires macOS 15 or later.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding()
+                    osdUnavailableNotice
                 }
             case .vertical:
                 verticalSections
-
             case .circular:
                 circularSections
             }
@@ -1665,6 +1479,34 @@ private struct HUDAndOSDSettingsView: View {
                 verticalHUDLiquidGlassCustomizationMode = .standard
             }
         }
+    }
+
+    private var osdUnavailableNotice: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+
+            Text("macOS 15 or later required")
+                .font(.headline)
+
+            Text("Custom OSD feature requires macOS 15 or later.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    /// Activating a style enables it and disables the others — HUD styles are
+    /// mutually exclusive.
+    private func activate(_ tab: Tab) {
+        selectedTab = tab
+        enableSystemHUD = tab == .hud
+        enableCustomOSD = tab == .osd
+        enableVerticalHUD = tab == .vertical
+        enableCircularHUD = tab == .circular
     }
 
     @ViewBuilder
@@ -1791,59 +1633,6 @@ private struct HUDStepSizeSection: View {
     }
 }
 
-private struct HUDSelectionCard<Preview: View>: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    @ViewBuilder let preview: Preview
-
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(
-                                    isSelected ? Color.accentColor : Color.clear,
-                                    lineWidth: 2.5
-                                )
-                        )
-                        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-
-                    preview
-                }
-                .frame(width: 92, height: 62)
-
-                VStack(spacing: 4) {
-                    Text(title)
-                        .font(Geist.Typography.bodyStrong)
-                        .foregroundStyle(isSelected ? .primary : .secondary)
-
-                    if isSelected {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 4, height: 4)
-                    } else {
-                        Color.clear
-                            .frame(width: 4, height: 4)
-                    }
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovering = hovering
-            }
-        }
-    }
-}
-
 private struct DevicesSettingsView: View {
     @Default(.progressBarStyle) var progressBarStyle
 
@@ -1871,12 +1660,7 @@ private struct DevicesSettingsView: View {
                 GeistToggleRow(title: "Use circular battery indicator", isOn: geistBinding(.useCircularBluetoothBatteryIndicator))
                 GeistToggleRow(title: "Show battery percentage text in HUD", isOn: geistBinding(.showBluetoothBatteryPercentageText))
                 GeistToggleRow(title: "Scroll device name in HUD", isOn: geistBinding(.showBluetoothDeviceNameMarquee))
-                GeistRow(divider: false) {
-                    Button { BluetoothAudioManager.shared.triggerTestDeviceConnectedHUD() } label: {
-                        Label("Test connection HUD", systemImage: "airpods.pro")
-                    }
-                    .buttonStyle(.geist)
-                }
+                GeistToggleRow(title: "Show AirPods listening mode changes", isOn: geistBinding(.showAirPodsListeningModeChanges), divider: false)
             }
 
             GeistSection(title: "Battery Indicator Styling", footer: batteryFooter) {
@@ -1935,7 +1719,7 @@ struct HUD: View {
             }
 
             GeistSection(title: "Audio feedback", footer: "Requires Accessibility permission so Dynamic Island can intercept the hardware volume keys.") {
-                GeistToggleRow(title: "Play feedback when volume is changed", isOn: geistBinding(.playVolumeChangeFeedback), divider: false)
+                GeistToggleRow(title: "Play feedback when volume is changed", isOn: geistBinding(.playVolumeChangeFeedback), divider: false, onPreview: { SoundPreview.play(bundled: "audio-feedback", ext: "m4a") })
                     .help("Plays the supplied feedback clip whenever you press the hardware volume keys.")
             }
 
@@ -1994,7 +1778,6 @@ struct Media: View {
     @Default(.musicControlWindowEnabled) private var musicControlWindowEnabled
     @Default(.showSneakPeekOnTrackChange) private var showSneakPeekOnTrackChange
     @Default(.showStandardMediaControls) private var showStandardMediaControls
-    @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     @Default(.parallaxEffectIntensity) private var parallaxEffectIntensity
     @Default(.enableLyrics) private var enableLyrics
     @Default(.showLyricsInClosedNotch) private var showLyricsInClosedNotch
@@ -2019,43 +1802,125 @@ struct Media: View {
         if standardControlsSuppressed {
             return "Standard notch media controls are hidden. Re-enable the toggle above to restore them."
         }
-        if !autoHideInactiveNotchMediaPlayer {
-            return "When disabled, the notch music player stays visible with placeholder metadata even when playback is inactive."
-        }
         return nil
     }
 
+    // Now Playing, Appearance, and Fullscreen are rendered inline on the Media page,
+    // so they are not part of the drill-down navigation. Only these remain nav rows.
+    private enum SubPage: String, Hashable, Identifiable {
+        case sneakLyrics, controls
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .sneakLyrics: return String(localized: "Sneak Peek & Lyrics")
+            case .controls: return String(localized: "Controls")
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .sneakLyrics: return String(localized: "Track peeks and synced lyrics")
+            case .controls: return String(localized: "Skip behavior and custom buttons")
+            }
+        }
+        var systemImage: String {
+            switch self {
+            case .sneakLyrics: return "quote.bubble"
+            case .controls: return "slider.horizontal.3"
+            }
+        }
+        var tint: Color {
+            switch self {
+            case .sneakLyrics: return .pink
+            case .controls: return .blue
+            }
+        }
+    }
+
     var body: some View {
-        GeistSettingsPage(title: "Media") {
-            GeistSection(title: "Media Source") {
-                GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false) {
-                    ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
+        NavigationStack {
+            GeistSettingsPage(title: "Media") {
+                // Now Playing and Appearance are shown inline (no drill-down);
+                // the remaining pages stay as navigation rows in original order.
+                nowPlayingSections
+
+                GeistSection {
+                    navRow(.sneakLyrics, divider: true)
+                    navRow(.controls, divider: false)
                 }
-                .onChange(of: mediaController) { _, _ in
-                    NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
+
+                appearanceSections
+
+                fullscreenSections
+            }
+            .navigationDestination(for: SubPage.self) { page in
+                subPage(page)
+            }
+        }
+    }
+
+    private func navRow(_ page: SubPage, divider: Bool) -> some View {
+        GeistNavRow(
+            title: page.title,
+            subtitle: page.subtitle,
+            systemImage: page.systemImage,
+            tint: page.tint,
+            value: page,
+            divider: divider
+        )
+    }
+
+    @ViewBuilder
+    private func subPage(_ page: SubPage) -> some View {
+        switch page {
+        case .sneakLyrics: sneakLyricsPage
+        case .controls: controlsPage
+        }
+    }
+
+    @ViewBuilder
+    private var nowPlayingSections: some View {
+        GeistSection(
+            title: "Live Activity",
+            footer: "Shows the current track as a closed-notch live activity."
+        ) {
+            GeistToggleRow(title: "Enable music live activity", isOn: $coordinator.musicLiveActivityEnabled.animation(), divider: false)
+        }
+
+        GeistSection(title: "Media Source") {
+            GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false, info: "'Now Playing' was the only option on previous versions and works with all media apps. It follows the system Now Playing target — scrubbing the timeline may not work if the active app (e.g. Amazon Music) doesn't support remote seek.") {
+                ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
+            }
+            .onChange(of: mediaController) { _, _ in
+                NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
+            }
+        }
+        mediaSourceFooter()
+
+        if mediaController == .spotify {
+            SpotifyAuthSettingsSection()
+        }
+
+        GeistSection(title: "Dynamic Island Visibility") {
+            GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
+                .disabled(enableMinimalisticUI)
+            GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: true, info: "Shows the current track title and artist in the closed notch bar. Only takes effect on displays without a physical notch (external monitors or non-notch Macs) — on a notched built-in display the physical notch covers this area, so it stays hidden.")
+            GeistRow(divider: visibilityNote != nil) {
+                Text("Only appears on displays without a physical notch (external monitors or non-notch Macs). The built-in notched display hides it.")
+                    .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let visibilityNote {
+                GeistRow(divider: false) {
+                    Text(visibilityNote)
+                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            mediaSourceFooter()
+        }
+    }
 
-            if mediaController == .spotify {
-                SpotifyAuthSettingsSection()
-            }
-
-            GeistSection(title: "Dynamic Island Visibility") {
-                GeistToggleRow(title: "Show media controls in Dynamic Island", isOn: $showStandardMediaControls)
-                    .disabled(enableMinimalisticUI)
-                GeistToggleRow(title: "Auto-hide inactive notch media player", isOn: $autoHideInactiveNotchMediaPlayer)
-                    .disabled(enableMinimalisticUI || !showStandardMediaControls)
-                GeistToggleRow(title: "Show song info in closed notch", isOn: $showSongMetadataInClosedNotch, divider: visibilityNote != nil, info: "Shows the current track title and artist beside the closed notch pill.")
-                if let visibilityNote {
-                    GeistRow(divider: false) {
-                        Text(visibilityNote)
-                            .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-
+    private var sneakLyricsPage: some View {
+        GeistSettingsPage(title: "Sneak Peek & Lyrics") {
             GeistSection(
                 title: "Sneak Peek",
                 footer: "Sneak Peek briefly shows the track title and artist under the notch when playback changes."
@@ -2078,7 +1943,11 @@ struct Media: View {
                     .disabled(!enableLyrics)
                 GeistToggleRow(title: "Show live canvas in Dynamic Island", isOn: $showLiveCanvasInDynamicIsland, divider: false, info: "Plays Spotify Canvas looping video behind the album art when the track has one.")
             }
+        }
+    }
 
+    private var controlsPage: some View {
+        GeistSettingsPage(title: "Controls") {
             GeistSection(title: "Skip Buttons") {
                 GeistSegmentedRow(title: "Skip button behavior", selection: $musicSkipBehavior, divider: false) {
                     ForEach(MusicSkipBehavior.allCases) { Text($0.displayName).tag($0) }
@@ -2103,33 +1972,42 @@ struct Media: View {
             }
             .disabled(!showStandardMediaControls)
             .opacity(showStandardMediaControls ? 1 : 0.5)
+        }
+    }
 
-            GeistSection(title: "Appearance") {
-                GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
-                GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
-                GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")
-                GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
-                GeistSliderRow(title: "Album art parallax", valueLabel: parallaxEffectIntensity == 0 ? "Off" : String(format: "%.0f", parallaxEffectIntensity), value: $parallaxEffectIntensity, range: 0...20, step: 1, info: "3D tilt of the album art as you move the pointer. Set to Off to disable.")
-                GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
-                    ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
+    @ViewBuilder
+    private var appearanceSections: some View {
+        GeistSection(title: "Appearance") {
+            GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), info: "Shows a live waveform driven by system audio in the music live activity.")
+            GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
+            GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
+            GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")
+            GeistToggleRow(title: "Enable blur effect behind album art", isOn: geistBinding(.lightingEffect))
+            GeistSliderRow(title: "Album art parallax", valueLabel: parallaxEffectIntensity == 0 ? "Off" : String(format: "%.0f", parallaxEffectIntensity), value: $parallaxEffectIntensity, range: 0...20, step: 1, info: "3D tilt of the album art as you move the pointer. Set to Off to disable.")
+            GeistPickerRow(title: "Slider color", selection: $sliderColor, divider: false) {
+                ForEach(SliderColorEnum.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
+        }
+    }
 
-            GeistSection(title: "Fullscreen", badge: "Beta") {
-                GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
-                    Text("Always hide in fullscreen").tag(HideNotchOption.always)
-                    Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
-                    Text("Never hide").tag(HideNotchOption.never)
-                }
-                .onChange(of: hideNotchOption) {
-                    Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
-                }
+    @ViewBuilder
+    private var fullscreenSections: some View {
+        GeistSection(title: "Fullscreen") {
+            GeistPickerRow(title: "Hide Dynamic Island", selection: $hideNotchOption, divider: false) {
+                Text("Always hide in fullscreen").tag(HideNotchOption.always)
+                Text("Hide only when NowPlaying app is in fullscreen").tag(HideNotchOption.nowPlayingOnly)
+                Text("Never hide").tag(HideNotchOption.never)
+            }
+            .onChange(of: hideNotchOption) {
+                Defaults[.enableFullscreenMediaDetection] = hideNotchOption != .never
             }
         }
     }
 
     @ViewBuilder
     private func mediaSourceFooter() -> some View {
+        // Keep the install requirement inline — it's an actionable prerequisite,
+        // not just explanation. The general Now Playing blurb lives in the row's ⓘ.
         if MusicManager.shared.isNowPlayingDeprecated {
             HStack(spacing: 0) {
                 Text("YouTube Music requires this third-party app to be installed: ")
@@ -2138,15 +2016,6 @@ struct Media: View {
                     .foregroundStyle(Geist.Colors.accent)
             }
             .font(Geist.Typography.caption)
-            .padding(.leading, Geist.Spacing.xxs)
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
-                Text(String(localized: "'Now Playing' was the only option on previous versions and works with all media apps."))
-                Text(String(localized: "Uses macOS Now Playing when the Amazon Music app is the active media source. Playback controls follow the system Now Playing target. Scrubbing the timeline may not work if the Amazon Music app does not support remote seek."))
-            }
-            .font(Geist.Typography.caption)
-            .foregroundStyle(Geist.Colors.mute)
             .padding(.leading, Geist.Spacing.xxs)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -2205,7 +2074,20 @@ struct CalendarSettings: View {
         }
     }
 
+    private enum SubPage: String, Hashable { case selectCalendars }
+
     var body: some View {
+        NavigationStack {
+            calendarRoot
+                .navigationDestination(for: SubPage.self) { page in
+                    switch page {
+                    case .selectCalendars: selectCalendarsPage
+                    }
+                }
+        }
+    }
+
+    private var calendarRoot: some View {
         GeistSettingsPage(title: "Calendar") {
             if !calendarManager.hasCalendarAccess || !calendarManager.hasReminderAccess {
                 GeistSection {
@@ -2276,8 +2158,9 @@ struct CalendarSettings: View {
 
                 GeistSection(
                     title: "Reminder Live Activity",
-                    footer: "Turn the reminder live activity on or off in the Live Activities tab. These settings control how it looks."
+                    footer: "Shows an upcoming reminder as a closed-notch countdown."
                 ) {
+                    GeistToggleRow(title: "Enable reminder live activity", isOn: $enableReminderLiveActivity)
                     GeistSegmentedRow(title: "Countdown style", selection: $reminderPresentationStyle) {
                         ForEach(ReminderPresentationStyle.allCases) { Text($0.displayName).tag($0) }
                     }
@@ -2324,7 +2207,16 @@ struct CalendarSettings: View {
                     }
                 }
 
-                calendarSelectionSections()
+                GeistSection {
+                    GeistNavRow(
+                        title: "Select Calendars",
+                        subtitle: "Choose which calendars appear in the notch",
+                        systemImage: "calendar",
+                        tint: .cyan,
+                        value: SubPage.selectCalendars,
+                        divider: false
+                    )
+                }
             }
         }
         .onAppear {
@@ -2335,17 +2227,16 @@ struct CalendarSettings: View {
         }
     }
 
+    private var selectCalendarsPage: some View {
+        GeistSettingsPage(title: "Select Calendars") {
+            calendarSelectionSections()
+        }
+    }
+
     @ViewBuilder
     private func calendarSelectionSections() -> some View {
         let grouped = Dictionary(grouping: calendarManager.allCalendars, by: \.accountName)
         let sortedAccounts = grouped.keys.sorted()
-
-        Text("Select Calendars".uppercased())
-            .font(Geist.Typography.captionStrong)
-            .foregroundStyle(Geist.Colors.mute)
-            .tracking(0.6)
-            .padding(.leading, Geist.Spacing.xxs)
-            .frame(maxWidth: .infinity, alignment: .leading)
 
         ForEach(sortedAccounts, id: \.self) { account in
             let accountCalendars = grouped[account] ?? []
@@ -2473,6 +2364,25 @@ struct About: View {
                 .buttonStyle(.plain)
             }
 
+            GeistSection(title: "System") {
+                GeistRow(divider: false) {
+                    HStack(spacing: Geist.Spacing.xs) {
+                        Button {
+                            relaunchApp()
+                        } label: {
+                            Label("Restart", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.geist)
+                        Button(role: .destructive) {
+                            NSApp.terminate(nil)
+                        } label: {
+                            Label("Quit", systemImage: "power")
+                        }
+                        .buttonStyle(.geist)
+                    }
+                }
+            }
+
             Text("Made with ❤️ by Zaaacqwq")
                 .font(Geist.Typography.caption)
                 .foregroundStyle(Geist.Colors.mute)
@@ -2480,6 +2390,22 @@ struct About: View {
         }
         .toolbar {
             CheckForUpdatesView(updater: updaterController.updater)
+        }
+    }
+
+    /// Relaunches the exact bundle that is currently running, then terminates
+    /// this instance. We deliberately use `Bundle.main.bundleURL` (not the
+    /// LaunchServices-registered URL) so restarting keeps the running build —
+    /// otherwise it would relaunch whatever copy lives in /Applications.
+    private func relaunchApp() {
+        let workspace = NSWorkspace.shared
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+
+        workspace.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            Task { @MainActor in
+                NSApplication.shared.terminate(nil)
+            }
         }
     }
 }
@@ -2631,166 +2557,289 @@ struct LiveActivitiesSettings: View {
         }
     }
 
+    private enum SubPage: String, Hashable, CaseIterable, Identifiable {
+        case privacy, focus, indicators
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .privacy: return String(localized: "Privacy")
+            case .focus: return String(localized: "Focus")
+            case .indicators: return String(localized: "Indicators")
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .privacy: return String(localized: "Camera, microphone, and screen recording")
+            case .focus: return String(localized: "Focus / Do Not Disturb detection")
+            case .indicators: return String(localized: "Caps Lock and input method")
+            }
+        }
+        var systemImage: String {
+            switch self {
+            case .privacy: return "hand.raised.fill"
+            case .focus: return "moon.fill"
+            case .indicators: return "keyboard"
+            }
+        }
+        var tint: Color {
+            switch self {
+            case .privacy: return .red
+            case .focus: return .purple
+            case .indicators: return .green
+            }
+        }
+    }
+
     var body: some View {
-        GeistSettingsPage(title: "Live Activities") {
-            GeistSection(
-                title: "Closed Notch Priority",
-                footer: "Toggle each live activity on or off with its switch, and drag with the arrows to set priority. Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side."
-            ) {
-                let order = normalizedClosedNotchPriorityOrder
-                ForEach(Array(order.enumerated()), id: \.element) { index, kind in
-                    GeistRow {
-                        HStack(spacing: Geist.Spacing.sm) {
-                            Text("\(index + 1)")
-                                .font(Geist.Typography.caption.monospacedDigit())
-                                .foregroundStyle(Geist.Colors.mute)
-                                .frame(width: 22, alignment: .trailing)
-                            Toggle("", isOn: Binding(
-                                get: { !disabledClosedNotchActivities.contains(kind) },
-                                set: { isOn in
-                                    if isOn { disabledClosedNotchActivities.remove(kind) }
-                                    else { disabledClosedNotchActivities.insert(kind) }
-                                }
-                            ))
-                            .labelsHidden().toggleStyle(.switch).controlSize(.small)
-                            Label(kind.displayName, systemImage: kind.systemImage)
-                                .labelStyle(.titleAndIcon)
-                                .font(Geist.Typography.bodyStrong)
-                                .foregroundStyle(disabledClosedNotchActivities.contains(kind) ? Geist.Colors.mute : Geist.Colors.ink)
-                            Spacer()
-                            HStack(spacing: 4) {
-                                Button { moveClosedNotchActivity(kind, direction: -1) } label: {
-                                    Image(systemName: "chevron.up")
-                                }
-                                .buttonStyle(.borderless).disabled(index == 0).help("Raise priority")
-                                Button { moveClosedNotchActivity(kind, direction: 1) } label: {
-                                    Image(systemName: "chevron.down")
-                                }
-                                .buttonStyle(.borderless).disabled(index == order.count - 1).help("Lower priority")
-                            }
-                            .foregroundStyle(Geist.Colors.body)
-                        }
+        NavigationStack {
+            GeistSettingsPage(title: "Live Activities") {
+                GeistSection(title: "Detection") {
+                    let pages = SubPage.allCases
+                    ForEach(Array(pages.enumerated()), id: \.element) { index, page in
+                        GeistNavRow(
+                            title: page.title,
+                            subtitle: page.subtitle,
+                            systemImage: page.systemImage,
+                            tint: page.tint,
+                            value: page,
+                            divider: index != pages.count - 1
+                        )
                     }
                 }
-                GeistRow(divider: false) {
-                    Button("Reset Closed Notch Priority") {
-                        closedNotchActivityPriorityOrder = ClosedNotchActivityKind.defaultPriorityOrder
-                    }
-                    .buttonStyle(.geist)
-                }
-            }
 
-            GeistSection(
-                title: "Screen Recording",
-                footer: "Uses event-driven private API for real-time screen recording detection"
-            ) {
-                GeistToggleRow(title: "Enable Screen Recording Detection", isOn: $enableScreenRecordingDetection)
-                GeistToggleRow(title: "Show Recording Indicator", isOn: geistBinding(.showRecordingIndicator), divider: recordingManager.isMonitoring)
-                    .disabled(!enableScreenRecordingDetection)
-                if recordingManager.isMonitoring {
-                    GeistLabeledRow(title: "Detection Status", divider: false) {
-                        if recordingManager.isRecording {
-                            statusLabel(dot: .red, text: "Recording Detected", color: Geist.Colors.error)
-                        } else {
-                            statusLabel(dot: nil, text: "Active - No Recording", color: Geist.Colors.success)
-                        }
-                    }
-                }
+                closedNotchPrioritySection
             }
-
-            if !fullDiskAccessPermission.isAuthorized {
-                SettingsPermissionCallout(
-                    title: String(localized: "Custom Focus metadata"),
-                    message: String(localized: "Full Disk Access unlocks custom Focus icons, colors, and labels. Standard Focus detection still works without it—grant access only if you need personalized indicators."),
-                    icon: "externaldrive.fill",
-                    iconColor: .purple,
-                    requestButtonTitle: String(localized: "Request Full Disk Access"),
-                    openSettingsButtonTitle: String(localized: "Open Privacy & Security"),
-                    requestAction: { fullDiskAccessPermission.requestAccessPrompt() },
-                    openSettingsAction: { fullDiskAccessPermission.openSystemSettings() }
-                )
-            }
-
-            GeistSection(
-                title: "Do Not Disturb",
-                footer: "Listens for Focus session changes via distributed notifications"
-            ) {
-                GeistToggleRow(title: "Enable Focus Detection", isOn: $enableDoNotDisturbDetection)
-                GeistToggleRow(title: "Show Focus Indicator", isOn: geistBinding(.showDoNotDisturbIndicator))
-                    .disabled(!enableDoNotDisturbDetection)
-                GeistToggleRow(title: "Show Focus Label", isOn: geistBinding(.showDoNotDisturbLabel))
-                    .disabled(!enableDoNotDisturbDetection || focusIndicatorNonPersistent)
-                    .help(focusIndicatorNonPersistent ? "Labels are forced to compact on/off text while brief toast mode is enabled." : "Show the active Focus name inside the indicator.")
-                GeistToggleRow(title: "Show Focus as brief toast", isOn: geistBinding(.focusIndicatorNonPersistent))
-                    .disabled(!enableDoNotDisturbDetection)
-                    .help("When enabled, Focus appears briefly (on/off) and then collapses instead of staying visible.")
-                GeistLabeledRow(title: "Focus Status", divider: false) {
-                    if doNotDisturbManager.isMonitoring {
-                        if doNotDisturbManager.isDoNotDisturbActive {
-                            statusLabel(dot: .purple, text: doNotDisturbManager.currentFocusModeName.isEmpty ? "Focus Enabled" : doNotDisturbManager.currentFocusModeName, color: .purple)
-                        } else {
-                            statusLabel(dot: nil, text: "Active - No Focus", color: Geist.Colors.success)
-                        }
-                    } else {
-                        statusLabel(dot: nil, text: "Disabled", color: Geist.Colors.mute)
-                    }
-                }
-            }
-
-            GeistSection(
-                title: "Caps Lock Indicator",
-                footer: "Adds a notch HUD when Caps Lock is enabled, with optional label and tint controls."
-            ) {
-                GeistToggleRow(title: "Show Caps Lock Indicator", isOn: geistBinding(.enableCapsLockIndicator))
-                GeistToggleRow(title: "Show Caps Lock label", isOn: geistBinding(.showCapsLockLabel))
-                    .disabled(!Defaults[.enableCapsLockIndicator])
-                GeistSegmentedRow(title: "Caps Lock color", selection: $capsLockTintMode, divider: false) {
-                    ForEach(CapsLockIndicatorTintMode.allCases) { Text($0.displayName).tag($0) }
-                }
-                .disabled(!Defaults[.enableCapsLockIndicator])
-            }
-
-            GeistSection(
-                title: "Privacy Indicators",
-                footer: "Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs."
-            ) {
-                GeistToggleRow(title: "Enable Camera Detection", isOn: geistBinding(.enableCameraDetection))
-                GeistToggleRow(title: "Enable Microphone Detection", isOn: geistBinding(.enableMicrophoneDetection), divider: privacyManager.isMonitoring)
-                if privacyManager.isMonitoring {
-                    GeistLabeledRow(title: "Camera Status") {
-                        if privacyManager.cameraActive {
-                            statusLabel(dot: .green, text: "Camera Active", color: Geist.Colors.success)
-                        } else {
-                            statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
-                        }
-                    }
-                    GeistLabeledRow(title: "Microphone Status", divider: false) {
-                        if privacyManager.microphoneActive {
-                            statusLabel(dot: .yellow, text: "Microphone Active", color: .yellow)
-                        } else {
-                            statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
-                        }
-                    }
-                }
-            }
-
-            GeistSection(
-                title: "Media Live Activity",
-                footer: "Use the Media tab to configure sneak peek, lyrics, and floating media controls."
-            ) {
-                GeistToggleRow(title: "Enable music live activity", isOn: $coordinator.musicLiveActivityEnabled.animation(), divider: false)
-            }
-
-            GeistSection(
-                title: "Reminder Live Activity",
-                footer: "Configure countdown style in the Calendar tab."
-            ) {
-                GeistToggleRow(title: "Enable reminder live activity", isOn: geistBinding(.enableReminderLiveActivity), divider: false)
+            .navigationDestination(for: SubPage.self) { page in
+                subPage(page)
             }
         }
         .onAppear {
             fullDiskAccessPermission.refreshStatus()
             normalizeClosedNotchActivityPriorityOrder()
+        }
+    }
+
+    @ViewBuilder
+    private func subPage(_ page: SubPage) -> some View {
+        switch page {
+        case .privacy: privacyPage
+        case .focus: focusPage
+        case .indicators: indicatorsPage
+        }
+    }
+
+    private var privacyPage: some View {
+        GeistSettingsPage(title: "Privacy") {
+            privacyIndicatorsSection
+            screenRecordingSection
+        }
+    }
+
+    private var focusPage: some View {
+        GeistSettingsPage(title: "Focus") {
+            if !fullDiskAccessPermission.isAuthorized {
+                fullDiskCallout
+            }
+            doNotDisturbSection
+        }
+        .onAppear { fullDiskAccessPermission.refreshStatus() }
+    }
+
+    private var indicatorsPage: some View {
+        GeistSettingsPage(title: "Indicators") {
+            capsLockSection
+            inputSourceSection
+        }
+    }
+
+    @ViewBuilder
+    private var closedNotchPrioritySection: some View {
+        let order = normalizedClosedNotchPriorityOrder
+        VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+            Text("Closed Notch Priority".uppercased())
+                .font(Geist.Typography.captionStrong)
+                .foregroundStyle(Geist.Colors.mute)
+                .tracking(0.6)
+                .padding(.leading, Geist.Spacing.xxs)
+
+            List {
+                ForEach(order, id: \.self) { kind in
+                    priorityRow(kind)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 14, bottom: 5, trailing: 14))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                .onMove(perform: movePriority)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .scrollDisabled(true)
+            .frame(height: CGFloat(order.count) * 38)
+            .background(Geist.Colors.canvasSoft)
+            .clipShape(RoundedRectangle(cornerRadius: Geist.Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Geist.Radius.md, style: .continuous)
+                    .strokeBorder(Geist.Colors.hairline, lineWidth: Geist.hairlineWidth)
+            )
+
+            Text("Drag rows to set priority; toggle each activity on or off with its switch. Temporary HUDs such as volume, brightness, notifications, and battery status always appear above this order. When two persistent activities are active, VibeIsland shows the two highest-priority items side by side.")
+                .font(Geist.Typography.caption)
+                .foregroundStyle(Geist.Colors.mute)
+                .padding(.leading, Geist.Spacing.xxs)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button("Reset Closed Notch Priority") {
+                closedNotchActivityPriorityOrder = ClosedNotchActivityKind.defaultPriorityOrder
+            }
+            .buttonStyle(.geist)
+            .padding(.top, Geist.Spacing.xxs)
+        }
+    }
+
+    private func priorityRow(_ kind: ClosedNotchActivityKind) -> some View {
+        HStack(spacing: Geist.Spacing.sm) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Geist.Colors.mute)
+            Label(kind.displayName, systemImage: kind.systemImage)
+                .labelStyle(.titleAndIcon)
+                .font(Geist.Typography.bodyStrong)
+                .foregroundStyle(disabledClosedNotchActivities.contains(kind) ? Geist.Colors.mute : Geist.Colors.ink)
+            Spacer(minLength: Geist.Spacing.sm)
+            Toggle("", isOn: Binding(
+                get: { !disabledClosedNotchActivities.contains(kind) },
+                set: { isOn in
+                    if isOn { disabledClosedNotchActivities.remove(kind) }
+                    else { disabledClosedNotchActivities.insert(kind) }
+                }
+            ))
+            .labelsHidden().toggleStyle(.switch).controlSize(.small)
+        }
+        .frame(height: 24)
+    }
+
+    private func movePriority(from source: IndexSet, to destination: Int) {
+        var order = normalizedClosedNotchPriorityOrder
+        order.move(fromOffsets: source, toOffset: destination)
+        closedNotchActivityPriorityOrder = order
+    }
+
+    @ViewBuilder
+    private var screenRecordingSection: some View {
+        GeistSection(
+            title: "Screen Recording",
+            footer: "Uses event-driven private API for real-time screen recording detection"
+        ) {
+            GeistToggleRow(title: "Enable Screen Recording Detection", isOn: $enableScreenRecordingDetection)
+            GeistToggleRow(title: "Show Recording Indicator", isOn: geistBinding(.showRecordingIndicator), divider: recordingManager.isMonitoring)
+                .disabled(!enableScreenRecordingDetection)
+            if recordingManager.isMonitoring {
+                GeistLabeledRow(title: "Detection Status", divider: false) {
+                    if recordingManager.isRecording {
+                        statusLabel(dot: .red, text: "Recording Detected", color: Geist.Colors.error)
+                    } else {
+                        statusLabel(dot: nil, text: "Active - No Recording", color: Geist.Colors.success)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var fullDiskCallout: some View {
+        SettingsPermissionCallout(
+            title: String(localized: "Custom Focus metadata"),
+            message: String(localized: "Full Disk Access unlocks custom Focus icons, colors, and labels. Standard Focus detection still works without it—grant access only if you need personalized indicators."),
+            icon: "externaldrive.fill",
+            iconColor: .purple,
+            requestButtonTitle: String(localized: "Request Full Disk Access"),
+            openSettingsButtonTitle: String(localized: "Open Privacy & Security"),
+            requestAction: { fullDiskAccessPermission.requestAccessPrompt() },
+            openSettingsAction: { fullDiskAccessPermission.openSystemSettings() }
+        )
+    }
+
+    @ViewBuilder
+    private var doNotDisturbSection: some View {
+        GeistSection(
+            title: "Do Not Disturb",
+            footer: "Listens for Focus session changes via distributed notifications"
+        ) {
+            GeistToggleRow(title: "Enable Focus Detection", isOn: $enableDoNotDisturbDetection)
+            GeistToggleRow(title: "Show Focus Indicator", isOn: geistBinding(.showDoNotDisturbIndicator))
+                .disabled(!enableDoNotDisturbDetection)
+            GeistToggleRow(title: "Show Focus Label", isOn: geistBinding(.showDoNotDisturbLabel))
+                .disabled(!enableDoNotDisturbDetection || focusIndicatorNonPersistent)
+                .help(focusIndicatorNonPersistent ? "Labels are forced to compact on/off text while brief toast mode is enabled." : "Show the active Focus name inside the indicator.")
+            GeistToggleRow(title: "Show Focus as brief toast", isOn: geistBinding(.focusIndicatorNonPersistent))
+                .disabled(!enableDoNotDisturbDetection)
+                .help("When enabled, Focus appears briefly (on/off) and then collapses instead of staying visible.")
+            GeistLabeledRow(title: "Focus Status", divider: false) {
+                if doNotDisturbManager.isMonitoring {
+                    if doNotDisturbManager.isDoNotDisturbActive {
+                        statusLabel(dot: .purple, text: doNotDisturbManager.currentFocusModeName.isEmpty ? "Focus Enabled" : doNotDisturbManager.currentFocusModeName, color: .purple)
+                    } else {
+                        statusLabel(dot: nil, text: "Active - No Focus", color: Geist.Colors.success)
+                    }
+                } else {
+                    statusLabel(dot: nil, text: "Disabled", color: Geist.Colors.mute)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var capsLockSection: some View {
+        GeistSection(
+            title: "Caps Lock Indicator",
+            footer: "Adds a notch HUD when Caps Lock is enabled, with optional label and tint controls."
+        ) {
+            GeistToggleRow(title: "Show Caps Lock Indicator", isOn: geistBinding(.enableCapsLockIndicator))
+            GeistToggleRow(title: "Show Caps Lock label", isOn: geistBinding(.showCapsLockLabel))
+                .disabled(!Defaults[.enableCapsLockIndicator])
+            GeistSegmentedRow(title: "Caps Lock color", selection: $capsLockTintMode, divider: false) {
+                ForEach(CapsLockIndicatorTintMode.allCases) { Text($0.displayName).tag($0) }
+            }
+            .disabled(!Defaults[.enableCapsLockIndicator])
+        }
+    }
+
+    @ViewBuilder
+    private var inputSourceSection: some View {
+        GeistSection(
+            title: "Input Method Indicator",
+            footer: "Briefly shows the notch HUD with the input method (输入法) name whenever you switch keyboards."
+        ) {
+            GeistToggleRow(title: "Show Input Method Indicator", isOn: geistBinding(.enableInputSourceIndicator))
+        }
+    }
+
+    @ViewBuilder
+    private var privacyIndicatorsSection: some View {
+        GeistSection(
+            title: "Camera & Microphone",
+            footer: "Shows green camera icon and yellow microphone icon when in use. Uses event-driven CoreAudio and CoreMediaIO APIs."
+        ) {
+            GeistToggleRow(title: "Enable Camera Detection", isOn: geistBinding(.enableCameraDetection))
+            if privacyManager.isMonitoring {
+                GeistLabeledRow(title: "Camera Status") {
+                    if privacyManager.cameraActive {
+                        statusLabel(dot: .green, text: "Camera Active", color: Geist.Colors.success)
+                    } else {
+                        statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
+                    }
+                }
+            }
+            GeistToggleRow(title: "Enable Microphone Detection", isOn: geistBinding(.enableMicrophoneDetection), divider: privacyManager.isMonitoring)
+            if privacyManager.isMonitoring {
+                GeistLabeledRow(title: "Microphone Status", divider: false) {
+                    if privacyManager.microphoneActive {
+                        statusLabel(dot: .yellow, text: "Microphone Active", color: .yellow)
+                    } else {
+                        statusLabel(dot: nil, text: "Inactive", color: Geist.Colors.mute)
+                    }
+                }
+            }
         }
     }
 
@@ -2817,15 +2866,6 @@ struct LiveActivitiesSettings: View {
             closedNotchActivityPriorityOrder = normalized
         }
     }
-
-    private func moveClosedNotchActivity(_ kind: ClosedNotchActivityKind, direction: Int) {
-        var order = normalizedClosedNotchPriorityOrder
-        guard let currentIndex = order.firstIndex(of: kind) else { return }
-        let targetIndex = currentIndex + direction
-        guard order.indices.contains(targetIndex) else { return }
-        order.swapAt(currentIndex, targetIndex)
-        closedNotchActivityPriorityOrder = order
-    }
 }
 
 struct Appearance: View {
@@ -2836,7 +2876,6 @@ struct Appearance: View {
     @Default(.autoNotchWidth) var autoNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.externalDisplayStyle) private var externalDisplayStyle
-
     @State private var isIconImporterPresented = false
     @State private var isIconDropTarget = false
     @State private var iconImportError: String?
@@ -2855,25 +2894,20 @@ struct Appearance: View {
                 GeistPickerRow(
                     title: "Non-notch display style",
                     selection: $externalDisplayStyle,
-                    info: "How the island looks on displays without a physical notch — the main screen on non-notch Macs, or external monitors on a notch MacBook."
+                    divider: false,
+                    info: "How the island looks on displays without a physical notch — the main screen on non-notch Macs, or external monitors on a notch MacBook.\n\n• Standard Notch: classic notch shape that blends into the top screen edge.\n• Dynamic Island: pill-shaped island with rounded corners, similar to iPhone's Dynamic Island."
                 ) {
                     ForEach(ExternalDisplayStyle.allCases) { Text($0.localizedName).tag($0) }
                 }
                 .onChange(of: externalDisplayStyle) {
                     NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
                 }
-                GeistRow(divider: false) {
-                    Text(externalDisplayStyle.description)
-                        .font(Geist.Typography.caption).foregroundStyle(Geist.Colors.body)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
 
             notchWidthControls()
 
             GeistSection(title: "Animations") {
-                GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), info: "Plays a small looping face animation in the notch when idle.")
-                GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), divider: false, info: "Shows a live waveform driven by system audio in the music live activity.")
+                GeistToggleRow(title: "Idle Animation", isOn: geistBinding(.showNotHumanFace), divider: false, info: "Plays a small looping face animation in the notch when idle.")
             }
 
             GeistSection(title: "App icon") {
@@ -3282,15 +3316,25 @@ struct TimerSettings: View {
         SettingsTab.timer.highlightID(for: title)
     }
 
+    private enum SubPage: String, Hashable { case presets }
+
     var body: some View {
-        GeistSettingsPage(title: "Timer") {
-            timerFeatureSection
-            if enableTimerFeature {
-                timerConfigurationSections
+        NavigationStack {
+            GeistSettingsPage(title: "Timer") {
+                timerFeatureSection
+                if enableTimerFeature {
+                    timerConfigurationSections
+                }
+            }
+            .onAppear { syncCustomDuration() }
+            .onChange(of: customTimerDuration) { _, newValue in syncCustomDuration(newValue) }
+            .navigationDestination(for: SubPage.self) { page in
+                switch page {
+                case .presets:
+                    GeistSettingsPage(title: "Timer Presets") { timerPresetsSection }
+                }
             }
         }
-        .onAppear { syncCustomDuration() }
-        .onChange(of: customTimerDuration) { _, newValue in syncCustomDuration(newValue) }
     }
 
     @ViewBuilder
@@ -3321,7 +3365,16 @@ struct TimerSettings: View {
         Group {
             customTimerSection
             appearanceSection
-            timerPresetsSection
+            GeistSection {
+                GeistNavRow(
+                    title: "Timer Presets",
+                    subtitle: "Quick-start durations for the timer popover",
+                    systemImage: "timer",
+                    tint: .red,
+                    value: SubPage.presets,
+                    divider: false
+                )
+            }
             timerSoundSection
         }
         .onAppear {
@@ -3436,7 +3489,10 @@ struct TimerSettings: View {
             footer: "Select a custom sound to play when a timer ends. Supported formats include MP3, M4A, WAV, and AIFF."
         ) {
             GeistLabeledRow(title: "Timer Sound") {
-                Button("Choose File", action: selectCustomTimerSound).buttonStyle(.geist)
+                HStack(spacing: Geist.Spacing.sm) {
+                    GeistPreviewButton(help: "Preview timer sound", action: previewTimerSound)
+                    Button("Choose File", action: selectCustomTimerSound).buttonStyle(.geist)
+                }
             }
             GeistRow {
                 if let customTimerSoundPath = UserDefaults.standard.string(forKey: "customTimerSoundPath") {
@@ -3525,6 +3581,20 @@ struct TimerSettings: View {
             if let url = panel.url {
                 UserDefaults.standard.set(url.path, forKey: "customTimerSoundPath")
             }
+        }
+    }
+
+    /// Auditions the timer end sound, mirroring `TimerManager.playTimerSound`'s
+    /// resolution: custom file → bundled `timer.mp3` → `dynamic.m4a`.
+    private func previewTimerSound() {
+        if let customPath = UserDefaults.standard.string(forKey: "customTimerSoundPath"),
+           !customPath.isEmpty,
+           FileManager.default.fileExists(atPath: customPath) {
+            SoundPreview.play(url: URL(fileURLWithPath: customPath))
+        } else if Bundle.main.url(forResource: "timer", withExtension: "mp3") != nil {
+            SoundPreview.play(bundled: "timer", ext: "mp3")
+        } else {
+            SoundPreview.play(bundled: "dynamic", ext: "m4a")
         }
     }
 }

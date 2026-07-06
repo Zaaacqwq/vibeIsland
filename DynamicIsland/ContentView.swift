@@ -56,6 +56,7 @@ struct ContentView: View {
     @ObservedObject var privacyManager = PrivacyIndicatorManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
     @ObservedObject var capsLockManager = CapsLockManager.shared
+    @ObservedObject var inputSourceManager = InputSourceManager.shared
     @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
@@ -64,6 +65,7 @@ struct ContentView: View {
     @ObservedObject var weatherManager = WeatherManager.shared
     @Default(.debugNotchBackgroundEnabled) var debugNotchBackgroundEnabled
     @Default(.debugNotchBackgroundColor) var debugNotchBackgroundColor
+    @Default(.debugTabInsetBorderEnabled) var debugTabInsetBorderEnabled
 
     /// Gap between an activity wing and the black notch cover so content never
     /// touches the physical notch.
@@ -102,13 +104,6 @@ struct ContentView: View {
     // Dynamic sizing based on view type and graph count with smooth transitions
     var dynamicNotchSize: CGSize {
         let baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize : openNotchSize
-
-        // The approve/ask overlay lives inside the Agents tab; give it some extra
-        // height (its content scrolls) so multi-option prompts aren't clipped.
-        if vm.notchState == .open, coordinator.currentView == .agents,
-           agentMonitor.activeInputSession != nil {
-            return CGSize(width: baseSize.width, height: 250)
-        }
 
         // When inline sneak peek is active in closed notch, use the wider inline width
         // so the outer maxWidth frame doesn't clip the expanded content
@@ -155,13 +150,11 @@ struct ContentView: View {
             }
         }
         
-        if coordinator.currentView == .timer {
-            return CGSize(width: baseSize.width, height: 250) // Extra height for timer presets
-        }
-
-
-
-
+        // Every standard tab claims the same fixed open-notch height
+        // (`standardOpenNotchContentHeight`). No per-tab height override here —
+        // tabs whose content is denser must compress/scroll to fit rather than
+        // resizing the window, per the redesign's "uniform height everywhere"
+        // rule. (Removed the old Timer→250 and Agents-overlay→250 special cases.)
         return baseSize
     }
     
@@ -674,9 +667,6 @@ struct ContentView: View {
         // Smoothly animate the notch height when switching tabs (e.g. into the
         // taller weather tab) instead of snapping.
         .animation(.smooth(duration: 0.3), value: coordinator.currentView)
-        // Smoothly grow/shrink when the approve/ask overlay appears or collapses
-        // within the Agents tab (no currentView change there).
-        .animation(.smooth(duration: 0.3), value: agentMonitor.activeInputSession != nil)
         .environmentObject(privacyManager)
         .background(dragDetector)
         .environmentObject(vm)
@@ -830,6 +820,9 @@ struct ContentView: View {
                       }()
                       let scheduledActivities = closedNotchScheduledActivities(hasActiveMusicSnapshot: hasActiveMusicSnapshot)
                       let activeSneakPeekStyle = resolvedSneakPeekStyle()
+                      let isAirPodsListeningModeSneak = coordinator.sneakPeek.type == .bluetoothAudio
+                          && coordinator.sneakPeek.value < 0
+                          && AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
 
                       if currentScreenExpansionType == .battery
                             && isBatteryHUDVisibleOnCurrentScreen
@@ -847,10 +840,10 @@ struct ContentView: View {
                             styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) }
                         )
                         .id(batteryModel.activeTemporaryHUDToken)
-                      } else if isSneakPeekVisibleOnCurrentScreen && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                      } else if isSneakPeekVisibleOnCurrentScreen && (Defaults[.inlineHUD] || coordinator.sneakPeek.type == .inputSource || isAirPodsListeningModeSneak) && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(
-                                  coordinator.sneakPeek.type == .capsLock
+                                  (coordinator.sneakPeek.type == .capsLock || coordinator.sneakPeek.type == .inputSource)
                                       ? AnyTransition.move(edge: .trailing).combined(with: .opacity)
                                       : AnyTransition.opacity
                               )
@@ -874,7 +867,7 @@ struct ContentView: View {
                        }
                       
                       if isSneakPeekVisibleOnCurrentScreen {
-                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && (coordinator.sneakPeek.type != .notification) && !Defaults[.inlineHUD] && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                          if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .capsLock) && (coordinator.sneakPeek.type != .inputSource) && (coordinator.sneakPeek.type != .notification) && !Defaults[.inlineHUD] && !isAirPodsListeningModeSneak && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
                               SystemEventIndicatorModifier(eventType: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, sendEventBack: { _ in
                                   //
                               })
@@ -997,6 +990,36 @@ struct ContentView: View {
                           // attach their own root `.transition` or it overrides this
                           // slide (blur / vertical / opacity-in-place).
                           .transition(tabSwitchTransition)
+                          // Uniform tab insets are applied HERE, once, for every
+                          // tab — individual tab views no longer add their own root
+                          // padding or content-height math (see `NotchDesign.TabInset`).
+                          // 1) Bound the content to the shared height budget so each
+                          //    tab's scroll views cap identically. Short tabs (Home,
+                          //    empty Agents/Shelf) stay top-aligned and leave the same
+                          //    breathing room below instead of resizing the window —
+                          //    per the redesign's "uniform height everywhere" rule.
+                          // 2) Left/right + top insets stack on the shell's shared
+                          //    `.padding([.horizontal, .bottom], 12)`. The bottom inset
+                          //    is folded into the height budget (top pad + bounded
+                          //    height, then pinned to the top), so it emerges as the
+                          //    gap below without an explicit `.padding(.bottom)`.
+                          .frame(
+                              maxWidth: .infinity,
+                              maxHeight: NotchDesign.TabInset.contentHeight(headerHeight: max(24, vm.effectiveClosedNotchHeight)),
+                              alignment: .top
+                          )
+                          // Debug: outline the uniform inset box so the shared
+                          // left/right/top/bottom margins are visible across tabs.
+                          .overlay {
+                              if debugTabInsetBorderEnabled {
+                                  Rectangle()
+                                      .strokeBorder(Color.cyan, lineWidth: 1)
+                                      .allowsHitTesting(false)
+                              }
+                          }
+                          .padding(.horizontal, NotchDesign.TabInset.horizontal)
+                          .padding(.top, NotchDesign.TabInset.top)
+                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                       }
                       .transition(notchOpenTransition)
                   }
@@ -2263,6 +2286,11 @@ struct ContentView: View {
         return vm.notchState == .open
             && !Defaults[.enableMinimalisticUI]
             && !hasAnyActivePopovers()
+            // Only *horizontally* scrolling areas (timer presets, calendar week
+            // slider) register here — a sideways scroll there pages that content
+            // instead of switching to the adjacent tab. Vertical lists don't, so a
+            // sideways swipe over them still switches tabs.
+            && !vm.isTabSwitchGestureSuppressed
     }
 
     private func handleMusicControlPlaybackChange(isPlaying: Bool) {

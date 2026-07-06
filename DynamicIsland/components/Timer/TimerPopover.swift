@@ -17,85 +17,345 @@
  */
 
 import SwiftUI
+import AppKit
 import Defaults
+
+/// Visual tokens for the menu-bar Timer popover (Form B in the notch redesign
+/// handoff). Shares the dark ink-and-hairline language of the in-notch Timer
+/// tab (`NotchDesign`); the few exact hexes the mockup calls out that aren't in
+/// the shared ramp live here.
+private enum PopoverStyle {
+    static let surface = Color(nsColor: NSColor(geistHex: "#161618"))
+    static let cardFill = Color.white.opacity(0.05)
+    static let cardStroke = Color.white.opacity(0.06)
+    static let fieldFill = Color.white.opacity(0.05)
+    static let fieldStroke = Color.white.opacity(0.07)
+    static let chipFill = Color.white.opacity(0.06)
+    static let chipStroke = Color.white.opacity(0.10)
+    static let activeCardFill = Color.white.opacity(0.08)
+    static let activeCardStroke = Color.white.opacity(0.08)
+    static let divider = Color.white.opacity(0.09)
+    static let iconTile = Color.white.opacity(0.06)
+
+    static let title = Color(nsColor: NSColor(geistHex: "#F2F2F2"))
+    static let value = Color(nsColor: NSColor(geistHex: "#FAFAFA"))
+    static let bright = Color(nsColor: NSColor(geistHex: "#CFCFCF"))
+    static let muted = Color(nsColor: NSColor(geistHex: "#8A8A8A"))
+    static let faint = NotchDesign.Colors.textTertiary // #6E6E6E
+    static let danger = NotchDesign.Colors.danger      // #E5645F
+
+    static let cardRadius: CGFloat = 10
+    static let controlRadius: CGFloat = 8
+    static let quickAddMinutes = [1, 5, 10, 30]
+}
 
 struct TimerPopover: View {
     @ObservedObject var timerManager = TimerManager.shared
     @Default(.timerPresets) private var timerPresets
-    @Default(.timerShowsCountdown) private var showsCountdown
     @Default(.timerShowsProgress) private var showsProgress
     @Default(.timerProgressStyle) private var progressStyle
     @Default(.timerIconColorMode) private var colorMode
     @Default(.timerSolidColor) private var solidColor
     @AppStorage("customTimerDuration") private var customTimerDuration: Double = 600
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var customHours: Int = 0
     @State private var customMinutes: Int = 10
     @State private var customSeconds: Int = 0
-    
+
     private var customDurationInSeconds: TimeInterval {
         TimeInterval(customHours * 3600 + customMinutes * 60 + customSeconds)
     }
-    
+
+    /// The active timer's resolved color (respects the user's color mode), used
+    /// for running-state accents. Falls back to the brand accent when idle.
+    private var timerAccent: Color {
+        switch colorMode {
+        case .adaptive: return timerManager.activePreset?.color ?? timerManager.timerColor
+        case .solid: return solidColor
+        }
+    }
+
+    /// Brand accent for idle call-to-action (the "Start Custom Timer" fill),
+    /// per the mockup — independent of the timer's progress color.
+    private var ctaAccent: Color { NotchDesign.Colors.accent }
+
     var body: some View {
-        VStack(spacing: 16) {
-            HeaderView(statusText: statusText)
-            
+        VStack(alignment: .leading, spacing: 16) {
+            header
+
             if timerManager.isTimerActive {
-                ActiveTimerSection(timerManager: timerManager)
+                activeCard
             } else {
-                CustomTimerSection(hours: $customHours, minutes: $customMinutes, seconds: $customSeconds, startAction: startCustomTimer)
+                customTimerCard
                     .onChange(of: customHours) { _, _ in updateStoredCustomDuration() }
                     .onChange(of: customMinutes) { _, _ in updateStoredCustomDuration() }
                     .onChange(of: customSeconds) { _, _ in updateStoredCustomDuration() }
             }
-            
-            Divider()
-                .padding(.horizontal, -8)
-            
-            PresetList(presets: timerPresets, activePresetId: timerManager.activePresetId, startAction: startPreset)
-                .animation(.smooth, value: timerManager.activePresetId)
-                .frame(maxHeight: 200)
+
+            Rectangle()
+                .fill(PopoverStyle.divider)
+                .frame(height: 1)
+
+            presets
         }
         .padding(16)
         .frame(width: 300)
         .background(
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .cornerRadius(12)
+            ZStack {
+                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                PopoverStyle.surface.opacity(0.92)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         )
-        .onAppear {
-            syncCustomDuration(with: customTimerDuration)
-        }
-        .onChange(of: customTimerDuration) { _, newValue in
-            syncCustomDuration(with: newValue)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.09), lineWidth: 1)
+        )
+        .onAppear { syncCustomDuration(with: customTimerDuration) }
+        .onChange(of: customTimerDuration) { _, newValue in syncCustomDuration(with: newValue) }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(timerManager.isTimerActive ? timerAccent.opacity(0.16) : PopoverStyle.iconTile)
+                Image(systemName: "timer")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(timerManager.isTimerActive ? timerAccent : Color(nsColor: NSColor(geistHex: "#E6E6E6")))
+            }
+            .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(localized: "Timer"))
+                    .font(NotchDesign.Typography.voice(14, weight: .semibold))
+                    .foregroundStyle(PopoverStyle.title)
+                Text(statusText)
+                    .font(NotchDesign.Typography.mono(11, weight: .medium))
+                    .foregroundStyle(timerManager.isTimerActive ? timerAccent : PopoverStyle.muted)
+            }
+
+            Spacer()
         }
     }
-    
+
     private var statusText: String {
-        if timerManager.isOvertime {
-            return String(localized: "Overtime")
-        } else if timerManager.isPaused {
-            return String(localized: "Paused")
-        } else if timerManager.isTimerActive {
-            return String(localized: "Running")
-        } else {
-            return "Ready"
+        if timerManager.isOvertime { return String(localized: "Overtime") }
+        if timerManager.isPaused { return String(localized: "Paused") }
+        if timerManager.isTimerActive { return String(localized: "Running") }
+        return "Ready"
+    }
+
+    // MARK: - Setup state
+
+    private var customTimerCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(String(localized: "Custom Timer"))
+                .font(NotchDesign.Typography.voice(13, weight: .semibold))
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
+
+            HStack(spacing: 6) {
+                DurationField(title: String(localized: "Hours"), value: $customHours, range: 0...23)
+                DurationField(title: String(localized: "Minutes"), value: $customMinutes, range: 0...59)
+                DurationField(title: String(localized: "Seconds"), value: $customSeconds, range: 0...59)
+            }
+
+            HStack(spacing: 5) {
+                ForEach(PopoverStyle.quickAddMinutes, id: \.self) { minutes in
+                    QuickAddChip(minutes: minutes) { addMinutes(minutes) }
+                }
+                Spacer(minLength: 0)
+                Button(action: resetDuration) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(PopoverStyle.muted)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(PopoverStyle.chipFill)
+                                .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(PopoverStyle.chipStroke, lineWidth: 1))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(customDurationInSeconds == 0)
+                .help(String(localized: "Reset"))
+            }
+
+            Text(durationCaption)
+                .font(NotchDesign.Typography.mono(11, weight: .medium))
+                .foregroundStyle(PopoverStyle.muted)
+
+            Button(action: startCustomTimer) {
+                HStack(spacing: 7) {
+                    Image(systemName: "play.fill").font(.system(size: 11, weight: .semibold))
+                    Text("Start Custom Timer").font(NotchDesign.Typography.voice(12, weight: .semibold))
+                }
+                .foregroundStyle(Color(nsColor: NSColor(geistHex: "#0A0A0A")))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(
+                    RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous)
+                        .fill(ctaAccent.opacity(customDurationInSeconds == 0 ? 0.5 : 1))
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(customDurationInSeconds == 0)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: PopoverStyle.cardRadius, style: .continuous)
+                .fill(PopoverStyle.cardFill)
+                .overlay(RoundedRectangle(cornerRadius: PopoverStyle.cardRadius, style: .continuous).strokeBorder(PopoverStyle.cardStroke, lineWidth: 1))
+        )
+    }
+
+    /// Human-readable summary of the chosen duration, e.g. "10 min", "1h 30m".
+    private var durationCaption: String {
+        let total = Int(customDurationInSeconds)
+        if total == 0 { return String(localized: "No duration set") }
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        var parts: [String] = []
+        if h > 0 { parts.append("\(h)h") }
+        if m > 0 { parts.append(h > 0 ? "\(m)m" : "\(m) min") }
+        if s > 0 { parts.append("\(s)s") }
+        return parts.joined(separator: " ")
+    }
+
+    // MARK: - Running state
+
+    private var activeCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(timerManager.timerName)
+                .font(NotchDesign.Typography.voice(14, weight: .semibold))
+                .foregroundStyle(PopoverStyle.title)
+                .lineLimit(1)
+
+            Text(timerManager.formattedRemainingTime())
+                .font(NotchDesign.Typography.mono(30, weight: .bold))
+                .foregroundStyle(timerManager.isOvertime ? PopoverStyle.danger : PopoverStyle.value)
+                .contentTransition(.numericText())
+                .padding(.top, 8)
+
+            if showsProgress {
+                Capsule()
+                    .fill(Color.white.opacity(0.12))
+                    .frame(height: 5)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { geo in
+                            Capsule()
+                                .fill(timerAccent)
+                                .frame(width: geo.size.width * CGFloat(min(max(timerManager.progress, 0), 1)))
+                                .animation(.smooth(duration: 0.25), value: timerManager.progress)
+                        }
+                    }
+                    .padding(.top, 14)
+            }
+
+            HStack(spacing: 8) {
+                if !timerManager.isOvertime {
+                    ActionButton(
+                        title: timerManager.isPaused ? String(localized: "Resume") : String(localized: "Pause"),
+                        systemImage: timerManager.isPaused ? "play.fill" : "pause.fill",
+                        fill: Color.white.opacity(0.09),
+                        stroke: Color.white.opacity(0.12),
+                        foreground: NotchDesign.Colors.textPrimary,
+                        action: togglePause
+                    )
+                    .disabled(!timerManager.allowsManualInteraction)
+                }
+                ActionButton(
+                    title: String(localized: "Stop"),
+                    systemImage: "stop.fill",
+                    fill: PopoverStyle.danger,
+                    stroke: .clear,
+                    foreground: Color(nsColor: NSColor(geistHex: "#0A0A0A")),
+                    action: stopTimer
+                )
+                .disabled(!timerManager.allowsManualInteraction)
+            }
+            .padding(.top, 14)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: PopoverStyle.cardRadius, style: .continuous)
+                .fill(PopoverStyle.activeCardFill)
+                .overlay(RoundedRectangle(cornerRadius: PopoverStyle.cardRadius, style: .continuous).strokeBorder(PopoverStyle.activeCardStroke, lineWidth: 1))
+        )
+        .animation(.smooth, value: timerManager.isPaused)
+    }
+
+    // MARK: - Presets
+
+    private var presets: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String(localized: "Presets"))
+                .font(NotchDesign.Typography.voice(12, weight: .semibold))
+                .foregroundStyle(PopoverStyle.bright)
+                .padding(.leading, 2)
+
+            if timerPresets.isEmpty {
+                Text("Configure presets in Settings")
+                    .font(NotchDesign.Typography.voice(12))
+                    .foregroundStyle(PopoverStyle.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous).fill(PopoverStyle.cardFill)
+                    )
+            } else {
+                ScrollView {
+                    VStack(spacing: 7) {
+                        ForEach(timerPresets) { preset in
+                            PresetRow(
+                                preset: preset,
+                                isActive: timerManager.activePresetId == preset.id,
+                                accent: timerAccent
+                            ) { startPreset(preset) }
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+                .animation(.smooth, value: timerManager.activePresetId)
+            }
         }
     }
-    
+
+    // MARK: - Actions (unchanged state machine)
+
     private func syncCustomDuration(with value: Double) {
         let components = TimerPreset.components(for: value)
         customHours = components.hours
         customMinutes = components.minutes
         customSeconds = components.seconds
     }
-    
+
     private func updateStoredCustomDuration() {
-        let newValue = customDurationInSeconds
-        customTimerDuration = newValue
+        customTimerDuration = customDurationInSeconds
     }
-    
+
+    private func addMinutes(_ increment: Int) {
+        let maxSeconds = 23 * 3600 + 59 * 60 + 59
+        let total = min(Int(customDurationInSeconds) + increment * 60, maxSeconds)
+        let components = TimerPreset.components(for: Double(total))
+        withAnimation(.smooth(duration: 0.2)) {
+            customHours = components.hours
+            customMinutes = components.minutes
+            customSeconds = components.seconds
+        }
+    }
+
+    private func resetDuration() {
+        withAnimation(.smooth(duration: 0.2)) {
+            customHours = 0
+            customMinutes = 0
+            customSeconds = 0
+        }
+    }
+
     private func startCustomTimer() {
         let duration = customDurationInSeconds
         guard duration > 0 else { return }
@@ -104,306 +364,186 @@ struct TimerPopover: View {
         }
         dismiss()
     }
-    
+
     private func startPreset(_ preset: TimerPreset) {
         withAnimation(.smooth) {
             timerManager.startTimer(duration: preset.duration, name: preset.name, preset: preset)
         }
         dismiss()
     }
-}
 
-private struct HeaderView: View {
-    let statusText: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            TimerIconAnimation()
-                .frame(width: 32, height: 32)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "Timer"))
-                    .font(.system(size: 14, weight: .semibold))
-                Text(statusText)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-        }
-    }
-}
-
-private struct ActiveTimerSection: View {
-    @ObservedObject var timerManager: TimerManager
-    @Default(.timerShowsProgress) private var showsProgress
-    @Default(.timerProgressStyle) private var progressStyle
-    @Default(.timerIconColorMode) private var colorMode
-    @Default(.timerSolidColor) private var solidColor
-    @Default(.timerPresets) private var timerPresets
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(timerManager.timerName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .lineLimit(1)
-                    .foregroundColor(.primary)
-                
-                Text(timerManager.formattedRemainingTime())
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
-                    .foregroundStyle(timerManager.isOvertime ? Color.red : Color.primary)
-                    .contentTransition(.numericText())
-            }
-            
-            if showsProgress && progressStyle == .bar {
-                ProgressView(value: min(timerManager.progress, 1.0))
-                    .progressViewStyle(LinearProgressViewStyle(tint: progressTint))
-                    .animation(.smooth(duration: 0.2), value: timerManager.progress)
-            }
-            
-            HStack(spacing: 8) {
-                if !timerManager.isOvertime {
-                    Button(action: togglePause) {
-                        Label(timerManager.isPaused ? String(localized: "Resume") : String(localized: "Pause"), systemImage: timerManager.isPaused ? "play.fill" : "pause.fill")
-                            .font(.system(size: 12, weight: .medium))
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!timerManager.allowsManualInteraction)
-                }
-
-                Button(role: .destructive, action: stopTimer) {
-                    Label(String(localized: "Stop"), systemImage: "stop.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .labelStyle(.titleAndIcon)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!timerManager.allowsManualInteraction)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.white.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .animation(.smooth, value: timerManager.isPaused)
-    }
-    
     private func togglePause() {
         guard timerManager.allowsManualInteraction else { return }
         withAnimation(.smooth) {
-            if timerManager.isPaused {
-                timerManager.resumeTimer()
-            } else {
-                timerManager.pauseTimer()
-            }
+            timerManager.isPaused ? timerManager.resumeTimer() : timerManager.pauseTimer()
         }
     }
-    
+
     private func stopTimer() {
         guard timerManager.allowsManualInteraction else {
             timerManager.endExternalTimer(triggerSmoothClose: false)
             return
         }
-        withAnimation(.smooth) {
-            timerManager.stopTimer()
-        }
-    }
-
-    private var progressTint: Color {
-        switch colorMode {
-        case .adaptive:
-            return activePresetColor ?? timerManager.timerColor
-        case .solid:
-            return solidColor
-        }
-    }
-
-    private var activePresetColor: Color? {
-        guard let presetId = timerManager.activePresetId else { return nil }
-        return timerPresets.first { $0.id == presetId }?.color
+        withAnimation(.smooth) { timerManager.stopTimer() }
     }
 }
 
-private struct CustomTimerSection: View {
-    @Binding var hours: Int
-    @Binding var minutes: Int
-    @Binding var seconds: Int
-    let startAction: () -> Void
-    
-    private var totalSeconds: Int {
-        hours * 3600 + minutes * 60 + seconds
-    }
+// MARK: - Duration field (mono numeral + chevron stepper)
 
-    private func addMinutes(_ increment: Int) {
-        let maxSeconds = 23 * 3600 + 59 * 60 + 59
-        let total = min(totalSeconds + increment * 60, maxSeconds)
-        let components = TimerPreset.components(for: Double(total))
-        withAnimation(.smooth(duration: 0.2)) {
-            hours = components.hours
-            minutes = components.minutes
-            seconds = components.seconds
-        }
-    }
-
-    private func resetDuration() {
-        withAnimation(.smooth(duration: 0.2)) {
-            hours = 0
-            minutes = 0
-            seconds = 0
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(String(localized: "Custom Timer"))
-                .font(.system(size: 14, weight: .semibold))
-            
-            Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 8) {
-                GridRow {
-                    DurationStepper(title: String(localized: "Hours"), value: $hours, range: 0...23)
-                    DurationStepper(title: String(localized: "Minutes"), value: $minutes, range: 0...59)
-                    DurationStepper(title: String(localized: "Seconds"), value: $seconds, range: 0...59)
-                }
-            }
-
-            HStack(spacing: 6) {
-                ForEach([1, 5, 10, 30], id: \.self) { increment in
-                    Button("+\(increment)m") { addMinutes(increment) }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                }
-                Spacer(minLength: 0)
-                Button(action: resetDuration) {
-                    Image(systemName: "arrow.counterclockwise")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help(String(localized: "Reset"))
-                .disabled(totalSeconds == 0)
-            }
-
-            Text(formattedDuration)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.secondary)
-
-            Button(action: startAction) {
-                Label("Start Custom Timer", systemImage: "play.fill")
-                    .font(.system(size: 13, weight: .medium))
-                    .labelStyle(.titleAndIcon)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(totalSeconds == 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-    
-    private var formattedDuration: String {
-        let components = TimerPreset.DurationComponents(hours: hours, minutes: minutes, seconds: seconds)
-        let interval = TimerPreset.duration(from: components)
-        return TimerPreset(name: "", duration: interval, color: .clear).formattedDuration
-    }
-}
-
-private struct DurationStepper: View {
+private struct DurationField: View {
     let title: String
     @Binding var value: Int
     let range: ClosedRange<Int>
-    
+
     var body: some View {
-        Stepper(value: $value, in: range) {
-            HStack {
+        HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 8.5, weight: .medium))
-                Spacer()
+                    .font(NotchDesign.Typography.voice(8.5, weight: .medium))
+                    .foregroundStyle(PopoverStyle.muted)
                 Text("\(value)")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(NotchDesign.Typography.mono(13, weight: .semibold))
+                    .foregroundStyle(PopoverStyle.value)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 3) {
+                chevron("chevron.up") { step(1) }
+                chevron("chevron.down") { step(-1) }
             }
         }
-        .frame(width: 88)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous)
+                .fill(PopoverStyle.fieldFill)
+                .overlay(RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous).strokeBorder(PopoverStyle.fieldStroke, lineWidth: 1))
+        )
+    }
+
+    private func chevron(_ name: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: name)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(PopoverStyle.faint)
+                .frame(width: 12, height: 9)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func step(_ delta: Int) {
+        let next = min(max(value + delta, range.lowerBound), range.upperBound)
+        withAnimation(.smooth(duration: 0.15)) { value = next }
     }
 }
 
-private struct PresetList: View {
-    let presets: [TimerPreset]
-    let activePresetId: UUID?
-    let startAction: (TimerPreset) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(localized: "Presets"))
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.leading, 4)
-            
-            if presets.isEmpty {
-                Text("Configure presets in Settings")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            } else {
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(presets) { preset in
-                            TimerPresetRow(preset: preset, isActive: activePresetId == preset.id) {
-                                startAction(preset)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-        }
-    }
-}
+// MARK: - Quick-add chip
 
-private struct TimerPresetRow: View {
-    let preset: TimerPreset
-    let isActive: Bool
+private struct QuickAddChip: View {
+    let minutes: Int
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            Text("+\(minutes)m")
+                .font(NotchDesign.Typography.voice(11, weight: .medium))
+                .foregroundStyle(PopoverStyle.bright)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(PopoverStyle.chipFill)
+                        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(PopoverStyle.chipStroke, lineWidth: 1))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Active card action button
+
+private struct ActionButton: View {
+    let title: String
+    let systemImage: String
+    let fill: Color
+    let stroke: Color
+    let foreground: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage).font(.system(size: 11, weight: .semibold))
+                Text(title).font(NotchDesign.Typography.voice(12, weight: .semibold))
+            }
+            .foregroundStyle(foreground)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous)
+                    .fill(fill)
+                    .overlay(RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous).strokeBorder(stroke, lineWidth: 1))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: PopoverStyle.controlRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Preset row
+
+private struct PresetRow: View {
+    let preset: TimerPreset
+    let isActive: Bool
+    let accent: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 11) {
                 Circle()
-                    .fill(preset.color.gradient)
-                    .frame(width: 20, height: 20)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.5), lineWidth: 1)
-                    )
-                
-                VStack(alignment: .leading, spacing: 2) {
+                    .fill(preset.color)
+                    .frame(width: 18, height: 18)
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 4) {
                     Text(preset.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(NotchDesign.Typography.voice(12, weight: .medium))
+                        .foregroundStyle(NotchDesign.Colors.textPrimary)
                         .lineLimit(1)
                     Text(preset.formattedDuration)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(NotchDesign.Typography.mono(10, weight: .medium))
+                        .foregroundStyle(PopoverStyle.muted)
                 }
-                
-                Spacer()
-                
-                Image(systemName: isActive ? "checkmark" : "play.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? preset.color : Color.secondary)
-                    .padding(6)
-                    .background(isActive ? preset.color.opacity(0.2) : Color.clear)
-                    .clipShape(Circle())
+
+                Spacer(minLength: 0)
+
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 22, height: 22)
+                        .background(Circle().fill(accent.opacity(0.25)))
+                } else {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PopoverStyle.faint)
+                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isActive ? preset.color.opacity(0.18) : Color.white.opacity(0.05))
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(isActive ? accent.opacity(0.18) : PopoverStyle.cardFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .strokeBorder(isActive ? accent.opacity(0.35) : Color.clear, lineWidth: 1)
+                    )
             )
+            .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -411,7 +551,6 @@ private struct TimerPresetRow: View {
 
 #Preview {
     TimerPopover()
-    .frame(width: 300)
-        .padding()
+        .padding(40)
         .background(Color.black)
 }

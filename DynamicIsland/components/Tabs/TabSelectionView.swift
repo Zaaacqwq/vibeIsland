@@ -79,7 +79,7 @@ struct TabSelectionView: View {
         return tabsArray
     }
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 4) {
             ForEach(Array(tabs.enumerated()), id: \.element.id) { idx, tab in
                 let isSelected = isSelected(tab)
 
@@ -87,12 +87,13 @@ struct TabSelectionView: View {
                 TabButton(label: tab.label, icon: tab.icon, selected: isSelected) {
                     coordinator.currentView = tab.view
                 }
-                .frame(height: 26)
-                .foregroundStyle(isSelected ? .white : .gray)
+                .foregroundStyle(isSelected ? NotchDesign.Colors.textPrimary : NotchDesign.Colors.textTertiary)
+                .frame(width: isSelected ? nil : 30, height: 30)
+                .padding(.horizontal, isSelected ? 12 : 0)
                 .background {
                     if isSelected {
                         Capsule()
-                            .fill(Color(nsColor: .secondarySystemFill).opacity(0.25))
+                            .fill(Color.white.opacity(0.09))
                             .matchedGeometryEffect(id: "capsule", in: animation)
                     } else {
                         Capsule()
@@ -102,11 +103,10 @@ struct TabSelectionView: View {
                     }
                 }
 
-                
+
             }
         }
         .animation(.smooth(duration: 0.3), value: coordinator.currentView)
-        .clipShape(Capsule())
         .onAppear {
             ensureValidSelection(with: tabs)
         }

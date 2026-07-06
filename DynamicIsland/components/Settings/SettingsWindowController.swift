@@ -58,7 +58,10 @@ class SettingsWindowController: NSWindowController {
         window.titlebarAppearsTransparent = false
         window.titleVisibility = .visible
         window.toolbarStyle = .unified
-        window.isMovableByWindowBackground = true
+        // Intentionally NOT movable by window background: it hijacks mouse-down on
+        // plain background views and breaks the drag-and-drop in the media control
+        // slot configurator. The visible title bar still lets users move the window.
+        window.isMovableByWindowBackground = false
         window.level = .normal
         
         // Make it behave like a regular app window with proper Spaces support

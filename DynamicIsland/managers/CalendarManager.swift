@@ -35,12 +35,33 @@ class CalendarManager: ObservableObject {
     /// Days (start-of-day) in the currently displayed month range that have at
     /// least one event/reminder — used to draw dots on the calendar tab grid.
     @Published var eventDates: Set<Date> = []
+    /// Up to three distinct calendar colors per day (start-of-day) across the
+    /// displayed month range — drives the small colored event dots on the
+    /// month-grid cells. Kept alongside `eventDates` so callers that only need
+    /// "has any event" stay cheap.
+    @Published var monthEventColors: [Date: [NSColor]] = [:]
     @Published var allCalendars: [CalendarModel] = []
     @Published var eventCalendars: [CalendarModel] = []
     @Published var reminderLists: [CalendarModel] = []
     @Published var selectedCalendarIDs: Set<String> = []
     @Published var calendarAuthorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var reminderAuthorizationStatus: EKAuthorizationStatus = .notDetermined
+
+    /// The next non-all-day calendar event happening today that hasn't ended
+    /// yet, from the currently loaded `events` window. Drives the open-notch
+    /// header's Calendar-tab widget; `nil` when nothing is left today.
+    var nextEventToday: EventModel? {
+        let now = Date()
+        let calendar = Calendar.current
+        return events
+            .filter { event in
+                event.type.isEvent
+                    && !event.isAllDay
+                    && calendar.isDateInToday(event.start)
+                    && event.end >= now
+            }
+            .min { $0.start < $1.start }
+    }
 
     private var selectedCalendars: [CalendarModel] = []
     private let calendarService = CalendarService()
@@ -260,6 +281,31 @@ class CalendarManager: ObservableObject {
         }
 
         self.eventDates = Set(monthEvents.map { cal.startOfDay(for: $0.start) })
+
+        // Group up to three distinct calendar colors per day for the grid dots.
+        var colorsByDay: [Date: [NSColor]] = [:]
+        var seenKeysByDay: [Date: Set<Int>] = [:]
+        for event in monthEvents {
+            let day = cal.startOfDay(for: event.start)
+            guard (colorsByDay[day]?.count ?? 0) < 3 else { continue }
+            let color = event.calendar.color
+            let key = Self.colorDedupKey(color)
+            var seen = seenKeysByDay[day] ?? []
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            seenKeysByDay[day] = seen
+            colorsByDay[day, default: []].append(color)
+        }
+        self.monthEventColors = colorsByDay
+    }
+
+    /// Coarse RGB bucket so near-identical calendar colors collapse to one dot.
+    private static func colorDedupKey(_ color: NSColor) -> Int {
+        let rgb = color.usingColorSpace(.sRGB) ?? color
+        let r = Int((rgb.redComponent * 32).rounded())
+        let g = Int((rgb.greenComponent * 32).rounded())
+        let b = Int((rgb.blueComponent * 32).rounded())
+        return (r << 12) | (g << 6) | b
     }
 
     private func updateEvents(force: Bool = false) async {

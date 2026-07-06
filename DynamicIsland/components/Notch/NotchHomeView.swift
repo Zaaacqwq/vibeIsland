@@ -264,8 +264,8 @@ struct AlbumArtView: View {
             AppIcon(for: musicManager.bundleIdentifier ?? "com.apple.Music")
                 .resizable()
                 .scaledToFill()
-                .frame(width: 36, height: 36)
-                .offset(x: 10, y: 10)
+                .frame(width: 15, height: 15)
+                .offset(x: 4, y: 4)
                 .transition(.scale.combined(with: .opacity).animation(.bouncy.delay(0.3)))
                 .zIndex(2)
         }
@@ -290,9 +290,11 @@ struct MusicControlsView: View {
     @Default(.enableLyrics) private var enableLyrics
     private let seekInterval: TimeInterval = 10
     private let skipMagnitude: CGFloat = 6
+    private let contentSpacing: CGFloat = 4
+    private let songInfoAndSliderHeight: CGFloat = 92
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: contentSpacing) {
             songInfoAndSlider
             if shouldShowControlHUDRow {
                 controlHUDRow
@@ -307,40 +309,48 @@ struct MusicControlsView: View {
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .center, spacing: 8) {
+                HStack(alignment: .center, spacing: 12) {
                     AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                        .frame(width: 38, height: 38)
-                    songInfo(width: max(0, geo.size.width - 46))
+                        .frame(width: 48, height: 48)
+                    songInfo(width: max(0, geo.size.width - 65))
                 }
                 musicSlider
             }
+            // Pin to the top of whatever height the parent proposes — a bare
+            // GeometryReader centers its child by default, which shoved this
+            // row down into the controls row below whenever the parent
+            // offered more height than the content needed.
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .padding(.top, 10)
         .padding(.leading, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: songInfoAndSliderHeight, alignment: .top)
     }
 
     private func songInfo(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 2) {
+            // Title, then artist on its own line beneath it, then lyrics — three
+            // stacked rows. The taller album art (see songInfoAndSlider) matches
+            // this block now that the card fills the full tab height.
             MusicTitleMarqueeView(
                 text: musicManager.songTitle,
                 isExplicit: musicManager.isCurrentTrackExplicit,
-                font: .headline,
+                font: NotchDesign.Typography.voice(15, weight: .semibold),
                 nsFont: .headline,
-                textColor: .white,
+                textColor: NotchDesign.Colors.textPrimary,
                 frameWidth: width,
-                badgeHeight: 14
+                badgeHeight: 15
             )
             MarqueeText(
                 $musicManager.artistName,
-                font: .headline,
+                font: NotchDesign.Typography.voice(12.5, weight: .medium),
                 nsFont: .headline,
                 textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor)
-                    .ensureMinimumBrightness(factor: 0.6) : .gray,
+                    .ensureMinimumBrightness(factor: 0.6) : NotchDesign.Colors.textSecondary,
                 frameWidth: width
             )
-            .fontWeight(.medium)
-            // Lyrics shown under the author name (same font size as author) when enabled in settings
+            // Lyrics shown under the title/artist lines (when enabled in settings)
             if enableLyrics {
                 let transition = AnyTransition.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
@@ -395,18 +405,24 @@ struct MusicControlsView: View {
                 guard !musicManager.isLiveStream else { return }
                 MusicManager.shared.seek(to: newValue)
             }
-            .padding(.top, 5)
-            .frame(height: 36)
+            .padding(.top, 2)
+            .frame(height: 26)
         }
     }
 
     private var playbackControls: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(displayedSlots.enumerated()), id: \.offset) { _, slot in
+        // Drop empty slots entirely instead of rendering them as greedy Spacers.
+        // A lone `.none` Spacer eats all horizontal slack and shoves the remaining
+        // buttons to one side (e.g. only 4 active controls). The `.center` frame
+        // below keeps the real buttons centered regardless of how many there are.
+        let controls = displayedSlots.filter { $0 != .none }
+        return HStack(spacing: 20) {
+            ForEach(Array(controls.enumerated()), id: \.offset) { _, slot in
                 slotView(for: slot)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.bottom, 0)
     }
 
     private var shouldShowControlHUDRow: Bool {
@@ -431,7 +447,8 @@ struct MusicControlsView: View {
         HStack(alignment: .center, spacing: 10) {
             if !controlLeftIconName.isEmpty {
                 Image(systemName: controlLeftIconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 22, height: 22, alignment: .center)
             }
 
@@ -439,11 +456,13 @@ struct MusicControlsView: View {
 
             if !controlRightIconName.isEmpty {
                 Image(systemName: controlRightIconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 22, height: 22, alignment: .center)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 8)
         .onAppear { syncHUDValueIfNeeded(force: true) }
         .onChange(of: coordinator.sneakPeek.value) { _, _ in
             syncHUDValueIfNeeded(force: false)
@@ -542,7 +561,7 @@ struct MusicControlsView: View {
     private var repeatIconColor: Color {
         switch musicManager.repeatMode {
         case .off:
-            return .white
+            return NotchDesign.Colors.textFaint
         case .all, .one:
             return brandAccentColor
         }
@@ -574,7 +593,10 @@ struct MusicControlsView: View {
         case .playPause:
             HoverButton(
                 icon: musicManager.isPlaying ? (musicManager.isLiveStream ? "stop.fill" : "pause.fill") : "play.fill",
-                scale: .large
+                scale: .large,
+                filled: true,
+                filledSize: 34,
+                filledIconSize: 15
             ) {
                 MusicManager.shared.togglePlay()
             }
@@ -613,7 +635,7 @@ struct MusicControlsView: View {
         case .shuffle:
             HoverButton(
                 icon: "shuffle",
-                iconColor: musicManager.isShuffled ? brandAccentColor : .white,
+                iconColor: musicManager.isShuffled ? brandAccentColor : NotchDesign.Colors.textFaint,
                 scale: .medium
             ) {
                 MusicManager.shared.toggleShuffle()
@@ -689,15 +711,11 @@ struct NotchHomeView: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @ObservedObject private var musicManager = MusicManager.shared
     @Default(.showStandardMediaControls) private var showStandardMediaControls
-    @Default(.autoHideInactiveNotchMediaPlayer) private var autoHideInactiveNotchMediaPlayer
     let albumArtNamespace: Namespace.ID
     @State private var calendarScrollSuppressionToken = UUID()
 
-    /// Whether the music player should actively display (enabled AND has real content).
-    private var shouldShowMusicPlayer: Bool {
-        showStandardMediaControls && (!autoHideInactiveNotchMediaPlayer || musicManager.hasActiveSession)
-    }
-    
+    private let homeCardContentPadding: CGFloat = 5
+
     var body: some View {
         Group {
             if !coordinator.firstLaunch {
@@ -711,34 +729,51 @@ struct NotchHomeView: View {
     }
 
     private var mainContent: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(alignment: .top, spacing: 14) {
             if Defaults[.enableMinimalisticUI] {
                 MinimalisticMusicPlayerView(albumArtNamespace: albumArtNamespace)
             } else {
                 // Normal mode: Show full music player with optional calendar and webcam.
-                // When the Agents panel is shown, keep music as a persistent left
-                // panel (whenever media controls are enabled) rather than auto-hiding
-                // it while idle, so the home tab keeps its music + agents split.
-                if Defaults[.enableAgentMonitoring] ? showStandardMediaControls : shouldShowMusicPlayer {
+                // The media player is a persistent left panel whenever media controls
+                // are enabled — it stays visible even while playback is idle.
+                if showStandardMediaControls {
                     MusicPlayerView(albumArtNamespace: albumArtNamespace)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Fill the full (fixed) panel height so the media and
+                        // agents cards are always the SAME height — a two-column
+                        // equal grid. Content top-aligns; shorter content leaves
+                        // breathing room below rather than making its card shorter
+                        // than its neighbour.
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                        .padding(homeCardContentPadding)
+                        .notchCard(radius: NotchDesign.Radius.lg)
                 }
 
                 if Defaults[.enableAgentMonitoring] {
                     // Agent monitor takes the home view's secondary panel;
                     // the calendar moves to its own tab.
                     NotchAgentsView(showsInputOverlay: false)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Match the media card's full height (see above) so the
+                        // idle empty-state no longer sticks out taller than the
+                        // media card next to it.
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
                         .environmentObject(vm)
+                        .padding(homeCardContentPadding)
+                        .notchCard(radius: NotchDesign.Radius.lg)
                 } else if Defaults[.showCalendar] {
                     Group {
-                        if shouldShowMusicPlayer {
+                        if showStandardMediaControls {
                             CalendarView()
                         } else {
                             StandaloneCalendarView()
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Fill the full (fixed) panel height so the calendar card is
+                    // the same height as the media card next to it (equal columns),
+                    // matching the media/agents branches above.
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
                     .onHover { isHovering in
                         vm.setScrollGestureSuppression(isHovering, token: calendarScrollSuppressionToken)
                     }
@@ -746,15 +781,25 @@ struct NotchHomeView: View {
                         vm.setScrollGestureSuppression(false, token: calendarScrollSuppressionToken)
                     }
                     .environmentObject(vm)
+                    .padding(5)
+                    .notchCard(radius: NotchDesign.Radius.lg)
                 }
-                
+
             }
         }
         // No root `.transition` here either — ContentView owns open/close (top-down
         // drop + blur) and tab-switch (horizontal slide). The `.blur` below is a
         // separate closed-state effect and stays.
         .blur(radius: vm.notchState == .closed ? 30 : 0)
-        .padding(Defaults[.enableMinimalisticUI] ? 0 : 8) //Putting the main padding for home view here for consistency
+        // Uniform tab insets come from the shared tab container in ContentView
+        // (`NotchDesign.TabInset`) — no root padding here.
+        // Claim the full (fixed) open-notch height so the two cards inside have a
+        // definite height to stretch into (each card uses `maxHeight: .infinity`,
+        // so both fill down to the shared inset boundary and stay equal height)
+        // — otherwise the HStack hugs its content and the cards collapse back to
+        // intrinsic (idle-agents-taller) sizing. Safe now that the window height
+        // is fixed (see standardOpenNotchContentHeight).
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -828,9 +873,8 @@ struct MusicSliderView: View {
                 Spacer()
                 Text(trailingTimeText)
             }
-            .fontWeight(.medium)
             .foregroundColor(timeLabelColor)
-            .font(.caption)
+            .font(NotchDesign.Typography.mono(10))
         }
     }
 
@@ -910,7 +954,7 @@ struct MusicSliderView: View {
     private var timeLabelColor: Color {
         Defaults[.playerColorTinting]
             ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6)
-            : .gray
+            : NotchDesign.Colors.textFaint
     }
 
     private var trailingTimeText: String {
@@ -970,7 +1014,7 @@ struct CustomSlider: View {
             ZStack(alignment: .leading) {
                 // Background track
                 Rectangle()
-                    .fill(.gray.opacity(0.3))
+                    .fill(Color.white.opacity(0.12))
                     .frame(height: trackHeight)
 
                 // Filled track

@@ -20,6 +20,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import ApplicationServices
+import ApplicationServices
 import Defaults
 import MacroVisionKit
 import SwiftUI
@@ -81,15 +83,62 @@ class FullscreenMediaDetector: ObservableObject {
 
         let apps = detector.detectFullscreenApps(debug: false)
         let names = NSScreen.screens.map { $0.localizedName }
+        let hideOption = Defaults[.hideNotchOption]
+
         var newStatus: [String: Bool] = [:]
         for name in names {
-            newStatus[name] = apps.contains { $0.screen.localizedName == name && $0.bundleIdentifier != "com.apple.finder" && ($0.bundleIdentifier == musicManager.bundleIdentifier || Defaults[.hideNotchOption] == .always) }
+            newStatus[name] = apps.contains { app in
+                guard app.screen.localizedName == name,
+                      app.bundleIdentifier != "com.apple.finder" else { return false }
+
+                switch hideOption {
+                case .always:
+                    return isInNativeFullscreen(app)
+                case .nowPlayingOnly:
+                    return app.bundleIdentifier == musicManager.bundleIdentifier
+                        && isInNativeFullscreen(app)
+                case .never:
+                    return false
+                }
+            }
         }
 
         if newStatus != fullscreenStatus {
             fullscreenStatus = newStatus
             NSLog("✅ Fullscreen status: \(newStatus)")
         }
+    }
+
+    /// Confirms an app flagged as screen-filling is in genuine native
+    /// fullscreen, not merely maximized/zoomed. When Accessibility is not
+    /// trusted, keep the detector's frame-based behavior as a fallback.
+    private func isInNativeFullscreen(_ app: MacroVisionKit.FullscreenWindowInfo) -> Bool {
+        guard AXIsProcessTrusted() else { return true }
+
+        let appElement = AXUIElementCreateApplication(app.processId)
+
+        if let focused: AXUIElement = copyAttribute(kAXFocusedWindowAttribute as CFString, from: appElement),
+           isWindowFullscreen(focused) {
+            return true
+        }
+
+        if let windows: [AXUIElement] = copyAttribute(kAXWindowsAttribute as CFString, from: appElement) {
+            return windows.contains { isWindowFullscreen($0) }
+        }
+
+        return false
+    }
+
+    private func isWindowFullscreen(_ window: AXUIElement) -> Bool {
+        let value: Bool? = copyAttribute("AXFullScreen" as CFString, from: window)
+        return value ?? false
+    }
+
+    private func copyAttribute<T>(_ attribute: CFString, from element: AXUIElement) -> T? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success,
+              let typed = value as? T else { return nil }
+        return typed
     }
 
     private func cleanupNotificationObservers() {

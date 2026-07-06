@@ -51,17 +51,25 @@ struct ShelfView: View {
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
     private let spacing: CGFloat = 8
+    private let quickShareWidth: CGFloat = 150
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: NotchDesign.Spacing.md) {
             FileShareView()
-                .aspectRatio(1, contentMode: .fit)
+                .frame(width: quickShareWidth)
+                .frame(maxHeight: .infinity)
                 .environmentObject(vm)
             panel
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
                     handleDrop(providers: providers)
                 }
         }
+        // Uniform tab insets + height budget come from the shared tab container
+        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
+        // (The old `contentPadding` + negative drop-zone outset are gone so the
+        // shelf respects the same margins as every other tab.)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // Bind Quick Look to shelf selection
         .onChange(of: selection.selectedIDs) {
             updateQuickLookSelection()
@@ -96,13 +104,17 @@ struct ShelfView: View {
     }
 
     var panel: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .stroke(
-                vm.dragDetectorTargeting
-                    ? Color.accentColor.opacity(0.9)
-                    : Color.white.opacity(0.1),
-                style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [10])
-            )
+        RoundedRectangle(cornerRadius: NotchDesign.Radius.xl, style: .continuous)
+            .fill(NotchDesign.Colors.cardFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: NotchDesign.Radius.xl, style: .continuous)
+                    .stroke(
+                        vm.dragDetectorTargeting
+                            ? NotchDesign.Colors.accent.opacity(0.9)
+                            : NotchDesign.Colors.hairlineStrong,
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [8, 6])
+                    )
+            }
             .overlay {
                 ZStack {
                     ShelfBackgroundClickCatcher {
@@ -111,7 +123,7 @@ struct ShelfView: View {
                     }
 
                     content
-                        .padding()
+                        .padding(12)
                 }
             }
             .transaction { transaction in
@@ -121,20 +133,21 @@ struct ShelfView: View {
     }
 
     var content: some View {
-        Group {
-            if tvm.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "tray.and.arrow.down")
-                        .symbolVariant(.fill)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.white, .gray)
-                        .imageScale(.large)
-                    
-                    Text("Drop files here")
-                        .foregroundStyle(.gray)
-                        .font(.system(.title3, design: .rounded))
-                        .fontWeight(.medium)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                NotchMonoEyebrow(text: "Drop Zone")
+                Spacer()
+                Text(itemSummary)
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+                    .foregroundStyle(NotchDesign.Colors.textFaint)
+                if !tvm.isEmpty {
+                    clearAllButton
                 }
+            }
+
+            if tvm.isEmpty {
+                emptyDropHint
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView(.horizontal) {
                     HStack(spacing: spacing) {
@@ -144,15 +157,60 @@ struct ShelfView: View {
                         }
                     }
                 }
-                .padding(-spacing)
                 .scrollIndicators(.never)
                 .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
                     handleDrop(providers: providers)
                 }
             }
+
+            hintRow
         }
         .onAppear {
             ShelfStateViewModel.shared.cleanupInvalidItems()
+        }
+    }
+
+    private var itemSummary: String {
+        tvm.items.isEmpty ? "0 items" : "\(tvm.items.count) items"
+    }
+
+    private var clearAllButton: some View {
+        Button {
+            ShelfSelectionModel.shared.clear()
+            tvm.removeAll()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "trash")
+                    .font(.system(size: 9, weight: .semibold))
+                Text("Clear all")
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+            }
+            .foregroundStyle(NotchDesign.Colors.textFaint)
+        }
+        .buttonStyle(.plain)
+        .help("Remove all files from the shelf")
+    }
+
+    private var emptyDropHint: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "tray.and.arrow.down")
+                .font(.system(size: 22, weight: .light))
+                .foregroundStyle(NotchDesign.Colors.textTertiary)
+            Text("Drop files to stash them here")
+                .font(NotchDesign.Typography.voice(13, weight: .medium))
+                .foregroundStyle(NotchDesign.Colors.textSecondary)
+        }
+    }
+
+    private var hintRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: vm.dragDetectorTargeting ? "plus.circle.fill" : "plus.circle")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(vm.dragDetectorTargeting ? NotchDesign.Colors.accent : NotchDesign.Colors.textTertiary)
+            Text("Drop files to stash them here")
+                .font(NotchDesign.Typography.mono(10))
+                .foregroundStyle(NotchDesign.Colors.textTertiary)
+            Spacer()
         }
     }
 }

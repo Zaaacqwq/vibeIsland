@@ -25,12 +25,18 @@ import EventKit
 enum CalendarStyle {
     static let surface = Color.white.opacity(0.05)
     static let surfaceHover = Color.white.opacity(0.10)
-    static let hairline = Color.white.opacity(0.08)
+    static let hairline = NotchDesign.Colors.hairlineStrong
+    static let hairlineFaint = Color.white.opacity(0.05)
 
-    static let ink = Color.white
+    static let ink = NotchDesign.Colors.textPrimary
     static let body = Color(white: 0.72)
-    static let muted = Color(white: 0.55)
-    static let faint = Color(white: 0.35)
+    static let muted = NotchDesign.Colors.textSecondary
+    static let faint = NotchDesign.Colors.textTertiary
+    /// Weekend / de-emphasized numerals — one notch dimmer than `faint`.
+    static let dim = Color(nsColor: NSColor(geistHex: "#5A5A5A"))
+    /// Near-black text/glyphs sitting on top of an accent fill (today cell,
+    /// active toggle segment) — matches the mockup's `#0a0a0a` on accent.
+    static let onAccent = Color(nsColor: NSColor(geistHex: "#0A0A0A"))
 
     static let cardRadius: CGFloat = 14
     static let chipRadius: CGFloat = 10
@@ -199,61 +205,62 @@ struct WheelPicker: View {
     }
 }
 
+/// Compact week-view calendar embedded in the Home tab's right panel (shown when
+/// agent monitoring is off and music is playing). Same notch-calendar language as
+/// the full tab — month/year label, the shared `WeekDateSlider`, and the new
+/// `CalendarAgendaList` — laid out for the narrower panel (label left, a wide
+/// slider filling the rest, agenda below). The Home embed's `.notchCard` wrapper
+/// provides the gray surface, so this view adds no card of its own.
 struct CalendarView: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
     @Default(.hideAllDayEvents) private var hideAllDayEvents
     @Default(.hideCompletedReminders) private var hideCompletedReminders
+    @Default(.showFullEventTitles) private var showFullEventTitles
+
+    private let calendar = Calendar.current
+
+    private var filteredEvents: [EventModel] {
+        EventListView.filteredEvents(
+            events: calendarManager.events,
+            hideCompletedReminders: hideCompletedReminders,
+            hideAllDayEvents: hideAllDayEvents
+        )
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(selectedDate.formatted(.dateTime.month(.abbreviated)))
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .font(NotchDesign.Typography.voice(13, weight: .semibold))
+                        .foregroundStyle(CalendarStyle.ink)
                     Text(selectedDate.formatted(.dateTime.year()))
-                        .font(.title3)
-                        .fontWeight(.light)
-                        .foregroundColor(Color(white: 0.65))
+                        .font(NotchDesign.Typography.voice(13, weight: .light))
+                        .foregroundStyle(CalendarStyle.muted)
                 }
+                .fixedSize()
 
-                ZStack(alignment: .top) {
-                    WheelPicker(selectedDate: $selectedDate, config: Config())
-                    HStack(alignment: .top) {
-                        LinearGradient(
-                            colors: [Color.black, .clear], startPoint: .leading, endPoint: .trailing
-                        )
-                        .frame(width: 20)
-                        Spacer()
-                        LinearGradient(
-                            colors: [.clear, Color.black], startPoint: .leading, endPoint: .trailing
-                        )
-                        .frame(width: 20)
-                    }
-                }
+                // Tighter cells + fade into the card fill (this sits inside the
+                // Home embed's gray notchCard, not the black panel). Pin the
+                // height so the horizontal ScrollView doesn't greedily expand
+                // vertically (the tab constrains this via its control-row height)
+                // and leave a big gap above the agenda.
+                WeekDateSlider(
+                    selectedDate: $selectedDate,
+                    cellWidth: 36,
+                    cellSpacing: 2,
+                    fadeColor: NotchDesign.Colors.cardFill
+                )
+                .frame(height: 34)
             }
 
-            let filteredEvents = EventListView.filteredEvents(
-                events: calendarManager.events,
-                hideCompletedReminders: hideCompletedReminders,
-                hideAllDayEvents: hideAllDayEvents
-            )
-            if filteredEvents.isEmpty {
-                EmptyEventsView(selectedDate: selectedDate)
-                Spacer(minLength: 0)
-            } else {
-                EventListView(events: calendarManager.events)
-            }
+            agenda
         }
-        .listRowBackground(Color.clear)
-        .frame(height: 120)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: selectedDate) {
-            Task {
-                await calendarManager.updateCurrentDate(selectedDate)
-            }
+            Task { await calendarManager.updateCurrentDate(selectedDate) }
         }
         .onChange(of: vm.notchState) { _, _ in
             Task {
@@ -268,6 +275,153 @@ struct CalendarView: View {
             }
         }
     }
+
+    private var agenda: some View {
+        CalendarAgendaList(
+            events: filteredEvents,
+            showFullEventTitles: showFullEventTitles,
+            selectedDate: selectedDate,
+            scrollResetID: calendar.startOfDay(for: selectedDate),
+            onToggleReminder: { reminderID, completed in
+                Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+}
+
+/// Full open-notch Calendar tab. Single-column, mode-toggled surface following
+/// the notch UI redesign: a header control row (month label + nav + Week/Month
+/// toggle), then either a week strip over a flat agenda list, or a static paged
+/// month grid over a compact selected-day summary. The "Calendar" tab pill
+/// itself lives in the shared `DynamicIslandHeader`, so this body starts with
+/// the mode controls rather than repeating the pill.
+/// Reusable horizontal date slider in the notch calendar style: a continuous,
+/// snap-to-center strip of days. Scrolling pages days and selects the centered
+/// one; changing `selectedDate` elsewhere recenters the strip. Registers scroll +
+/// tab-switch suppression while hovered so a sideways scroll pages days instead of
+/// closing the notch / switching tabs. Shared by the full Calendar tab header and
+/// the compact Home embed.
+struct WeekDateSlider: View {
+    @EnvironmentObject var vm: DynamicIslandViewModel
+    @Binding var selectedDate: Date
+    var cellWidth: CGFloat = 44
+    var cellSpacing: CGFloat = 3
+    /// Color the day cells fade into at both ends — black on the tab's flat black
+    /// header, the card fill when embedded inside a `notchCard` (Home).
+    var fadeColor: Color = .black
+
+    @State private var scrollID: Date?
+    @State private var programmatic = false
+    @State private var suppressionToken = UUID()
+
+    private let calendar = Calendar.current
+    private static let pastDays = 120
+    private static let futureDays = 240
+
+    private var days: [Date] {
+        let today = calendar.startOfDay(for: Date())
+        guard let start = calendar.date(byAdding: .day, value: -Self.pastDays, to: today) else { return [] }
+        let count = Self.pastDays + Self.futureDays + 1
+        return (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: cellSpacing) {
+                ForEach(days, id: \.self) { day in
+                    cell(day)
+                        .frame(width: cellWidth)
+                        .id(calendar.startOfDay(for: day))
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.never)
+        .scrollPosition(id: $scrollID, anchor: .center)
+        .scrollTargetBehavior(.viewAligned)
+        .overlay(alignment: .leading) { edgeFade(leading: true) }
+        .overlay(alignment: .trailing) { edgeFade(leading: false) }
+        .onHover { hovering in
+            vm.setScrollGestureSuppression(hovering, token: suppressionToken)
+            vm.setTabSwitchSuppression(hovering, token: suppressionToken)
+        }
+        .onDisappear {
+            vm.setScrollGestureSuppression(false, token: suppressionToken)
+            vm.setTabSwitchSuppression(false, token: suppressionToken)
+        }
+        .onAppear {
+            programmatic = true
+            scrollID = calendar.startOfDay(for: selectedDate)
+        }
+        // User scroll settled on a new centered day → select it.
+        .onChange(of: scrollID) { _, newID in
+            guard let newID else { return }
+            if programmatic { programmatic = false; return }
+            if !calendar.isDate(newID, inSameDayAs: selectedDate) { select(newID) }
+        }
+        // Selection changed elsewhere (tap, nav arrows) → recenter the slider.
+        .onChange(of: selectedDate) { _, newDate in
+            let target = calendar.startOfDay(for: newDate)
+            guard scrollID == nil || !calendar.isDate(scrollID ?? target, inSameDayAs: target) else { return }
+            programmatic = true
+            withAnimation(.smooth(duration: 0.2)) { scrollID = target }
+        }
+    }
+
+    private func select(_ day: Date) {
+        withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
+    }
+
+    private func edgeFade(leading: Bool) -> some View {
+        LinearGradient(
+            colors: leading ? [fadeColor, .clear] : [.clear, fadeColor],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .frame(width: 18)
+        .allowsHitTesting(false)
+    }
+
+    private func cell(_ day: Date) -> some View {
+        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(day)
+        let isWeekend = calendar.isDateInWeekend(day)
+        let dow = day.formatted(.dateTime.weekday(.abbreviated)).uppercased()
+
+        return Button { select(day) } label: {
+            VStack(spacing: 1) {
+                Text(dow)
+                    .font(NotchDesign.Typography.mono(7, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? CalendarStyle.onAccent.opacity(0.7)
+                                     : (isWeekend ? CalendarStyle.dim : CalendarStyle.faint))
+                Text(day.formatted(.dateTime.day()))
+                    .font(NotchDesign.Typography.voice(12, weight: isSelected || isToday ? .semibold : .medium))
+                    .foregroundStyle(numeralColor(isSelected: isSelected, isToday: isToday, isWeekend: isWeekend))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isSelected ? CalendarStyle.accent : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .stroke(CalendarStyle.accent, lineWidth: (!isSelected && isToday) ? 1.5 : 0)
+                    )
+                    // Inset the highlight so its rounded top/bottom (and today's
+                    // ring) clear the slider's clip edges instead of being cropped.
+                    .padding(.vertical, 3)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func numeralColor(isSelected: Bool, isToday: Bool, isWeekend: Bool) -> Color {
+        if isSelected { return CalendarStyle.onAccent }
+        if isToday { return CalendarStyle.accent }
+        if isWeekend { return NotchDesign.Colors.textFaint }
+        return CalendarStyle.ink
+    }
 }
 
 struct StandaloneCalendarView: View {
@@ -275,29 +429,42 @@ struct StandaloneCalendarView: View {
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
     @State private var displayedMonth = Date()
-    @State private var datePickerScrollTarget: Date?
     @Default(.hideAllDayEvents) private var hideAllDayEvents
     @Default(.hideCompletedReminders) private var hideCompletedReminders
+    @Default(.showFullEventTitles) private var showFullEventTitles
     @Default(.calendarTabLayout) private var layout
 
     private let calendar = Calendar.current
+    private let weekColumns: [GridItem] = Array(repeating: GridItem(.flexible(minimum: 14), spacing: 4), count: 7)
 
-    private var weekdaySymbols: [String] {
-        let symbols = calendar.veryShortStandaloneWeekdaySymbols
-        guard !symbols.isEmpty else { return symbols }
+    private var isWeek: Bool { layout == .week }
 
-        let firstWeekdayIndex = max(0, min(symbols.count - 1, calendar.firstWeekday - 1))
-        var ordered = Array(symbols[firstWeekdayIndex...])
-        ordered.append(contentsOf: symbols[..<firstWeekdayIndex])
-        return ordered
+    private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    /// Shared content-height budget (open-notch height minus header and the
+    /// uniform tab insets), identical to every other tab via
+    /// `NotchDesign.TabInset`. Used for internal splits (e.g. `weekStripHeight`);
+    /// the root frame itself just fills the region the shared container provides.
+    private var tabContentHeight: CGFloat {
+        NotchDesign.TabInset.contentHeight(headerHeight: headerHeight)
     }
 
-    private var monthTitle: String {
-        displayedMonth.formatted(.dateTime.month(.wide))
+    // MARK: - Derived data
+
+    /// Weekday columns ordered by the user's `firstWeekday`, each tagged with
+    /// whether it is a weekend column (for the dimmer weekend styling).
+    private var orderedWeekdays: [(symbol: String, isWeekend: Bool)] {
+        let symbols = calendar.shortStandaloneWeekdaySymbols
+        guard symbols.count == 7 else { return symbols.map { ($0, false) } }
+        let first = calendar.firstWeekday
+        return (0..<7).map { offset in
+            let weekday = ((first - 1 + offset) % 7) + 1 // 1 = Sunday ... 7 = Saturday
+            return (symbols[weekday - 1], weekday == 1 || weekday == 7)
+        }
     }
 
-    private var yearTitle: String {
-        displayedMonth.formatted(.dateTime.year())
+    private var monthLabel: String {
+        displayedMonth.formatted(.dateTime.month(.wide).year())
     }
 
     private var monthDays: [Date] {
@@ -317,267 +484,6 @@ struct StandaloneCalendarView: View {
         return days
     }
 
-    private var filteredEvents: [EventModel] {
-        EventListView.filteredEvents(
-            events: calendarManager.events,
-            hideCompletedReminders: hideCompletedReminders,
-            hideAllDayEvents: hideAllDayEvents
-        )
-    }
-
-    private var resolvedNotchHeight: CGFloat {
-        let height = vm.notchSize.height
-        return height > 0 ? height : openNotchSize.height
-    }
-
-    private var headerHeight: CGFloat {
-        max(24, vm.effectiveClosedNotchHeight)
-    }
-
-    private var maxTabContentHeight: CGFloat {
-        let available = resolvedNotchHeight - headerHeight - 36
-        return max(130, available)
-    }
-
-    private let weekColumns: [GridItem] = Array(repeating: GridItem(.flexible(minimum: 14), spacing: 6), count: 7)
-
-    var body: some View {
-        GeometryReader { geometry in
-            let paneSpacing: CGFloat = 14
-            let paneWidth = max((geometry.size.width - paneSpacing) / 2, 0)
-            let paneHeight = max(0, geometry.size.height)
-
-            HStack(alignment: .top, spacing: paneSpacing) {
-                leftPickerPane(height: paneHeight)
-                    .frame(width: paneWidth, height: paneHeight, alignment: .topLeading)
-                    .layoutPriority(1)
-
-                rightEventsPane
-                    .frame(width: paneWidth, height: paneHeight, alignment: .topLeading)
-                    .layoutPriority(1)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .clipped()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .clipped()
-        .onAppear {
-            selectedDate = Date.now
-            displayedMonth = selectedDate.startOfMonth
-            requestDatePickerCenterOnCurrentDate()
-            Task {
-                await calendarManager.updateCurrentDate(selectedDate)
-                await calendarManager.loadEventDates(forMonth: displayedMonth)
-            }
-        }
-        .onChange(of: selectedDate) { _, newDate in
-            withAnimation(.smooth(duration: 0.22)) {
-                displayedMonth = newDate.startOfMonth
-            }
-            Task { await calendarManager.updateCurrentDate(newDate) }
-        }
-        .onChange(of: displayedMonth) { _, newMonth in
-            Task { await calendarManager.loadEventDates(forMonth: newMonth) }
-        }
-        .onChange(of: vm.notchState) { _, newState in
-            guard newState == .open else { return }
-            selectedDate = Date.now
-            displayedMonth = selectedDate.startOfMonth
-            requestDatePickerCenterOnCurrentDate()
-            Task {
-                await calendarManager.updateCurrentDate(selectedDate)
-                await calendarManager.loadEventDates(forMonth: displayedMonth)
-            }
-        }
-    }
-
-    // MARK: - Left pane (date picker)
-
-    private func leftPickerPane(height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            pickerHeader
-            weekdayHeader
-            pickerBody(height: height)
-        }
-        .padding(.horizontal, 6)
-        .padding(.top, 4)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .clipped()
-    }
-
-    private var pickerHeader: some View {
-        HStack(alignment: .center) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(monthTitle)
-                    .font(.title3).fontWeight(.semibold)
-                    .foregroundStyle(CalendarStyle.ink)
-                Text(yearTitle)
-                    .font(.subheadline).fontWeight(.medium)
-                    .foregroundStyle(CalendarStyle.muted)
-            }
-            Spacer()
-            HStack(spacing: 2) {
-                if !calendar.isDateInToday(selectedDate) {
-                    headerButton(icon: "smallcircle.filled.circle", action: goToToday)
-                }
-                headerButton(icon: "chevron.left", action: showPrevious)
-                headerButton(icon: "chevron.right", action: showNext)
-            }
-            .foregroundStyle(CalendarStyle.ink)
-        }
-    }
-
-    private func headerButton(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var weekdayHeader: some View {
-        LazyVGrid(columns: weekColumns, spacing: 6) {
-            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
-                Text(symbol.prefix(1))
-                    .font(.caption2).fontWeight(.semibold)
-                    .foregroundStyle(CalendarStyle.muted)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func pickerBody(height: CGFloat) -> some View {
-        switch layout {
-        case .scrollingMonth: scrollingMonthView
-        case .week: weekStripView
-        }
-    }
-
-    private var scrollingMonthView: some View {
-        ScrollViewReader { proxy in
-            ZStack {
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVGrid(columns: weekColumns, spacing: 6) {
-                        ForEach(monthDays, id: \.self) { day in
-                            dayCell(for: day, rowHeight: 34, dimOtherMonths: true)
-                                .id(calendar.startOfDay(for: day))
-                        }
-                    }
-                    .padding(.bottom, 2)
-                }
-                .onChange(of: datePickerScrollTarget) { _, target in
-                    guard let target else { return }
-                    centerDatePicker(on: target, proxy: proxy)
-                }
-                edgeFade(top: true)
-                edgeFade(top: false)
-            }
-        }
-        .clipped()
-    }
-
-    private var weekStripView: some View {
-        LazyVGrid(columns: weekColumns, spacing: 2) {
-            ForEach(currentWeekDays, id: \.self) { day in
-                dayCell(for: day, rowHeight: 44, dimOtherMonths: false)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private func edgeFade(top: Bool) -> some View {
-        LinearGradient(
-            colors: top ? [Color.black.opacity(0.6), .clear] : [.clear, Color.black.opacity(0.6)],
-            startPoint: .top, endPoint: .bottom
-        )
-        .frame(height: 14)
-        .allowsHitTesting(false)
-        .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
-    }
-
-    // MARK: - Right pane (events)
-
-    private var rightEventsPane: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(selectedDateTitle)
-                .font(.subheadline).fontWeight(.semibold)
-                .foregroundStyle(CalendarStyle.ink)
-                .padding(.horizontal, 2)
-
-            if filteredEvents.isEmpty {
-                EmptyEventsView(selectedDate: selectedDate)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                StandaloneEventCardList(
-                    events: filteredEvents,
-                    showFullEventTitles: Defaults[.showFullEventTitles],
-                    onToggleReminder: { reminderID, completed in
-                        Task {
-                            await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed)
-                        }
-                    }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.top, 4)
-        .clipped()
-    }
-
-    private var selectedDateTitle: String {
-        if calendar.isDateInToday(selectedDate) { return String(localized: "Today") }
-        if calendar.isDateInTomorrow(selectedDate) { return String(localized: "Tomorrow") }
-        return selectedDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-    }
-
-    // MARK: - Day cell
-
-    private func dayCell(for day: Date, rowHeight: CGFloat, dimOtherMonths: Bool) -> some View {
-        let isCurrentMonth = !dimOtherMonths || calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
-        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
-        let isToday = calendar.isDateInToday(day)
-        let hasEvent = calendarManager.eventDates.contains(calendar.startOfDay(for: day))
-
-        return Button {
-            withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
-        } label: {
-            ZStack {
-                if isSelected {
-                    Circle().fill(CalendarStyle.accent).frame(width: 26, height: 26)
-                } else if isToday {
-                    Circle().stroke(CalendarStyle.accent, lineWidth: 1.5).frame(width: 26, height: 26)
-                }
-                Text(day.formatted(.dateTime.day()))
-                    .font(.system(size: 12, weight: isSelected || isToday ? .semibold : .medium))
-                    .foregroundStyle(dayTextColor(isCurrentMonth: isCurrentMonth, isSelected: isSelected, isToday: isToday))
-            }
-            .frame(width: 26, height: 26)
-            .overlay(alignment: .bottom) {
-                Circle()
-                    .fill(isSelected ? Color.white : CalendarStyle.accent)
-                    .frame(width: 4, height: 4)
-                    .offset(y: 6)
-                    .opacity(hasEvent ? 1 : 0)
-            }
-            .frame(maxWidth: .infinity, minHeight: rowHeight)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func dayTextColor(isCurrentMonth: Bool, isSelected: Bool, isToday: Bool) -> Color {
-        if isSelected { return .white }
-        if !isCurrentMonth { return CalendarStyle.faint }
-        if isToday { return CalendarStyle.accent }
-        return CalendarStyle.ink
-    }
-
-    // MARK: - Navigation
-
     private var currentWeekDays: [Date] {
         guard let interval = calendar.dateInterval(of: .weekOfMonth, for: selectedDate) else { return [] }
         var days: [Date] = []
@@ -590,20 +496,254 @@ struct StandaloneCalendarView: View {
         return days
     }
 
-    private func goToToday() {
-        withAnimation(.smooth(duration: 0.22)) {
-            selectedDate = Date.now
-            displayedMonth = selectedDate.startOfMonth
+    private var filteredEvents: [EventModel] {
+        EventListView.filteredEvents(
+            events: calendarManager.events,
+            hideCompletedReminders: hideCompletedReminders,
+            hideAllDayEvents: hideAllDayEvents
+        )
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            controlRow
+                .padding(.bottom, 6)
+
+            if isWeek {
+                agenda
+            } else {
+                monthTwoPane
+            }
         }
-        requestDatePickerCenterOnCurrentDate()
+        // Same root frame every other tab uses (see NotchWeatherView): fill the
+        // region ContentView bounds with `NotchDesign.TabInset`, top-aligned, and
+        // let the notch stay content-driven. A fixed `height:` pin here forces the
+        // full budget and makes the calendar taller than the content-driven tabs.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .onAppear { resetToToday() }
+        .onChange(of: selectedDate) { _, newDate in
+            withAnimation(.smooth(duration: 0.22)) { displayedMonth = newDate.startOfMonth }
+            Task { await calendarManager.updateCurrentDate(newDate) }
+        }
+        .onChange(of: displayedMonth) { _, newMonth in
+            Task { await calendarManager.loadEventDates(forMonth: newMonth) }
+        }
+        .onChange(of: vm.notchState) { _, newState in
+            guard newState == .open else { return }
+            resetToToday()
+        }
+    }
+
+    private func resetToToday() {
+        selectedDate = Date.now
+        displayedMonth = selectedDate.startOfMonth
+        Task {
+            await calendarManager.updateCurrentDate(selectedDate)
+            await calendarManager.loadEventDates(forMonth: displayedMonth)
+        }
+    }
+
+    // MARK: - Header control row
+
+    private var controlRow: some View {
+        HStack(spacing: 8) {
+            // Both modes give their left half of the row to the weekday chrome —
+            // the same width the grid/agenda occupy below — paired with the right
+            // cluster, each greedily taking `maxWidth: .infinity` so they split the
+            // row 50/50. Week mode puts the full weekday+date strip here; month
+            // mode lifts just the weekday header up (its date grid stays in the
+            // lower-left card), padded to line its columns up with that grid.
+            if isWeek {
+                WeekDateSlider(selectedDate: $selectedDate)
+            } else {
+                monthWeekdayHeader
+                    .padding(.horizontal, 8)
+                    .frame(maxWidth: .infinity)
+            }
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                navButton(icon: "chevron.left", action: showPrevious)
+                Text(monthLabel.uppercased())
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+                    .tracking(NotchDesign.eyebrowTracking)
+                    .foregroundStyle(CalendarStyle.muted)
+                    .fixedSize()
+                navButton(icon: "chevron.right", action: showNext)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: isWeek ? 30 : 22)
+    }
+
+    private func navButton(icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(CalendarStyle.faint)
+                .frame(width: 18, height: 18)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Week mode
+
+    private var agenda: some View {
+        CalendarAgendaList(
+            events: filteredEvents,
+            showFullEventTitles: showFullEventTitles,
+            selectedDate: selectedDate,
+            scrollResetID: calendar.startOfDay(for: selectedDate),
+            onToggleReminder: { reminderID, completed in
+                Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .notchCard(radius: NotchDesign.Radius.md)
+    }
+
+    // MARK: - Month mode
+
+    /// Month mode is a two-pane surface: a scrollable calendar grid on the left,
+    /// the selected day's agenda (or empty state) on the right — mirroring the
+    /// week agenda so both modes share the same event surface.
+    private var monthTwoPane: some View {
+        HStack(alignment: .top, spacing: 10) {
+            monthLeftPane
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            agenda
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var monthLeftPane: some View {
+        // Weekday header now lives in the control row; this pane is just the
+        // scrollable date grid.
+        monthGrid
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .notchCard(radius: NotchDesign.Radius.md)
+    }
+
+    private var monthWeekdayHeader: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(orderedWeekdays.enumerated()), id: \.offset) { _, entry in
+                Text(entry.symbol.prefix(1).uppercased())
+                    .font(NotchDesign.Typography.mono(10, weight: .medium))
+                    .foregroundStyle(entry.isWeekend ? CalendarStyle.dim : CalendarStyle.faint)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    /// Per-week row height. The full month (5–6 rows) is taller than the notch
+    /// budget, so the grid scrolls vertically inside the left pane.
+    private static let monthRowHeight: CGFloat = 38
+
+    private var monthGrid: some View {
+        ScrollViewReader { proxy in
+            ZStack {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVGrid(columns: weekColumns, spacing: 2) {
+                        ForEach(monthDays, id: \.self) { day in
+                            monthCell(day)
+                                .id(calendar.startOfDay(for: day))
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                monthEdgeFade(top: true)
+                monthEdgeFade(top: false)
+            }
+            .onAppear { scrollMonth(to: selectedDate, proxy: proxy, animated: false) }
+            .onChange(of: displayedMonth) { _, _ in
+                scrollMonth(to: selectedDate, proxy: proxy, animated: true)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func scrollMonth(to date: Date, proxy: ScrollViewProxy, animated: Bool) {
+        let target = calendar.startOfDay(for: date)
+        DispatchQueue.main.async {
+            if animated {
+                withAnimation(.smooth(duration: 0.24)) { proxy.scrollTo(target, anchor: .center) }
+            } else {
+                proxy.scrollTo(target, anchor: .center)
+            }
+        }
+    }
+
+    private func monthEdgeFade(top: Bool) -> some View {
+        // Fade into the card fill (the grid sits in a `#141414` notchCard), not
+        // pure black, so the gradient dissolves cleanly instead of smudging dark.
+        let fade = NotchDesign.Colors.cardFill
+        return LinearGradient(
+            colors: top ? [fade.opacity(0.95), .clear] : [.clear, fade.opacity(0.95)],
+            startPoint: .top, endPoint: .bottom
+        )
+        .frame(height: 14)
+        .allowsHitTesting(false)
+        .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
+    }
+
+    private func monthCell(_ day: Date) -> some View {
+        let isCurrentMonth = calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
+        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(day)
+        let hasEvent = calendarManager.eventDates.contains(calendar.startOfDay(for: day))
+
+        return Button { select(day) } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8).fill(CalendarStyle.accent).frame(width: 30, height: 26)
+                    } else if isToday {
+                        RoundedRectangle(cornerRadius: 8).stroke(CalendarStyle.accent, lineWidth: 1.5).frame(width: 30, height: 26)
+                    }
+                    Text(day.formatted(.dateTime.day()))
+                        .font(NotchDesign.Typography.voice(13, weight: isSelected || isToday ? .semibold : .medium))
+                        .foregroundStyle(monthNumeralColor(isCurrentMonth: isCurrentMonth, isSelected: isSelected, isToday: isToday))
+                }
+                .frame(width: 30, height: 26)
+
+                Circle()
+                    .fill(CalendarStyle.accent)
+                    .frame(width: 4, height: 4)
+                    .opacity(hasEvent && !isSelected ? 1 : 0)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.monthRowHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func monthNumeralColor(isCurrentMonth: Bool, isSelected: Bool, isToday: Bool) -> Color {
+        if isSelected { return .white }
+        if !isCurrentMonth { return CalendarStyle.dim }
+        if isToday { return CalendarStyle.accent }
+        return CalendarStyle.ink
+    }
+
+    // MARK: - Navigation
+
+    private func select(_ day: Date) {
+        withAnimation(.smooth(duration: 0.18)) { selectedDate = day }
     }
 
     private func showPrevious() {
-        layout == .week ? shiftWeek(by: -1) : shiftMonth(by: -1)
+        isWeek ? shiftWeek(by: -1) : shiftMonth(by: -1)
     }
 
     private func showNext() {
-        layout == .week ? shiftWeek(by: 1) : shiftMonth(by: 1)
+        isWeek ? shiftWeek(by: 1) : shiftMonth(by: 1)
     }
 
     private func shiftMonth(by value: Int) {
@@ -617,22 +757,6 @@ struct StandaloneCalendarView: View {
     private func shiftWeek(by value: Int) {
         guard let newDate = calendar.date(byAdding: .weekOfMonth, value: value, to: selectedDate) else { return }
         withAnimation(.smooth(duration: 0.22)) { selectedDate = newDate }
-    }
-
-    private func requestDatePickerCenterOnCurrentDate() {
-        datePickerScrollTarget = calendar.startOfDay(for: selectedDate)
-    }
-
-    private func centerDatePicker(on target: Date, proxy: ScrollViewProxy) {
-        let normalizedTarget = calendar.startOfDay(for: target)
-        DispatchQueue.main.async {
-            withAnimation(.smooth(duration: 0.24)) {
-                proxy.scrollTo(normalizedTarget, anchor: .center)
-            }
-            if datePickerScrollTarget == normalizedTarget {
-                datePickerScrollTarget = nil
-            }
-        }
     }
 }
 
@@ -661,127 +785,158 @@ private extension Date {
     }
 }
 
-private struct StandaloneEventCardList: View {
+/// Flat agenda list for the Calendar tab's Week mode. Each row follows the
+/// redesign's event grammar — a mono time column, a thin category-color bar,
+/// then the Geist title + subtitle — separated by hairlines rather than sitting
+/// in filled cards. Reminders swap the color bar for a completion toggle.
+private struct CalendarAgendaList: View {
     @Environment(\.openURL) private var openURL
+    private static let topID = "calendar-agenda-top"
+
     let events: [EventModel]
     let showFullEventTitles: Bool
+    let selectedDate: Date
+    let scrollResetID: Date
     let onToggleReminder: (String, Bool) -> Void
 
+    @State private var displayedEvents: [EventModel] = []
+    @State private var displayedDate = Date()
+    @State private var hasSeededContent = false
+    @State private var contentOpacity = 1.0
+    @State private var fadeTask: Task<Void, Never>?
+
+    private var contentIdentity: String {
+        let dayKey = Int(scrollResetID.timeIntervalSinceReferenceDate)
+        let eventKey = events.map(\.id).joined(separator: "|")
+        return "\(dayKey)-\(eventKey)"
+    }
+
+    private var activeEvents: [EventModel] {
+        hasSeededContent ? displayedEvents : events
+    }
+
+    private var activeSelectedDate: Date {
+        hasSeededContent ? displayedDate : selectedDate
+    }
+
     var body: some View {
-        ZStack {
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(events) { event in
-                        eventCard(event)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
+        agendaContent(events: activeEvents, selectedDate: activeSelectedDate)
+            .opacity(contentOpacity)
             .clipped()
-
-            LinearGradient(colors: [Color.black.opacity(0.65), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 16)
-                .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .top)
-
-            LinearGradient(colors: [.clear, Color.black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 16)
-                .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        }
-        .clipped()
+            .onAppear(perform: seedContentIfNeeded)
+            .onDisappear { fadeTask?.cancel() }
+            .onChange(of: contentIdentity) { _, _ in
+                fadeToIncomingContent()
+            }
     }
 
     @ViewBuilder
-    private func eventCard(_ event: EventModel) -> some View {
-        if event.type.isReminder {
-            Button {
-                if let url = event.calendarAppURL() {
-                    openURL(url)
-                }
-            } label: {
-                reminderCard(event)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 2)
+    private func agendaContent(events: [EventModel], selectedDate: Date) -> some View {
+        if events.isEmpty {
+            EmptyEventsView(selectedDate: selectedDate)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            calendarEventCard(event)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if let url = event.calendarAppURL() {
-                        openURL(url)
+            ScrollViewReader { proxy in
+                ZStack {
+                    ScrollView {
+                        Color.clear
+                            .frame(height: 0)
+                            .id(Self.topID)
+
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                                row(event)
+                                if index < events.count - 1 {
+                                    Rectangle()
+                                        .fill(CalendarStyle.hairlineFaint)
+                                        .frame(height: 1)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                        .transaction { transaction in
+                            transaction.animation = nil
+                        }
                     }
+                    .clipped()
+                    .onChange(of: scrollResetID) { _, _ in
+                        withTransaction(Transaction(animation: nil)) {
+                            proxy.scrollTo(Self.topID, anchor: .top)
+                        }
+                    }
+
+                    // Fade into the card fill — the agenda sits in a `#141414` notchCard,
+                    // so a black fade would smudge dark against the card.
+                    LinearGradient(colors: [NotchDesign.Colors.cardFill.opacity(0.95), .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 16)
+                        .allowsHitTesting(false)
+                        .frame(maxHeight: .infinity, alignment: .top)
+
+                    LinearGradient(colors: [.clear, NotchDesign.Colors.cardFill.opacity(0.95)], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 16)
+                        .allowsHitTesting(false)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
                 }
-                .padding(.horizontal, 2)
+            }
         }
     }
 
-    private func reminderCard(_ event: EventModel) -> some View {
-        let isCompleted: Bool
-        if case .reminder(let completed) = event.type {
-            isCompleted = completed
+    private func seedContentIfNeeded() {
+        guard !hasSeededContent else { return }
+        displayedEvents = events
+        displayedDate = selectedDate
+        hasSeededContent = true
+        contentOpacity = 1
+    }
+
+    private func fadeToIncomingContent() {
+        let nextEvents = events
+        let nextDate = selectedDate
+        fadeTask?.cancel()
+        fadeTask = Task { @MainActor in
+            withAnimation(.easeInOut(duration: 0.10)) {
+                contentOpacity = 0
+            }
+            try? await Task.sleep(nanoseconds: 110_000_000)
+            guard !Task.isCancelled else { return }
+            displayedEvents = nextEvents
+            displayedDate = nextDate
+            hasSeededContent = true
+            withAnimation(.easeInOut(duration: 0.16)) {
+                contentOpacity = 1
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ event: EventModel) -> some View {
+        if event.type.isReminder {
+            reminderRow(event)
         } else {
-            isCompleted = false
+            eventRow(event)
         }
-
-        return HStack(spacing: 10) {
-            ReminderToggle(
-                isOn: Binding(
-                    get: { isCompleted },
-                    set: { newValue in onToggleReminder(event.id, newValue) }
-                ),
-                color: Color(event.calendar.color)
-            )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.title)
-                    .font(.callout)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .lineLimit(showFullEventTitles ? nil : 2)
-
-                if event.isAllDay {
-                    Text("All-day")
-                        .font(.caption)
-                        .foregroundColor(Color(white: 0.65))
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            if !event.isAllDay {
-                Text(event.start, style: .time)
-                    .font(.caption)
-                    .foregroundColor(Color(white: 0.75))
-            }
-        }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
-        )
-        .opacity(isCompleted ? 0.55 : 1)
     }
 
-    private func calendarEventCard(_ event: EventModel) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(event.calendar.color))
-                .frame(width: 4, height: 36)
+    // MARK: - Rows
 
-            VStack(alignment: .leading, spacing: 4) {
+    private func eventRow(_ event: EventModel) -> some View {
+        HStack(spacing: 14) {
+            timeColumn(event)
+
+            RoundedRectangle(cornerRadius: 100)
+                .fill(Color(nsColor: event.calendar.color))
+                .frame(width: 3, height: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(event.title)
-                    .font(.callout)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .lineLimit(showFullEventTitles ? nil : 2)
+                    .font(NotchDesign.Typography.voice(13, weight: .medium))
+                    .foregroundStyle(CalendarStyle.ink)
+                    .lineLimit(showFullEventTitles ? nil : 1)
 
                 if let location = event.location, !location.isEmpty {
                     Text(location)
-                        .font(.caption)
-                        .foregroundColor(Color(white: 0.65))
+                        .font(NotchDesign.Typography.voice(11))
+                        .foregroundStyle(CalendarStyle.muted)
                         .lineLimit(1)
                 }
 
@@ -790,32 +945,88 @@ private struct StandaloneEventCardList: View {
                 }
             }
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if event.isAllDay {
-                    Text("All-day")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                } else {
-                    Text(event.start, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.white)
-                    Text(event.end, style: .time)
-                        .font(.caption2)
-                        .foregroundColor(Color(white: 0.65))
-                }
-            }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.05))
-        )
+        .padding(.vertical, 7)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { open(event) }
         .opacity(event.eventStatus == .ended && Calendar.current.isDateInToday(event.start) ? 0.6 : 1)
+    }
+
+    private func reminderRow(_ event: EventModel) -> some View {
+        let isCompleted: Bool
+        if case .reminder(let completed) = event.type {
+            isCompleted = completed
+        } else {
+            isCompleted = false
+        }
+
+        return HStack(spacing: 14) {
+            timeColumn(event)
+
+            ReminderToggle(
+                isOn: Binding(
+                    get: { isCompleted },
+                    set: { newValue in onToggleReminder(event.id, newValue) }
+                ),
+                color: Color(nsColor: event.calendar.color)
+            )
+            .frame(width: 14)
+
+            Text(event.title)
+                .font(NotchDesign.Typography.voice(13, weight: .medium))
+                .foregroundStyle(CalendarStyle.ink)
+                .lineLimit(showFullEventTitles ? nil : 1)
+                .strikethrough(isCompleted, color: CalendarStyle.muted)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { open(event) }
+        .opacity(isCompleted ? 0.55 : 1)
+    }
+
+    // MARK: - Time column
+
+    /// Width sized so a 12-hour "12:30 PM" time fits on one line — otherwise the
+    /// AM/PM wraps and each agenda row balloons to three lines, shrinking how
+    /// many events are visible.
+    private static let timeColumnWidth: CGFloat = 62
+
+    @ViewBuilder
+    private func timeColumn(_ event: EventModel) -> some View {
+        if event.isAllDay {
+            Text("ALL-DAY")
+                .font(NotchDesign.Typography.mono(10, weight: .medium))
+                .tracking(0.6)
+                .foregroundStyle(CalendarStyle.faint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(width: Self.timeColumnWidth, alignment: .trailing)
+        } else {
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(event.start, style: .time)
+                    .font(NotchDesign.Typography.mono(12, weight: .medium))
+                    .foregroundStyle(CalendarStyle.ink)
+                Text(event.end, style: .time)
+                    .font(NotchDesign.Typography.mono(10))
+                    .foregroundStyle(CalendarStyle.faint)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(width: Self.timeColumnWidth, alignment: .trailing)
+        }
+    }
+
+    private func open(_ event: EventModel) {
+        if let url = event.calendarAppURL() {
+            openURL(url)
+        }
     }
 }
 

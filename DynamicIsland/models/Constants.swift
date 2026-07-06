@@ -562,11 +562,22 @@ extension Defaults.Keys {
         // MARK: Appearance
         //static let alwaysShowTabs = Key<Bool>("alwaysShowTabs", default: true)
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
+    /// Show a compact, tab-aware info widget in the open-notch header's right
+    /// wing (Home CPU/RAM, Shelf device, Agents usage, Calendar next event,
+    /// Weather location). Master switch; each widget also respects its own
+    /// feature toggle.
+    static let showHeaderContextWidgets = Key<Bool>("showHeaderContextWidgets", default: true)
+    /// Which system metrics the Home tab's notch-header widget shows, in
+    /// `HeaderStatKind.allCases` order. Empty hides the Home stats entirely.
+    static let homeHeaderStats = Key<[HeaderStatKind]>("homeHeaderStats", default: [.cpu, .ram])
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
     static let accentColor = Key<Color>("accentColor", default: Color.blue)
     /// Debug: tint the notch background instead of black, to inspect the layout regions.
     static let debugNotchBackgroundEnabled = Key<Bool>("debugNotchBackgroundEnabled", default: false)
     static let debugNotchBackgroundColor = Key<Color>("debugNotchBackgroundColor", default: .red)
+    /// Debug: outline the uniform tab-content inset (`NotchDesign.TabInset`) so the
+    /// shared left/right/top/bottom margins are visible across every tab.
+    static let debugTabInsetBorderEnabled = Key<Bool>("debugTabInsetBorderEnabled", default: false)
     /// Debug: force-show these closed-pill activities (with sample data) to preview combinations.
     static let debugForcedActivities = Key<Set<ClosedNotchActivityKind>>("debugForcedActivities", default: [])
     static let enableShadow = Key<Bool>("enableShadow", default: true)
@@ -618,7 +629,6 @@ extension Defaults.Keys {
     static let musicSkipBehavior = Key<MusicSkipBehavior>("musicSkipBehavior", default: .track)
     static let musicControlWindowEnabled = Key<Bool>("musicControlWindowEnabled", default: false)
     static let showStandardMediaControls = Key<Bool>("showStandardMediaControls", default: true)
-    static let autoHideInactiveNotchMediaPlayer = Key<Bool>("autoHideInactiveNotchMediaPlayer", default: true)
     static let cachedMusicLiveActivityPreference = Key<Bool?>("cachedMusicLiveActivityPreference", default: nil)
     static let cachedMusicControlWindowPreference = Key<Bool?>("cachedMusicControlWindowPreference", default: nil)
     
@@ -693,6 +703,7 @@ extension Defaults.Keys {
     static let useCircularBluetoothBatteryIndicator = Key<Bool>("useCircularBluetoothBatteryIndicator", default: true)
     static let showBluetoothBatteryPercentageText = Key<Bool>("showBluetoothBatteryPercentageText", default: false)
     static let showBluetoothDeviceNameMarquee = Key<Bool>("showBluetoothDeviceNameMarquee", default: false)
+    static let showAirPodsListeningModeChanges = Key<Bool>("showAirPodsListeningModeChanges", default: true)
 
     // MARK: Timer Feature
     static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
@@ -816,8 +827,14 @@ extension Defaults.Keys {
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Play a sound when a Claude session needs your input (permission / question).
     static let agentInputSoundEnabled = Key<Bool>("agentInputSoundEnabled", default: true)
+    /// Optional path to a user-supplied completion sound. Empty → bundled `agent-complete.mp3`.
+    static let agentCompletionSoundPath = Key<String>("agentCompletionSoundPath", default: "")
+    /// Optional path to a user-supplied input-needed sound. Empty → bundled `agent-input-needed.mp3`.
+    static let agentInputSoundPath = Key<String>("agentInputSoundPath", default: "")
     /// Auto-expand the notch to the Agents tab when a Claude session finishes.
     static let agentExpandOnComplete = Key<Bool>("agentExpandOnComplete", default: true)
+    /// Pop up the notch when an agent needs your input (permission / question prompt).
+    static let agentExpandOnInputNeeded = Key<Bool>("agentExpandOnInputNeeded", default: true)
 
     // MARK: Screen Recording Detection Feature
     static let enableScreenRecordingDetection = Key<Bool>("enableScreenRecordingDetection", default: true)
@@ -841,7 +858,10 @@ extension Defaults.Keys {
     static let capsLockIndicatorTintMode = Key<CapsLockIndicatorTintMode>("capsLockIndicatorTintMode", default: .white)
     static let didMigrateCapsLockTintMode = Key<Bool>("didMigrateCapsLockTintMode", default: false)
     static let showCapsLockLabel = Key<Bool>("showCapsLockLabel", default: false)
-    
+
+    // MARK: Input Source Indicator
+    static let enableInputSourceIndicator = Key<Bool>("enableInputSourceIndicator", default: true)
+
     // MARK: ImageService
     static let didClearLegacyURLCacheV1 = Key<Bool>("didClearLegacyURLCacheV1", default: false)
     
