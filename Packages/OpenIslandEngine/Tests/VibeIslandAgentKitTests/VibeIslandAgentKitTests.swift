@@ -78,9 +78,9 @@ struct ClaudeSessionFilterTests {
         #expect(ClaudeSessionFilter.includes(.openCode))
     }
 
-    @Test("Excludes agents not yet surfaced")
-    func excludesOtherAgents() {
-        #expect(!ClaudeSessionFilter.includes(.cursor))
+    @Test("Surfaces Cursor once it is wired through the bridge")
+    func surfacesCursor() {
+        #expect(ClaudeSessionFilter.includes(.cursor))
     }
 
     @Test("Filters a mixed state down to surfaced sessions only")
@@ -95,8 +95,9 @@ struct ClaudeSessionFilterTests {
 
         let surfaced = ClaudeSessionFilter.claudeSessions(in: state)
         let ids = Set(surfaced.map(\.id))
-        // codex (b) and antigravity (e) are surfaced; cursor (d) is not.
-        #expect(ids == ["a", "b", "c", "e"])
+        // All wired agent CLIs are surfaced, including Cursor (d), which is now
+        // fully wired through the bridge alongside Claude/Codex/Qoder/Antigravity.
+        #expect(ids == ["a", "b", "c", "d", "e"])
     }
 }
 

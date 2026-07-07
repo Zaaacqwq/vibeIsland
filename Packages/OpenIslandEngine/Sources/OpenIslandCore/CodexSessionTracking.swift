@@ -641,6 +641,26 @@ public enum CodexRolloutReducer {
             snapshot.isCompleted = true
             snapshot.isInterrupted = true
             snapshot.summary = "Codex turn was interrupted."
+        case "error":
+            // Codex logs a failed turn as
+            // { type: "event_msg", payload: { type: "error", message,
+            //   codex_error_info } }. The usage-limit case is terminal — Codex
+            // stops until the rate-limit window resets and fires no clean `Stop`,
+            // so without this the turn is stuck on "Thinking" forever. Mark it
+            // complete (interrupted). Other errors only refresh the summary:
+            // Codex retries transient failures within the same turn, and a real
+            // recovery re-opens it via the next `task_started`/`turn_started`.
+            let errorMessage = clipped(payload["message"] as? String)
+            if (payload["codex_error_info"] as? String) == "usage_limit_exceeded" {
+                snapshot.currentTool = nil
+                snapshot.currentCommandPreview = nil
+                snapshot.phase = .completed
+                snapshot.isCompleted = true
+                snapshot.isInterrupted = true
+                snapshot.summary = errorMessage ?? "Codex hit the usage limit."
+            } else if let errorMessage {
+                snapshot.summary = errorMessage
+            }
         case "agent_reasoning", "agent_reasoning_raw_content", "agent_reasoning_section_break":
             applyThinking(to: &snapshot)
         case "exec_command_begin":
