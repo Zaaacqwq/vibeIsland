@@ -1216,41 +1216,57 @@ public final class BridgeServer: @unchecked Sendable {
             )
             send(.response(.acknowledged), to: clientID)
 
-        case .beforeShellExecution:
+        case .beforeShellExecution, .beforeMCPExecution:
+            // Cursor's own command allowlist takes precedence over a hook's
+            // allow/ask (only `deny` is honored), so approving from the notch is
+            // impossible — it just double-prompts. Instead: auto-allow
+            // immediately (non-blocking) and raise a lightweight attention hint.
+            // If Cursor then prompts the user for this command, no matching
+            // after*Execution arrives until they answer, so the red halo lingers
+            // exactly while Cursor waits; an allowlisted command fires
+            // after*Execution almost immediately and the hint clears. No overlay,
+            // no sound — halo only.
             clearStaleCursorInteractionIfNeeded(for: payload.sessionID)
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let shellSummary = payload.commandPreview.map { "Running: \($0)" } ?? "Running shell command"
+            let waitingSummary = payload.hookEventName == .beforeShellExecution
+                ? (payload.commandPreview.map { "Awaiting approval: \($0)" } ?? "Awaiting shell approval")
+                : "Awaiting approval: \(payload.toolName ?? "MCP tool")"
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: shellSummary,
+                        summary: waitingSummary,
                         phase: .running,
-                        timestamp: .now
+                        timestamp: .now,
+                        attentionHint: true
                     )
                 )
             )
             send(.response(.cursorHookDirective(CursorHookDirective(permission: .allow))), to: clientID)
 
-        case .beforeMCPExecution:
-            clearStaleCursorInteractionIfNeeded(for: payload.sessionID)
+        case .afterShellExecution, .afterMCPExecution:
+            // The command actually ran (Cursor approved or auto-ran it) — clear
+            // the attention hint back to executing.
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let mcpSummary = payload.toolName.map { "Calling \($0)" } ?? "Calling MCP tool"
+            let ranSummary = payload.hookEventName == .afterShellExecution
+                ? (payload.commandPreview.map { "Ran: \($0)" } ?? "Ran shell command")
+                : "Called \(payload.toolName ?? "MCP tool")"
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: mcpSummary,
+                        summary: ranSummary,
                         phase: .running,
-                        timestamp: .now
+                        timestamp: .now,
+                        attentionHint: false
                     )
                 )
             )
-            send(.response(.cursorHookDirective(CursorHookDirective(permission: .allow))), to: clientID)
+            send(.response(.acknowledged), to: clientID)
 
         case .beforeReadFile:
             clearStaleCursorInteractionIfNeeded(for: payload.sessionID)

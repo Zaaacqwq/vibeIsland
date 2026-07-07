@@ -80,6 +80,9 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var codexHookStatus: HookStatus = .unknown
     @Published private(set) var antigravityHookStatus: HookStatus = .unknown
     @Published private(set) var openCodeHookStatus: HookStatus = .unknown
+    @Published private(set) var cursorHookStatus: HookStatus = .unknown
+    @Published private(set) var kimiHookStatus: HookStatus = .unknown
+    @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
     /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
@@ -362,22 +365,39 @@ final class AgentMonitorManager: ObservableObject {
             haloActivity[started.sessionID] = .idle
         case let .activityUpdated(activity):
             let summary = activity.summary
-            if summary.hasPrefix("Prompt:") {
-                haloActivity[activity.sessionID] = .thinking
-            } else if summary.range(of: "compacting", options: .caseInsensitive) != nil {
-                haloActivity[activity.sessionID] = .compacting
+            if activity.attentionHint == true {
+                // Lightweight "waiting on the user" hint (e.g. Cursor is prompting
+                // for command approval). Red halo immediately — no overlay, since
+                // phase stays .running and no permissionRequest is set. The sound
+                // is DEBOUNCED: Cursor gives no real-time "awaiting approval"
+                // signal (the before→after gap conflates approval wait with a
+                // command's own run time), so we only chime if the hint isn't
+                // cleared by a matching after*Execution within a short window —
+                // i.e. Cursor is genuinely blocked waiting on the user.
+                haloActivity[activity.sessionID] = .inputNeeded
+                scheduleCursorWaitSound(for: activity.sessionID)
             } else {
-                haloActivity[activity.sessionID] = .executing
+                cancelCursorWaitSound(for: activity.sessionID)
+                if summary.hasPrefix("Prompt:") {
+                    haloActivity[activity.sessionID] = .thinking
+                } else if summary.range(of: "compacting", options: .caseInsensitive) != nil {
+                    haloActivity[activity.sessionID] = .compacting
+                } else {
+                    haloActivity[activity.sessionID] = .executing
+                }
             }
         case let .permissionRequested(request):
+            cancelCursorWaitSound(for: request.sessionID)
             let wasInputNeeded = haloActivity[request.sessionID] == .inputNeeded
             haloActivity[request.sessionID] = .inputNeeded
             if !wasInputNeeded { playInputNeededSoundIfEnabled() }
         case let .questionAsked(question):
+            cancelCursorWaitSound(for: question.sessionID)
             let wasInputNeeded = haloActivity[question.sessionID] == .inputNeeded
             haloActivity[question.sessionID] = .inputNeeded
             if !wasInputNeeded { playInputNeededSoundIfEnabled() }
         case let .sessionCompleted(completed):
+            cancelCursorWaitSound(for: completed.sessionID)
             let wasCompleted = haloActivity[completed.sessionID] == .completed
             haloActivity[completed.sessionID] = .completed
             // Only chime / auto-expand on a turn-level completion (Stop). A full
@@ -463,6 +483,36 @@ final class AgentMonitorManager: ObservableObject {
         }
         inputSoundPlayer?.currentTime = 0
         inputSoundPlayer?.play()
+    }
+
+    // MARK: - Cursor "awaiting approval" debounced sound
+
+    /// Pending (not-yet-fired) wait chimes, keyed by session. A hint that clears
+    /// quickly (the command ran / auto-ran) cancels its chime before it fires.
+    private var pendingCursorWaitSounds: [String: DispatchWorkItem] = [:]
+
+    /// How long a Cursor `attentionHint` must persist (no matching
+    /// `after*Execution`) before we treat it as a genuine "awaiting your
+    /// approval" and chime. Long enough that fast auto-run commands don't chime;
+    /// short enough to alert before the user would otherwise notice.
+    private static let cursorWaitSoundDelay: TimeInterval = 2.0
+
+    private func scheduleCursorWaitSound(for sessionID: String) {
+        pendingCursorWaitSounds[sessionID]?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingCursorWaitSounds[sessionID] = nil
+            // Still flagged as needing input when the timer fires → Cursor is
+            // genuinely blocked waiting on the user.
+            guard self.haloActivity[sessionID] == .inputNeeded else { return }
+            self.playInputNeededSoundIfEnabled()
+        }
+        pendingCursorWaitSounds[sessionID] = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.cursorWaitSoundDelay, execute: work)
+    }
+
+    private func cancelCursorWaitSound(for sessionID: String) {
+        pendingCursorWaitSounds.removeValue(forKey: sessionID)?.cancel()
     }
 
     /// The halo state for a session: phase is authoritative for attention and
@@ -562,9 +612,18 @@ final class AgentMonitorManager: ObservableObject {
     /// hook then tears the turn down, killing the subprocess before it reaches
     /// the bridge, so a session can stick on "Executing" forever. As a safety
     /// net, auto-complete an antigravity session that has been `running` with no
-    /// new activity for this long (its short turns emit events ~1s apart, so a
-    /// few seconds of quiet means the turn is done — agy never delivers `Stop`).
-    private static let antigravityIdleCompleteSeconds: TimeInterval = 3
+    /// new activity for this long.
+    ///
+    /// This is a heuristic: the only signal we get is "time since the last hook
+    /// event", and the app never sees `PostToolUse` (the bridge suppresses it),
+    /// so the clock measures time since a tool *started*. The threshold must
+    /// therefore exceed the model's think time between tool calls, otherwise a
+    /// normal pause after a fast tool (read/write) is misread as task-complete —
+    /// which fires the completion chime and flips the card to "Completed" mid-
+    /// task, then the next `PreToolUse` re-opens it (chime storm). 3s was too
+    /// tight for real tasks; 10s clears typical inter-tool thinking gaps while
+    /// still auto-completing within a reasonable window when `Stop` never lands.
+    private static let antigravityIdleCompleteSeconds: TimeInterval = 10
 
     private func completeStaleAntigravitySessions() {
         let now = Date()
@@ -916,6 +975,72 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallOpenCodeHooks() {
         applyHookChange(label: "remove OpenCode plugin", assign: { self.openCodeHookStatus = $0 }) {
             _ = try OpenCodePluginInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    // MARK: - Cursor hooks (reuse the bundled OpenIslandHooks binary)
+
+    func refreshCursorHookStatus() {
+        applyHookChange(label: "check Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
+            try CursorHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installCursorHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
+            try CursorHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallCursorHooks() {
+        applyHookChange(label: "remove Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
+            _ = try CursorHookInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    // MARK: - Kimi hooks (reuse the bundled OpenIslandHooks binary)
+
+    func refreshKimiHookStatus() {
+        applyHookChange(label: "check Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
+            try KimiHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installKimiHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
+            try KimiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallKimiHooks() {
+        applyHookChange(label: "remove Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
+            _ = try KimiHookInstallationManager().uninstall()
+            return false
+        }
+    }
+
+    // MARK: - Gemini hooks (reuse the bundled OpenIslandHooks binary)
+
+    func refreshGeminiHookStatus() {
+        applyHookChange(label: "check Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            try GeminiHookInstallationManager().status().managedHooksPresent
+        }
+    }
+
+    func installGeminiHooks() {
+        let binary = bundledHooksBinaryURL
+        applyHookChange(label: "install Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            try GeminiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+        }
+    }
+
+    func uninstallGeminiHooks() {
+        applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
+            _ = try GeminiHookInstallationManager().uninstall()
             return false
         }
     }

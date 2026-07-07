@@ -3,7 +3,9 @@ import Foundation
 public enum CursorHookEventName: String, Codable, Sendable {
     case beforeSubmitPrompt
     case beforeShellExecution
+    case afterShellExecution
     case beforeMCPExecution
+    case afterMCPExecution
     case beforeReadFile
     case afterFileEdit
     case stop
@@ -280,8 +282,12 @@ public extension CursorHookPayload {
             return "Cursor received a new prompt in \(workspaceName)."
         case .beforeShellExecution:
             return "Cursor is preparing a shell command in \(workspaceName)."
+        case .afterShellExecution:
+            return "Cursor finished a shell command in \(workspaceName)."
         case .beforeMCPExecution:
             return "Cursor is calling \(toolName ?? "an MCP tool") in \(workspaceName)."
+        case .afterMCPExecution:
+            return "Cursor finished \(toolName ?? "an MCP tool") in \(workspaceName)."
         case .beforeReadFile:
             return "Cursor is reading \(filePath ?? "a file") in \(workspaceName)."
         case .afterFileEdit:

@@ -39,7 +39,9 @@ public enum CursorHookInstaller {
     private static let hookEvents: [String] = [
         "beforeSubmitPrompt",
         "beforeShellExecution",
+        "afterShellExecution",
         "beforeMCPExecution",
+        "afterMCPExecution",
         "beforeReadFile",
         "afterFileEdit",
         "stop",
@@ -148,8 +150,15 @@ public enum CursorHookInstaller {
 
     private static func isOpenIslandCursorHookCommand(_ command: String) -> Bool {
         let normalized = command.lowercased()
-        return (normalized.contains("openislandhooks") || normalized.contains("vibeislandhooks"))
-            && normalized.contains("cursor")
+        guard normalized.contains("cursor") else { return false }
+        // Current managed binary names plus legacy hyphenated launcher names
+        // (`vibe-island-bridge` / `open-island-bridge`) so a reinstall cleans up
+        // stale entries left by earlier VibeIsland versions instead of stacking
+        // duplicates.
+        return normalized.contains("openislandhooks")
+            || normalized.contains("vibeislandhooks")
+            || normalized.contains("open-island-bridge")
+            || normalized.contains("vibe-island-bridge")
     }
 
     private static func shellQuote(_ string: String) -> String {

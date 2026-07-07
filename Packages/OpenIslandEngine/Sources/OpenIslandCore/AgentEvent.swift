@@ -54,17 +54,25 @@ public struct SessionActivityUpdated: Equatable, Codable, Sendable {
     public var summary: String
     public var phase: SessionPhase
     public var timestamp: Date
+    /// When `true`, the session is (probably) waiting on the user even though its
+    /// coarse `phase` stays `.running` — e.g. Cursor's `beforeShellExecution`
+    /// fired and Cursor may now be prompting for approval. Lights the notch halo
+    /// `inputNeeded` (red) WITHOUT raising a permission/question overlay or sound.
+    /// Cleared by a later activity with `attentionHint == false`.
+    public var attentionHint: Bool?
 
     public init(
         sessionID: String,
         summary: String,
         phase: SessionPhase,
-        timestamp: Date
+        timestamp: Date,
+        attentionHint: Bool? = nil
     ) {
         self.sessionID = sessionID
         self.summary = summary
         self.phase = phase
         self.timestamp = timestamp
+        self.attentionHint = attentionHint
     }
 }
 

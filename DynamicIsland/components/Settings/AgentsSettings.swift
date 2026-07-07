@@ -59,7 +59,7 @@ struct AgentsSettings: View {
     }
 
     private var agentsRoot: some View {
-        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode) in the notch.") {
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode, Gemini, Cursor, Kimi) in the notch.") {
             GeistSection(
                 footer: "Adds an Agents tab and a closed-notch live activity showing running agent sessions, permission prompts, and one-click jump-back to the terminal."
             ) {
@@ -137,6 +137,30 @@ struct AgentsSettings: View {
                     uninstall: { agentMonitor.uninstallOpenCodeHooks() }
                 )
 
+                hookSection(
+                    title: "Gemini",
+                    info: "Installing writes VibeIsland-namespaced hooks into ~/.gemini/settings.json. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.geminiHookStatus,
+                    install: { agentMonitor.installGeminiHooks() },
+                    uninstall: { agentMonitor.uninstallGeminiHooks() }
+                )
+
+                hookSection(
+                    title: "Cursor",
+                    info: "Installing writes VibeIsland-namespaced hooks into ~/.cursor/hooks.json. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.cursorHookStatus,
+                    install: { agentMonitor.installCursorHooks() },
+                    uninstall: { agentMonitor.uninstallCursorHooks() }
+                )
+
+                hookSection(
+                    title: "Kimi",
+                    info: "Installing writes VibeIsland-namespaced hooks into ~/.kimi/config.toml. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.kimiHookStatus,
+                    install: { agentMonitor.installKimiHooks() },
+                    uninstall: { agentMonitor.uninstallKimiHooks() }
+                )
+
                 GeistSection {
                     GeistNavRow(
                         title: "Usage",
@@ -169,6 +193,9 @@ struct AgentsSettings: View {
             agentMonitor.refreshCodexHookStatus()
             agentMonitor.refreshAntigravityHookStatus()
             agentMonitor.refreshOpenCodeHookStatus()
+            agentMonitor.refreshGeminiHookStatus()
+            agentMonitor.refreshCursorHookStatus()
+            agentMonitor.refreshKimiHookStatus()
             agentMonitor.refreshStatusLineStatus()
             agentMonitor.refreshTokenUsage()
         }
