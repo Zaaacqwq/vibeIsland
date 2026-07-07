@@ -47,7 +47,15 @@ public final class AgentTokenUsageProvider: @unchecked Sendable {
 
     public init(
         windowDays: Int = 14,
-        aggregators: [TokenUsageAggregating] = [ClaudeTokenAggregator(), CodexTokenAggregator()]
+        aggregators: [TokenUsageAggregating] = [
+            ClaudeTokenAggregator(),
+            CodexTokenAggregator(),
+            OpenCodeTokenAggregator(),
+            GeminiTokenAggregator(),
+            AntigravityTokenAggregator(),
+            CopilotTokenAggregator(),
+            CursorTokenAggregator(),
+        ]
     ) {
         self.windowDays = windowDays
         self.aggregators = aggregators

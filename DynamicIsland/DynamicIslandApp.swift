@@ -633,6 +633,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if Defaults[.enableAgentMonitoring] {
             AgentMonitorManager.shared.startIfNeeded()
         }
+        OpenCodeQuotaSessionManager.shared.startBackgroundRefresh()
+        CursorUsageSyncManager.shared.startBackgroundRefresh()
         Defaults.publisher(.enableAgentMonitoring, options: [])
             .sink { change in
                 if change.newValue {

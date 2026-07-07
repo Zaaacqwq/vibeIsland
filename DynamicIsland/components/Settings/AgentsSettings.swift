@@ -27,13 +27,22 @@ import UniformTypeIdentifiers
 /// Master switch, live-activity toggle, and per-agent hook installation.
 struct AgentsSettings: View {
     @ObservedObject var agentMonitor = AgentMonitorManager.shared
+    @ObservedObject private var antigravityQuotaAuth = AntigravityQuotaAuthManager.shared
+    @ObservedObject private var openCodeQuotaSession = OpenCodeQuotaSessionManager.shared
+    @ObservedObject private var cursorSync = CursorUsageSyncManager.shared
+    @State private var cursorTokenInput = ""
     @Default(.enableAgentMonitoring) var enableAgentMonitoring
+    @Default(.agentUsageProviderOrder) private var providerOrder
+    @Default(.disabledAgentUsageProviders) private var disabledProviders
+    @Environment(\.colorScheme) private var colorScheme
     @Default(.agentInputSoundEnabled) private var inputSoundEnabled
     @Default(.agentCompletionSoundEnabled) private var completionSoundEnabled
     @Default(.agentInputSoundPath) private var inputSoundPath
     @Default(.agentCompletionSoundPath) private var completionSoundPath
+    @Default(.agentAntigravityCompactQuotaWindows) private var compactAntigravityQuotaWindows
+    @Default(.agentOpenCodeCompactQuotaWindows) private var compactOpenCodeQuotaWindows
 
-    private enum SubPage: String, Hashable { case usage }
+    private enum SubPage: String, Hashable { case usage, order }
 
     private let agentTint = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
 
@@ -43,6 +52,7 @@ struct AgentsSettings: View {
                 .navigationDestination(for: SubPage.self) { page in
                     switch page {
                     case .usage: usagePage
+                    case .order: usageOrderPage
                     }
                 }
         }
@@ -133,7 +143,14 @@ struct AgentsSettings: View {
                         subtitle: "Rate limits, cost, and token totals",
                         systemImage: "chart.bar.xaxis",
                         tint: agentTint,
-                        value: SubPage.usage,
+                        value: SubPage.usage
+                    )
+                    GeistNavRow(
+                        title: "Card order",
+                        subtitle: "Reorder and toggle the usage-panel cards",
+                        systemImage: "arrow.up.arrow.down",
+                        tint: agentTint,
+                        value: SubPage.order,
                         divider: false
                     )
                 }
@@ -227,10 +244,341 @@ struct AgentsSettings: View {
                     }
                 }
             }
+
+            GeistSection(
+                title: "Antigravity rate limits",
+                footer: "Uses Google OAuth and the Antigravity Code Assist quota endpoint. Tokens are stored in your macOS Keychain."
+            ) {
+                GeistToggleRow(
+                    title: "Merge Antigravity quota groups",
+                    description: "Show one 5-hour row and one 7-day row instead of separate Gemini and Claude/GPT rows.",
+                    isOn: $compactAntigravityQuotaWindows
+                )
+                GeistLabeledRow(title: "Google account") {
+                    if antigravityQuotaAuth.isAuthenticated {
+                        Label(
+                            antigravityQuotaAuth.accountEmail ?? "Connected",
+                            systemImage: "checkmark.circle.fill"
+                        )
+                        .font(Geist.Typography.body)
+                        .foregroundStyle(Geist.Colors.success)
+                        .labelStyle(.titleAndIcon)
+                    } else {
+                        Label("Not connected", systemImage: "xmark.circle")
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
+                if let quota = agentMonitor.providerQuotas[.antigravity] {
+                    let windows = AgentQuotaPresentation.windows(
+                        providerID: .antigravity,
+                        windows: quota.windows,
+                        compactAntigravity: compactAntigravityQuotaWindows,
+                        compactOpenCode: compactOpenCodeQuotaWindows
+                    )
+                    ForEach(windows) { window in
+                        GeistRow {
+                            providerQuotaRow(window: window)
+                                .font(Geist.Typography.body)
+                        }
+                    }
+                }
+                if let error = antigravityQuotaAuth.errorMessage {
+                    GeistRow {
+                        Text(error)
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.error)
+                    }
+                }
+                GeistRow(divider: false) {
+                    HStack(spacing: Geist.Spacing.xs) {
+                        if antigravityQuotaAuth.isAuthenticated {
+                            Button("Refresh") {
+                                agentMonitor.refreshProviderQuotas(force: true)
+                            }
+                            .buttonStyle(.geistProminent)
+                            Button("Disconnect") {
+                                antigravityQuotaAuth.signOut()
+                            }
+                            .buttonStyle(.geist)
+                        } else {
+                            Button(
+                                antigravityQuotaAuth.isAuthorizing
+                                    ? "Waiting for Google…"
+                                    : "Connect Google account"
+                            ) {
+                                antigravityQuotaAuth.signIn()
+                            }
+                            .buttonStyle(.geistProminent)
+                            .disabled(antigravityQuotaAuth.isAuthorizing)
+                        }
+                    }
+                }
+            }
+
+            GeistSection(
+                title: "OpenCode Go rate limits",
+                footer: "Uses a persistent in-app opencode.ai session to read the Rolling, Weekly, and Monthly windows from your Go dashboard."
+            ) {
+                GeistToggleRow(
+                    title: "Show compact OpenCode quota",
+                    description: "Show only the rolling 5-hour and weekly 7-day rows, hiding the monthly row.",
+                    isOn: $compactOpenCodeQuotaWindows
+                )
+                let openCodeQuota = agentMonitor.providerQuotas[.opencode]
+                let isOpenCodeConnected = openCodeQuotaSession.isAuthenticated || openCodeQuota != nil
+                GeistLabeledRow(title: "Dashboard session") {
+                    if isOpenCodeConnected {
+                        Label(
+                            openCodeQuotaSession.workspaceID.map(maskedWorkspaceID) ?? "Connected",
+                            systemImage: "checkmark.circle.fill"
+                        )
+                        .font(Geist.Typography.body)
+                        .monospacedDigit()
+                        .foregroundStyle(Geist.Colors.success)
+                        .labelStyle(.titleAndIcon)
+                    } else {
+                        Label("Not connected", systemImage: "xmark.circle")
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
+                if let quota = openCodeQuota {
+                    let windows = AgentQuotaPresentation.windows(
+                        providerID: .opencode,
+                        windows: quota.windows,
+                        compactAntigravity: compactAntigravityQuotaWindows,
+                        compactOpenCode: compactOpenCodeQuotaWindows
+                    )
+                    ForEach(windows) { window in
+                        GeistRow {
+                            providerQuotaRow(window: window)
+                                .font(Geist.Typography.body)
+                        }
+                    }
+                }
+                if !isOpenCodeConnected, let error = openCodeQuotaSession.errorMessage {
+                    GeistRow {
+                        Text(error)
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.error)
+                    }
+                }
+                GeistRow(divider: false) {
+                    HStack(spacing: Geist.Spacing.xs) {
+                        if isOpenCodeConnected {
+                            Button(
+                                openCodeQuotaSession.isRefreshing ? "Refreshing…" : "Refresh"
+                            ) {
+                                openCodeQuotaSession.refresh()
+                            }
+                            .buttonStyle(.geistProminent)
+                            .disabled(openCodeQuotaSession.isRefreshing)
+                            Button("Sign in again") {
+                                OpenCodeLoginWindowController.shared.show()
+                            }
+                            .buttonStyle(.geist)
+                            Button("Disconnect") {
+                                openCodeQuotaSession.disconnect()
+                            }
+                            .buttonStyle(.geist)
+                        } else {
+                            Button("Sign in to OpenCode") {
+                                OpenCodeLoginWindowController.shared.show()
+                            }
+                            .buttonStyle(.geistProminent)
+                        }
+                    }
+                }
+            }
+
+            cursorUsageSection
         }
         .onAppear {
+            Task { await antigravityQuotaAuth.reloadStatus() }
+            Task { await cursorSync.reloadStatus() }
             agentMonitor.refreshStatusLineStatus()
             agentMonitor.refreshTokenUsage(force: true)
+        }
+    }
+
+    private var usageOrderPage: some View {
+        GeistSettingsPage(title: "Card Order") {
+            let order = AgentUsageProviderCatalog.normalizedOrder(providerOrder)
+            VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                List {
+                    ForEach(order, id: \.self) { id in
+                        usageOrderRow(id)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 14, bottom: 5, trailing: 14))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                    .onMove(perform: moveProvider)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(order.count) * 40)
+                .background(Geist.Colors.canvasSoft)
+                .clipShape(RoundedRectangle(cornerRadius: Geist.Radius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Geist.Radius.md, style: .continuous)
+                        .strokeBorder(Geist.Colors.hairline, lineWidth: Geist.hairlineWidth)
+                )
+
+                Text("Drag rows to reorder the provider cards in the Agents usage panel, and toggle each card on or off. The Summary card is always shown first. An enabled provider's card only appears once it has token or quota data.")
+                    .font(Geist.Typography.caption)
+                    .foregroundStyle(Geist.Colors.mute)
+                    .padding(.leading, Geist.Spacing.xxs)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button("Reset Order") {
+                    providerOrder = AgentUsageProviderCatalog.defaultOrderRawValues
+                    disabledProviders = []
+                }
+                .buttonStyle(.geist)
+                .padding(.top, Geist.Spacing.xxs)
+            }
+        }
+    }
+
+    private func usageOrderRow(_ id: AgentUsageProviderID) -> some View {
+        let isEnabled = !disabledProviders.contains(id.rawValue)
+        return HStack(spacing: Geist.Spacing.sm) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Geist.Colors.mute)
+            usageOrderIcon(id)
+                .frame(width: 18, height: 18)
+                .opacity(isEnabled ? 1 : 0.4)
+            Text(id.displayName)
+                .font(Geist.Typography.bodyStrong)
+                .foregroundStyle(isEnabled ? Geist.Colors.ink : Geist.Colors.mute)
+            Spacer(minLength: Geist.Spacing.sm)
+            Toggle("", isOn: Binding(
+                get: { !disabledProviders.contains(id.rawValue) },
+                set: { isOn in
+                    if isOn { disabledProviders.remove(id.rawValue) }
+                    else { disabledProviders.insert(id.rawValue) }
+                }
+            ))
+            .labelsHidden().toggleStyle(.switch).controlSize(.small)
+        }
+        .frame(height: 24)
+    }
+
+    @ViewBuilder
+    private func usageOrderIcon(_ id: AgentUsageProviderID) -> some View {
+        if colorScheme == .dark {
+            // In dark mode the full-color marks (cursor/opencode/copilot are dark)
+            // vanish against the dark surface, so use the monochrome template
+            // marks tinted to the foreground — the same white glyphs the notch uses.
+            if let asset = AgentUsageProviderCatalog.icon(for: id).asset {
+                Image(asset)
+                    .renderingMode(.template)
+                    .resizable().aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Geist.Colors.ink)
+            } else {
+                Image(systemName: AgentUsageProviderCatalog.icon(for: id).system)
+                    .resizable().aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Geist.Colors.ink)
+            }
+        } else if let asset = AgentUsageProviderCatalog.settingsIconAsset(for: id) {
+            Image(asset).resizable().aspectRatio(contentMode: .fit)
+        } else {
+            Image(systemName: AgentUsageProviderCatalog.icon(for: id).system)
+                .resizable().aspectRatio(contentMode: .fit)
+                .foregroundStyle(Geist.Colors.ink)
+        }
+    }
+
+    private func moveProvider(from source: IndexSet, to destination: Int) {
+        var order = AgentUsageProviderCatalog.normalizedOrder(providerOrder)
+        order.move(fromOffsets: source, toOffset: destination)
+        providerOrder = order.map(\.rawValue)
+    }
+
+    private var cursorUsageSection: some View {
+        GeistSection(
+            title: "Cursor usage",
+            footer: "Cursor keeps no local token data, so VibeIsland downloads your usage export from cursor.com to show a token/cost card. Sign in below to capture your session automatically (or paste the WorkosCursorSessionToken cookie manually); it is stored in your macOS Keychain."
+        ) {
+            GeistLabeledRow(title: "Account") {
+                if cursorSync.isConnected {
+                    Label(
+                        cursorSync.membershipType.map { "Connected · \($0)" } ?? "Connected",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .font(Geist.Typography.body)
+                    .foregroundStyle(Geist.Colors.success)
+                    .labelStyle(.titleAndIcon)
+                } else {
+                    Label("Not connected", systemImage: "xmark.circle")
+                        .font(Geist.Typography.body)
+                        .foregroundStyle(Geist.Colors.mute)
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            if cursorSync.isConnected, let syncedAt = cursorSync.lastSyncedAt {
+                GeistLabeledRow(title: "Last synced") {
+                    Text(syncedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(Geist.Typography.body)
+                        .foregroundStyle(Geist.Colors.mute)
+                        .monospacedDigit()
+                }
+            }
+            if !cursorSync.isConnected {
+                GeistRow {
+                    VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                        Text("Advanced: paste the cookie value instead of signing in.")
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.mute)
+                        SecureField("WorkosCursorSessionToken", text: $cursorTokenInput)
+                            .textFieldStyle(.roundedBorder)
+                            .font(Geist.Typography.body)
+                    }
+                }
+            }
+            if let error = cursorSync.errorMessage {
+                GeistRow {
+                    Text(error)
+                        .font(Geist.Typography.caption)
+                        .foregroundStyle(Geist.Colors.error)
+                }
+            }
+            GeistRow(divider: false) {
+                HStack(spacing: Geist.Spacing.xs) {
+                    if cursorSync.isConnected {
+                        Button(cursorSync.isSyncing ? "Syncing…" : "Sync") {
+                            cursorSync.sync()
+                        }
+                        .buttonStyle(.geistProminent)
+                        .disabled(cursorSync.isSyncing)
+                        Button("Sign in again") {
+                            CursorLoginWindowController.shared.show()
+                        }
+                        .buttonStyle(.geist)
+                        Button("Disconnect") {
+                            cursorSync.disconnect()
+                        }
+                        .buttonStyle(.geist)
+                    } else {
+                        Button(cursorSync.isSyncing ? "Signing in…" : "Sign in to Cursor") {
+                            CursorLoginWindowController.shared.show()
+                        }
+                        .buttonStyle(.geistProminent)
+                        .disabled(cursorSync.isSyncing)
+                        Button("Connect with token") {
+                            cursorSync.connect(token: cursorTokenInput)
+                            cursorTokenInput = ""
+                        }
+                        .buttonStyle(.geist)
+                        .disabled(cursorSync.isSyncing || cursorTokenInput.isEmpty)
+                    }
+                }
+            }
         }
     }
 
@@ -321,6 +669,14 @@ struct AgentsSettings: View {
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 
+    /// Masks the middle of the workspace id so the connected account is
+    /// recognizable without exposing the full identifier (e.g.
+    /// `wrk_01KR********VR1`).
+    private func maskedWorkspaceID(_ id: String) -> String {
+        guard id.count > 11 else { return id }
+        return "\(id.prefix(8))********\(id.suffix(3))"
+    }
+
     @ViewBuilder
     private func usageRow(label: String, window: ClaudeUsageWindow) -> some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -343,6 +699,23 @@ struct AgentsSettings: View {
                 Text("\(window.label) limit")
                 Spacer()
                 Text("\(window.roundedUsedPercentage)%")
+                    .foregroundStyle(window.usedPercentage >= 80 ? .orange : .secondary)
+                    .monospacedDigit()
+            }
+            ProgressView(value: min(max(window.usedPercentage / 100, 0), 1))
+                .tint(window.usedPercentage >= 80 ? .orange : .accentColor)
+        }
+    }
+
+    /// Progress-bar row for a provider-neutral quota window (Antigravity,
+    /// OpenCode…), matching the Claude/Codex rate-limit rows.
+    @ViewBuilder
+    private func providerQuotaRow(window: ProviderQuotaWindow) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(window.label)
+                Spacer()
+                Text("\(Int(window.usedPercentage.rounded()))%")
                     .foregroundStyle(window.usedPercentage >= 80 ? .orange : .secondary)
                     .monospacedDigit()
             }

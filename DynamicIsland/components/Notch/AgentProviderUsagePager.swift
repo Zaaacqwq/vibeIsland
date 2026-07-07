@@ -9,6 +9,7 @@
  */
 
 import AppKit
+import Defaults
 import OpenIslandCore
 import SwiftUI
 
@@ -16,27 +17,60 @@ struct AgentProviderUsagePager: View {
     let summary: AgentUsageSummary?
     let claudeUsage: ClaudeUsageSnapshot?
     let codexUsage: CodexUsageSnapshot?
+    let providerQuotas: [AgentUsageProviderID: ProviderQuotaSnapshot]
     var isRefreshing = false
     var onRefresh: () -> Void = {}
 
     @State private var selectedIndex = 0
     @State private var pageDirection: PageDirection = .forward
+    @Default(.agentUsageProviderOrder) private var providerOrder
+    @Default(.disabledAgentUsageProviders) private var disabledProviders
+    @Default(.agentAntigravityCompactQuotaWindows) private var compactAntigravityQuotaWindows
+    @Default(.agentOpenCodeCompactQuotaWindows) private var compactOpenCodeQuotaWindows
 
     private enum PageDirection {
         case forward
         case backward
     }
 
+    /// The Summary card is always first; the provider cards follow in the
+    /// user-configured order (`AgentUsageProviderCatalog`). Claude and Codex
+    /// always show (they carry rate-limit rings even with no token data); the
+    /// remaining providers appear only when token or quota data exists, so
+    /// uninstalled agents don't add empty cards.
     private var cards: [AgentProviderUsageCardModel] {
         var result: [AgentProviderUsageCardModel] = [
             .summary(summary?.total)
         ]
 
-        let claudeSummary = summary?.provider(.claude)
-        result.append(.claude(tokens: claudeSummary, quota: claudeUsage))
-
-        let codexSummary = summary?.provider(.codex)
-        result.append(.codex(tokens: codexSummary, quota: codexUsage))
+        for id in AgentUsageProviderCatalog.normalizedOrder(providerOrder) {
+            guard !disabledProviders.contains(id.rawValue) else { continue }
+            switch id {
+            case .claude:
+                result.append(.claude(tokens: summary?.provider(.claude), quota: claudeUsage))
+            case .codex:
+                result.append(.codex(tokens: summary?.provider(.codex), quota: codexUsage))
+            default:
+                let contribution = summary?.provider(id)
+                let quota = AgentQuotaPresentation.snapshot(
+                    providerID: id,
+                    quota: providerQuotas[id],
+                    compactAntigravity: compactAntigravityQuotaWindows,
+                    compactOpenCode: compactOpenCodeQuotaWindows
+                )
+                guard contribution?.isEmpty == false || quota?.isEmpty == false else { continue }
+                let icon = AgentUsageProviderCatalog.icon(for: id)
+                result.append(
+                    .tokenOnly(
+                        id: id,
+                        iconAsset: icon.asset,
+                        iconSystemName: icon.system,
+                        tokens: contribution,
+                        quota: quota
+                    )
+                )
+            }
+        }
 
         return result
     }
@@ -45,30 +79,13 @@ struct AgentProviderUsagePager: View {
         let safeIndex = min(selectedIndex, max(cards.count - 1, 0))
         let card = cards[safeIndex]
 
-        ZStack(alignment: .bottomLeading) {
-            ZStack(alignment: .topLeading) {
-                AgentProviderUsageCard(model: card, isRefreshing: isRefreshing, onRefresh: onRefresh)
-                    .id(card.id)
-                    .transition(pageTransition)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(.bottom, 22)
-            .clipped()
-
-            HStack(spacing: 6) {
-                ForEach(cards.indices, id: \.self) { index in
-                    Circle()
-                        .fill(index == safeIndex ? NotchDesign.Colors.textPrimary : NotchDesign.Colors.hairline)
-                        .frame(width: 5, height: 5)
-                        .animation(.smooth(duration: 0.18), value: safeIndex)
-                }
-                Spacer(minLength: 0)
-                Text("↑↓ switch")
-                    .font(NotchDesign.Typography.mono(9))
-                    .foregroundStyle(NotchDesign.Colors.textFaint)
-            }
+        ZStack(alignment: .topLeading) {
+            AgentProviderUsageCard(model: card, isRefreshing: isRefreshing, onRefresh: onRefresh)
+                .id(card.id)
+                .transition(pageTransition)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 12)
@@ -133,6 +150,105 @@ struct AgentProviderUsagePager: View {
     }
 }
 
+enum AgentQuotaPresentation {
+    static func snapshot(
+        providerID: AgentUsageProviderID,
+        quota: ProviderQuotaSnapshot?,
+        compactAntigravity: Bool,
+        compactOpenCode: Bool
+    ) -> ProviderQuotaSnapshot? {
+        guard let quota else { return nil }
+        let displayed = windows(
+            providerID: providerID,
+            windows: quota.windows,
+            compactAntigravity: compactAntigravity,
+            compactOpenCode: compactOpenCode
+        )
+        guard !displayed.isEmpty else { return nil }
+        var snapshot = quota
+        snapshot.windows = displayed
+        return snapshot
+    }
+
+    static func windows(
+        providerID: AgentUsageProviderID,
+        windows: [ProviderQuotaWindow],
+        compactAntigravity: Bool,
+        compactOpenCode: Bool
+    ) -> [ProviderQuotaWindow] {
+        switch providerID {
+        case .antigravity where compactAntigravity:
+            return compactSharedWindows(windows)
+        case .opencode where compactOpenCode:
+            return windows.compactMap { window in
+                switch quotaWindowKind(window) {
+                case .short:
+                    return relabeled(window, label: "5h")
+                case .weekly:
+                    return relabeled(window, label: "7d")
+                case .monthly, .unknown:
+                    return nil
+                }
+            }
+        default:
+            return windows
+        }
+    }
+
+    private static func compactSharedWindows(_ windows: [ProviderQuotaWindow]) -> [ProviderQuotaWindow] {
+        [
+            mergedWindow(key: "5h", label: "5h", from: windows, matching: .short),
+            mergedWindow(key: "7d", label: "7d", from: windows, matching: .weekly),
+        ].compactMap { $0 }
+    }
+
+    private static func mergedWindow(
+        key: String,
+        label: String,
+        from windows: [ProviderQuotaWindow],
+        matching kind: QuotaWindowKind
+    ) -> ProviderQuotaWindow? {
+        let matches = windows.filter { quotaWindowKind($0) == kind }
+        guard !matches.isEmpty else { return nil }
+        return ProviderQuotaWindow(
+            key: key,
+            label: label,
+            usedPercentage: matches.map(\.usedPercentage).max() ?? 0,
+            resetsAt: matches.compactMap(\.resetsAt).min()
+        )
+    }
+
+    private static func relabeled(_ window: ProviderQuotaWindow, label: String) -> ProviderQuotaWindow {
+        ProviderQuotaWindow(
+            key: window.key,
+            label: label,
+            usedPercentage: window.usedPercentage,
+            resetsAt: window.resetsAt
+        )
+    }
+
+    private static func quotaWindowKind(_ window: ProviderQuotaWindow) -> QuotaWindowKind {
+        let text = "\(window.key) \(window.label)".lowercased()
+        if text.contains("monthly") || text.contains("30d") {
+            return .monthly
+        }
+        if text.contains("weekly") || text.contains("week") || text.contains("7d") {
+            return .weekly
+        }
+        if text.contains("rolling") || text.contains("5h") || text.contains("five") {
+            return .short
+        }
+        return .unknown
+    }
+
+    private enum QuotaWindowKind {
+        case short
+        case weekly
+        case monthly
+        case unknown
+    }
+}
+
 struct AgentProviderUsageCardModel: Identifiable, Equatable {
     let id: AgentUsageProviderID
     let title: String
@@ -143,7 +259,7 @@ struct AgentProviderUsageCardModel: Identifiable, Equatable {
     let quotaRows: [QuotaRow]
 
     struct QuotaRow: Identifiable, Equatable {
-        var id: String { label }
+        let id: String
         let label: String
         let usedPercentage: Double
         let resetsAt: Date?
@@ -161,13 +277,41 @@ struct AgentProviderUsageCardModel: Identifiable, Equatable {
         )
     }
 
+    /// A provider that exposes only token/cost totals (no local rate-limit
+    /// windows): OpenCode, Gemini, Antigravity, Copilot, Cursor. Rendered like
+    /// the Summary card but scoped to one provider's transcripts.
+    static func tokenOnly(
+        id: AgentUsageProviderID,
+        iconAsset: String?,
+        iconSystemName: String,
+        tokens: ProviderTokenUsageSummary?,
+        quota: ProviderQuotaSnapshot? = nil
+    ) -> Self {
+        Self(
+            id: id,
+            title: id.displayName,
+            iconAsset: iconAsset,
+            iconSystemName: iconSystemName,
+            tokens: tokens,
+            total: nil,
+            quotaRows: quota?.windows.map {
+                QuotaRow(
+                    id: $0.key,
+                    label: $0.label,
+                    usedPercentage: $0.usedPercentage,
+                    resetsAt: $0.resetsAt
+                )
+            } ?? []
+        )
+    }
+
     static func claude(tokens: ProviderTokenUsageSummary?, quota: ClaudeUsageSnapshot?) -> Self {
         var rows: [QuotaRow] = []
         if let five = quota?.fiveHour {
-            rows.append(.init(label: "5h", usedPercentage: five.usedPercentage, resetsAt: five.resetsAt))
+            rows.append(.init(id: "five-hour", label: "5h", usedPercentage: five.usedPercentage, resetsAt: five.resetsAt))
         }
         if let week = quota?.sevenDay {
-            rows.append(.init(label: "7d", usedPercentage: week.usedPercentage, resetsAt: week.resetsAt))
+            rows.append(.init(id: "seven-day", label: "7d", usedPercentage: week.usedPercentage, resetsAt: week.resetsAt))
         }
         return Self(
             id: .claude,
@@ -182,7 +326,7 @@ struct AgentProviderUsageCardModel: Identifiable, Equatable {
 
     static func codex(tokens: ProviderTokenUsageSummary?, quota: CodexUsageSnapshot?) -> Self {
         let rows = quota?.windows.map {
-            QuotaRow(label: $0.label, usedPercentage: $0.usedPercentage, resetsAt: $0.resetsAt)
+            QuotaRow(id: $0.key, label: $0.label, usedPercentage: $0.usedPercentage, resetsAt: $0.resetsAt)
         } ?? []
         return Self(
             id: .codex,
@@ -313,8 +457,11 @@ private struct AgentProviderUsageCard: View {
     @ViewBuilder
     private var providerIcon: some View {
         if let asset = model.iconAsset {
+            // No explicit renderingMode: each imageset's template-rendering-intent
+            // decides. Monochrome brand marks (claude/codex/gemini/cursor/
+            // antigravity) are `template` and pick up the tint below; two-tone
+            // marks (opencode) are `original` and keep their own colors.
             Image(asset)
-                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 16, height: 16)
@@ -388,9 +535,11 @@ private struct AgentProviderUsageCard: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
         }
+        // Equal share of the row width (all four tiles say maxWidth .infinity) and
+        // a fixed compact height so they never stretch or size to their content.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
         .padding(.horizontal, 7)
+        .frame(height: 34)
         .background(NotchDesign.Colors.cardFillRaised, in: RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous)

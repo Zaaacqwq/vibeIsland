@@ -191,6 +191,7 @@ struct NotchAgentsView: View {
                     summary: agentMonitor.detailedTokenUsage,
                     claudeUsage: agentMonitor.usage,
                     codexUsage: agentMonitor.codexUsage,
+                    providerQuotas: agentMonitor.providerQuotas,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )
@@ -204,6 +205,7 @@ struct NotchAgentsView: View {
                     summary: nil,
                     claudeUsage: nil,
                     codexUsage: nil,
+                    providerQuotas: agentMonitor.providerQuotas,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )

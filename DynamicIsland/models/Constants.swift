@@ -727,6 +727,33 @@ extension Defaults.Keys {
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
     
     
+    // MARK: Agents Usage Panel
+    /// Display order of the provider cards in the Agents usage pager, as
+    /// `AgentUsageProviderID` raw values. The Summary card is pinned first and is
+    /// not part of this list. See `AgentUsageProviderCatalog`.
+    static let agentUsageProviderOrder = Key<[String]>(
+        "agentUsageProviderOrder",
+        default: ["claude", "codex", "antigravity", "opencode", "cursor", "copilot", "gemini"]
+    )
+    /// Provider cards the user has switched off in the usage panel, as
+    /// `AgentUsageProviderID` raw values. Missing = enabled.
+    static let disabledAgentUsageProviders = Key<Set<String>>(
+        "disabledAgentUsageProviders",
+        default: []
+    )
+    /// When enabled, Antigravity's Gemini and Claude/GPT quota groups are
+    /// folded into one 5h row and one 7d row in the compact usage panel.
+    static let agentAntigravityCompactQuotaWindows = Key<Bool>(
+        "agentAntigravityCompactQuotaWindows",
+        default: false
+    )
+    /// When enabled, OpenCode's 30d quota row is hidden so the card shows only
+    /// the short rolling window and weekly window.
+    static let agentOpenCodeCompactQuotaWindows = Key<Bool>(
+        "agentOpenCodeCompactQuotaWindows",
+        default: false
+    )
+
     // MARK: Closed Notch Live Activities
     static let closedNotchActivityPriorityOrder = Key<[ClosedNotchActivityKind]>(
         "closedNotchActivityPriorityOrder",

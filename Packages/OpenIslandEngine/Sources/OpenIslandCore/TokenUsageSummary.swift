@@ -9,6 +9,11 @@ public enum AgentUsageProviderID: String, CaseIterable, Codable, Sendable, Ident
     case summary
     case claude
     case codex
+    case opencode
+    case gemini
+    case antigravity
+    case copilot
+    case cursor
 
     public var id: String { rawValue }
 
@@ -17,6 +22,11 @@ public enum AgentUsageProviderID: String, CaseIterable, Codable, Sendable, Ident
         case .summary: return "Summary"
         case .claude: return "Claude"
         case .codex: return "Codex"
+        case .opencode: return "OpenCode"
+        case .gemini: return "Gemini"
+        case .antigravity: return "Antigravity"
+        case .copilot: return "Copilot"
+        case .cursor: return "Cursor"
         }
     }
 }

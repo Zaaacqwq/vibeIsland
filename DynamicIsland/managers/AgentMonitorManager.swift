@@ -100,6 +100,9 @@ final class AgentMonitorManager: ObservableObject {
     /// Detailed rolling usage split by provider, used by the Agents tab's
     /// switchable provider cards while preserving the aggregate summary above.
     @Published private(set) var detailedTokenUsage: AgentUsageSummary?
+    /// Provider-neutral quota windows for providers whose limits require
+    /// asynchronous network or authenticated web-session loading.
+    @Published private(set) var providerQuotas: [AgentUsageProviderID: ProviderQuotaSnapshot] = [:]
     /// Whether an aggregation pass is currently running (spins the card's
     /// refresh control).
     @Published private(set) var isRefreshingTokenUsage = false
@@ -132,6 +135,12 @@ final class AgentMonitorManager: ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var state = SessionState()
     private let tokenUsageProvider = AgentTokenUsageProvider()
+    private let providerQuotaStore = ProviderQuotaStore(fetchers: [
+        AntigravityQuotaFetcher(
+            credentialStore: AntigravityKeychainCredentialStore.shared
+        ),
+        OpenCodeWebQuotaFetcher(),
+    ])
     private var lastTokenUsageRefresh: Date?
     private static let tokenUsageTTL: TimeInterval = 60
     private var hasStarted = false
@@ -179,7 +188,18 @@ final class AgentMonitorManager: ObservableObject {
     /// Recomputes the rolling token-usage summary off the main thread. Honors a
     /// short TTL so opening the Agents tab repeatedly doesn't re-walk every
     /// transcript; pass `force: true` for the card's manual refresh button.
-    func refreshTokenUsage(force: Bool = false) {
+    ///
+    /// `refreshQuotas` couples in a full provider-quota re-poll — the right
+    /// behavior for the user-facing refresh button, but callers that only
+    /// changed local token data (e.g. Cursor writing a fresh usage CSV) pass
+    /// `false` so they don't wake every provider's quota fetcher — which would,
+    /// among other things, spin up OpenCode's headless web view and flip its
+    /// "Refreshing…" state.
+    func refreshTokenUsage(force: Bool = false, refreshQuotas: Bool = true) {
+        if refreshQuotas {
+            refreshProviderQuotas(force: force)
+        }
+
         if !force, let last = lastTokenUsageRefresh,
            Date().timeIntervalSince(last) < Self.tokenUsageTTL {
             return
@@ -196,6 +216,42 @@ final class AgentMonitorManager: ObservableObject {
                 self.lastTokenUsageRefresh = Date()
                 self.isRefreshingTokenUsage = false
             }
+        }
+    }
+
+    func refreshProviderQuotas(force: Bool = false) {
+        let store = providerQuotaStore
+        Task {
+            let snapshots = await store.snapshots(forceRefresh: force)
+            self.providerQuotas = snapshots
+        }
+    }
+
+    /// Refreshes a single provider's quota headlessly (used by OpenCode's
+    /// background loop, turn-completion trigger, and manual Refresh button)
+    /// without re-hitting every other provider.
+    func refreshProviderQuota(_ providerID: AgentUsageProviderID, force: Bool = false) {
+        let store = providerQuotaStore
+        Task {
+            if let snapshot = await store.refreshSnapshot(for: providerID, force: force) {
+                self.providerQuotas[providerID] = snapshot
+            }
+        }
+    }
+
+    func clearProviderQuota(_ providerID: AgentUsageProviderID) {
+        providerQuotas.removeValue(forKey: providerID)
+        let store = providerQuotaStore
+        Task {
+            await store.removeSnapshot(for: providerID)
+        }
+    }
+
+    func recordProviderQuota(_ snapshot: ProviderQuotaSnapshot) {
+        providerQuotas[snapshot.providerID] = snapshot
+        let store = providerQuotaStore
+        Task {
+            await store.storeSnapshot(snapshot)
         }
     }
 
@@ -285,6 +341,11 @@ final class AgentMonitorManager: ObservableObject {
             postNeedsInput(sessionID: payload.sessionID)
         case let .questionAsked(payload):
             postNeedsInput(sessionID: payload.sessionID)
+        case let .sessionCompleted(payload):
+            if payload.isSessionEnd != true,
+               state.session(id: payload.sessionID)?.tool == .openCode {
+                OpenCodeQuotaSessionManager.shared.refreshAfterOpenCodeTurnCompleted()
+            }
         default:
             break
         }
