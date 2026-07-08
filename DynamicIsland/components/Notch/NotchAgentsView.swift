@@ -284,8 +284,23 @@ private struct AgentSessionRow: View {
 
     private var isAwaitingPermission: Bool { session.permissionRequest != nil }
 
+    /// A prompt we can detect and show but not answer in-notch — e.g. a Codex
+    /// `request_user_input` (question) or approval read from the rollout, which
+    /// has no write channel back. The prompt text lives in `summary`; the user
+    /// jumps back to answer in the terminal. Distinct from an interactive
+    /// permission/question that carries its own request object.
+    private var detectedPromptText: String? {
+        guard session.permissionRequest == nil,
+              session.questionPrompt == nil,
+              session.phase.requiresAttention,
+              !session.summary.isEmpty else { return nil }
+        return session.summary
+    }
+
+    private var isAwaiting: Bool { session.phase.requiresAttention }
+
     private var borderColor: Color {
-        isAwaitingPermission ? NotchDesign.Colors.warning.opacity(compact ? 0.22 : 0.28) : NotchDesign.Colors.hairline
+        isAwaiting ? NotchDesign.Colors.warning.opacity(compact ? 0.22 : 0.28) : NotchDesign.Colors.hairline
     }
 
     var body: some View {
@@ -332,6 +347,26 @@ private struct AgentSessionRow: View {
             }
             if let question = session.questionPrompt {
                 questionActions(question, sessionID: session.id)
+            }
+            if let prompt = detectedPromptText {
+                // Read-only prompt (e.g. Codex asked a question) — show the text
+                // and let the user jump back to answer in the terminal. No input
+                // field: there is no channel to send an answer back.
+                HStack(alignment: .top, spacing: 6) {
+                    Text(prompt)
+                        .font(statusFont)
+                        .foregroundStyle(NotchDesign.Colors.textSecondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if session.jumpTarget != nil {
+                        Text("Answer in terminal ↗")
+                            .font(NotchDesign.Typography.voice(compact ? 10 : 11, weight: .medium))
+                            .foregroundStyle(accent)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                    }
+                }
             }
         }
         .padding(rowPadding)

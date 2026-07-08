@@ -786,6 +786,22 @@ public enum CodexRolloutReducer {
                 return
             }
 
+            // Codex asks the user via the `request_user_input` tool call (a
+            // function_call, NOT an event_msg). Surface it as a question so the
+            // session goes to .waitingForAnswer (red halo) and the prompt text
+            // shows in the notch — the user answers in the terminal (no channel
+            // to send an answer back through the rollout).
+            if toolName == "request_user_input" || toolName == "elicitation" {
+                applyQuestionRequest(
+                    summary: requestUserInputQuestionText(from: payload) ?? "Codex is asking a question.",
+                    to: &snapshot
+                )
+                if let timestamp {
+                    snapshot.updatedAt = timestamp
+                }
+                return
+            }
+
             applyToolActivity(
                 toolName,
                 preview: commandPreview(for: toolName, payload: payload),
@@ -885,6 +901,32 @@ public enum CodexRolloutReducer {
         snapshot.isCompleted = false
         snapshot.isInterrupted = false
         snapshot.summary = summary ?? "Answer needed."
+    }
+
+    /// Extracts the question text from a `request_user_input` function_call's
+    /// `arguments` (a JSON string like
+    /// `{"questions":[{"question":"…","header":"…","options":[…]}]}`).
+    private static func requestUserInputQuestionText(from payload: [String: Any]) -> String? {
+        let argsObject: [String: Any]?
+        if let argsString = payload["arguments"] as? String,
+           let data = argsString.data(using: .utf8) {
+            argsObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        } else {
+            argsObject = payload["arguments"] as? [String: Any]
+        }
+
+        guard let questions = argsObject?["questions"] as? [[String: Any]],
+              let first = questions.first else {
+            return nil
+        }
+
+        let text = (first["question"] as? String) ?? (first["header"] as? String)
+        guard let text, !text.isEmpty else { return nil }
+
+        if questions.count > 1 {
+            return clipped("\(text) (+\(questions.count - 1) more)")
+        }
+        return clipped(text)
     }
 
     private static func applyUserMessage(

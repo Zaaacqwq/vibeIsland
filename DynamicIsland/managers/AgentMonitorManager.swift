@@ -65,6 +65,7 @@ final class AgentMonitorManager: ObservableObject {
         didSet {
             pruneCollapsedInputSessions()
             AgentInputHotkeyMonitor.shared.updatePendingState()
+            syncCodexRolloutTargets()
         }
     }
 
@@ -137,6 +138,12 @@ final class AgentMonitorManager: ObservableObject {
     private var bridgeTask: Task<Void, Never>?
     private var reconnectTask: Task<Void, Never>?
     private var state = SessionState()
+    /// Polls each tracked Codex session's rollout JSONL for rich state the hooks
+    /// don't deliver — most importantly `request_user_input` (Codex asked a
+    /// question) and `usage_limit_exceeded`. Feeds its events back through
+    /// `apply(_:)`. Targets are kept in sync with the live Codex sessions.
+    private let codexRolloutWatcher = CodexRolloutWatcher()
+    private var lastCodexRolloutTargets: [CodexRolloutWatchTarget] = []
     private let tokenUsageProvider = AgentTokenUsageProvider()
     private let providerQuotaStore = ProviderQuotaStore(fetchers: [
         AntigravityQuotaFetcher(
@@ -184,6 +191,33 @@ final class AgentMonitorManager: ObservableObject {
         startLivenessMonitor()
         refreshTokenUsage()
         AgentInputHotkeyMonitor.shared.start()
+
+        // Feed rollout-derived Codex events (questions, usage-limit, richer
+        // activity) back through the same apply path as bridge events.
+        codexRolloutWatcher.eventHandler = { [weak self] event in
+            Task { @MainActor [weak self] in
+                self?.apply(event)
+            }
+        }
+    }
+
+    /// Keeps the Codex rollout watcher pointed at exactly the live Codex
+    /// sessions that expose a transcript path (the rollout JSONL). Cheap and
+    /// idempotent — only re-syncs when the target set actually changes.
+    private func syncCodexRolloutTargets() {
+        let targets = state.sessions
+            .compactMap { session -> CodexRolloutWatchTarget? in
+                guard session.tool == .codex, !session.isDemoSession,
+                      let path = session.codexMetadata?.transcriptPath, !path.isEmpty else {
+                    return nil
+                }
+                return CodexRolloutWatchTarget(sessionID: session.id, transcriptPath: path)
+            }
+            .sorted { $0.sessionID < $1.sessionID }
+
+        guard targets != lastCodexRolloutTargets else { return }
+        lastCodexRolloutTargets = targets
+        codexRolloutWatcher.sync(targets: targets)
     }
 
     // MARK: - Token usage
@@ -263,6 +297,7 @@ final class AgentMonitorManager: ObservableObject {
         reconnectTask?.cancel()
         bridgeClient?.disconnect()
         bridgeServer.stop()
+        codexRolloutWatcher.stop()
         livenessTimer?.invalidate()
         livenessTimer = nil
         antigravityWatchdogTimer?.invalidate()
@@ -365,6 +400,21 @@ final class AgentMonitorManager: ObservableObject {
             haloActivity[started.sessionID] = .idle
         case let .activityUpdated(activity):
             let summary = activity.summary
+            if activity.phase.requiresAttention {
+                // A detected (non-interactive) prompt delivered as an activity —
+                // e.g. Codex asked via the `request_user_input` tool call. This is
+                // a real "waiting for your answer" signal, so chime + surface
+                // immediately (no debounce — unlike the Cursor timing heuristic).
+                // The prompt text is in `summary`; the user answers in the terminal.
+                cancelCursorWaitSound(for: activity.sessionID)
+                let wasAttention = haloActivity[activity.sessionID] == .inputNeeded
+                haloActivity[activity.sessionID] = .inputNeeded
+                if !wasAttention {
+                    playInputNeededSoundIfEnabled()
+                    postNeedsInput(sessionID: activity.sessionID)
+                }
+                return
+            }
             if activity.attentionHint == true {
                 // Lightweight "waiting on the user" hint (e.g. Cursor is prompting
                 // for command approval). Red halo immediately — no overlay, since
