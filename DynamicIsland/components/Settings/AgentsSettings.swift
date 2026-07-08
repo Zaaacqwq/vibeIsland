@@ -59,7 +59,7 @@ struct AgentsSettings: View {
     }
 
     private var agentsRoot: some View {
-        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode, Gemini, Cursor, Kimi) in the notch.") {
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode, Gemini, Cursor) in the notch.") {
             GeistSection(
                 footer: "Adds an Agents tab and a closed-notch live activity showing running agent sessions, permission prompts, and one-click jump-back to the terminal."
             ) {
@@ -153,14 +153,6 @@ struct AgentsSettings: View {
                     uninstall: { agentMonitor.uninstallCursorHooks() }
                 )
 
-                hookSection(
-                    title: "Kimi",
-                    info: "Installing writes VibeIsland-namespaced hooks into ~/.kimi/config.toml. Fails open if VibeIsland isn't running.",
-                    status: agentMonitor.kimiHookStatus,
-                    install: { agentMonitor.installKimiHooks() },
-                    uninstall: { agentMonitor.uninstallKimiHooks() }
-                )
-
                 GeistSection {
                     GeistNavRow(
                         title: "Usage",
@@ -195,7 +187,6 @@ struct AgentsSettings: View {
             agentMonitor.refreshOpenCodeHookStatus()
             agentMonitor.refreshGeminiHookStatus()
             agentMonitor.refreshCursorHookStatus()
-            agentMonitor.refreshKimiHookStatus()
             agentMonitor.refreshStatusLineStatus()
             agentMonitor.refreshTokenUsage()
         }

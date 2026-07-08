@@ -34,10 +34,39 @@ public enum ManagedHooksBinary {
         )
 
         if resolvedSourceURL != resolvedDestinationURL {
-            if fileManager.fileExists(atPath: resolvedDestinationURL.path) {
-                try fileManager.removeItem(at: resolvedDestinationURL)
+            // Idempotent: if the managed binary already matches the bundled one,
+            // do nothing. This is the common case when installing hooks for
+            // several providers in one session (e.g. onboarding) — only the
+            // first copy runs, so we never re-copy over an existing file.
+            if fileManager.fileExists(atPath: resolvedDestinationURL.path),
+               let installed = try? Data(contentsOf: resolvedDestinationURL),
+               let bundled = try? Data(contentsOf: resolvedSourceURL),
+               installed == bundled {
+                try? fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: resolvedDestinationURL.path)
+                return resolvedDestinationURL
             }
-            try fileManager.copyItem(at: resolvedSourceURL, to: resolvedDestinationURL)
+
+            // Otherwise install atomically via a unique temp file, tolerating a
+            // concurrent installer that may create the destination first (the
+            // provider install methods run in parallel detached tasks).
+            let tempURL = resolvedDestinationURL
+                .deletingLastPathComponent()
+                .appendingPathComponent(".\(binaryName).tmp-\(UUID().uuidString)")
+            try? fileManager.removeItem(at: tempURL)
+            try fileManager.copyItem(at: resolvedSourceURL, to: tempURL)
+            try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempURL.path)
+
+            if fileManager.fileExists(atPath: resolvedDestinationURL.path) {
+                _ = try fileManager.replaceItemAt(resolvedDestinationURL, withItemAt: tempURL)
+            } else {
+                do {
+                    try fileManager.moveItem(at: tempURL, to: resolvedDestinationURL)
+                } catch {
+                    // A concurrent installer won the race and created the
+                    // binary; clean up our temp copy and treat it as installed.
+                    try? fileManager.removeItem(at: tempURL)
+                }
+            }
         }
 
         try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: resolvedDestinationURL.path)

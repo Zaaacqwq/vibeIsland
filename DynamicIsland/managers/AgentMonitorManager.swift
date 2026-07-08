@@ -82,7 +82,6 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var antigravityHookStatus: HookStatus = .unknown
     @Published private(set) var openCodeHookStatus: HookStatus = .unknown
     @Published private(set) var cursorHookStatus: HookStatus = .unknown
-    @Published private(set) var kimiHookStatus: HookStatus = .unknown
     @Published private(set) var geminiHookStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
@@ -1050,28 +1049,6 @@ final class AgentMonitorManager: ObservableObject {
     func uninstallCursorHooks() {
         applyHookChange(label: "remove Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
             _ = try CursorHookInstallationManager().uninstall()
-            return false
-        }
-    }
-
-    // MARK: - Kimi hooks (reuse the bundled OpenIslandHooks binary)
-
-    func refreshKimiHookStatus() {
-        applyHookChange(label: "check Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
-            try KimiHookInstallationManager().status().managedHooksPresent
-        }
-    }
-
-    func installKimiHooks() {
-        let binary = bundledHooksBinaryURL
-        applyHookChange(label: "install Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
-            try KimiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
-        }
-    }
-
-    func uninstallKimiHooks() {
-        applyHookChange(label: "remove Kimi hooks", assign: { self.kimiHookStatus = $0 }) {
-            _ = try KimiHookInstallationManager().uninstall()
             return false
         }
     }

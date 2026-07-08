@@ -31,7 +31,7 @@ public struct ClaudeHookInstallationStatus: Equatable, Sendable {
 public final class ClaudeHookInstallationManager: @unchecked Sendable {
     public let claudeDirectory: URL
     public let managedHooksBinaryURL: URL
-    /// The `--source` value passed to the hooks binary (e.g. "claude", "qoder", "factory", "codebuddy").
+    /// The `--source` value passed to the hooks binary.
     public let hookSource: String
     private let fileManager: FileManager
 

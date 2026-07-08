@@ -64,14 +64,9 @@ struct VibeIslandAgentConfigurationTests {
 
 @Suite("ClaudeSessionFilter")
 struct ClaudeSessionFilterTests {
-    @Test("Includes the surfaced agents (Claude family, Codex, Gemini, Antigravity, OpenCode)")
+    @Test("Includes the surfaced agents (Claude, Codex, Gemini, Antigravity, OpenCode)")
     func includesSurfacedAgents() {
         #expect(ClaudeSessionFilter.includes(.claudeCode))
-        #expect(ClaudeSessionFilter.includes(.qoder))
-        #expect(ClaudeSessionFilter.includes(.qwenCode))
-        #expect(ClaudeSessionFilter.includes(.factory))
-        #expect(ClaudeSessionFilter.includes(.codebuddy))
-        #expect(ClaudeSessionFilter.includes(.kimiCLI))
         #expect(ClaudeSessionFilter.includes(.codex))
         #expect(ClaudeSessionFilter.includes(.geminiCLI))
         #expect(ClaudeSessionFilter.includes(.antigravity))
@@ -88,16 +83,13 @@ struct ClaudeSessionFilterTests {
         let state = SessionState(sessions: [
             makeSession(id: "a", tool: .claudeCode),
             makeSession(id: "b", tool: .codex),
-            makeSession(id: "c", tool: .qoder),
             makeSession(id: "d", tool: .cursor),
             makeSession(id: "e", tool: .antigravity),
         ])
 
         let surfaced = ClaudeSessionFilter.claudeSessions(in: state)
         let ids = Set(surfaced.map(\.id))
-        // All wired agent CLIs are surfaced, including Cursor (d), which is now
-        // fully wired through the bridge alongside Claude/Codex/Qoder/Antigravity.
-        #expect(ids == ["a", "b", "c", "d", "e"])
+        #expect(ids == ["a", "b", "d", "e"])
     }
 }
 

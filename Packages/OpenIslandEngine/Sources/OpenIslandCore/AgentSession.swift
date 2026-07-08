@@ -5,12 +5,7 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
     case codex
     case geminiCLI
     case openCode
-    case qoder
-    case qwenCode
-    case factory
-    case codebuddy
     case cursor
-    case kimiCLI
     case antigravity
 
     public var displayName: String {
@@ -23,18 +18,8 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "Gemini CLI"
         case .openCode:
             "OpenCode"
-        case .qoder:
-            "Qoder"
-        case .qwenCode:
-            "Qwen Code"
-        case .factory:
-            "Factory"
-        case .codebuddy:
-            "CodeBuddy"
         case .cursor:
             "Cursor"
-        case .kimiCLI:
-            "Kimi CLI"
         case .antigravity:
             "Antigravity"
         }
@@ -50,29 +35,10 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "GEMINI"
         case .openCode:
             "OPENCODE"
-        case .qoder:
-            "QODER"
-        case .qwenCode:
-            "QWEN"
-        case .factory:
-            "FACTORY"
-        case .codebuddy:
-            "CODEBUDDY"
         case .cursor:
             "CURSOR"
-        case .kimiCLI:
-            "KIMI"
         case .antigravity:
             "AGY"
-        }
-    }
-
-    public var isClaudeCodeFork: Bool {
-        switch self {
-        case .claudeCode, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI:
-            true
-        default:
-            false
         }
     }
 
@@ -87,11 +53,6 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
         case .cursor:     "#7a5cff"
         case .geminiCLI:  "#42e86b"
         case .openCode:   "#ffb547"
-        case .qoder:      "#ff6b9f"
-        case .qwenCode:   "#c084fc"
-        case .factory:    "#6e9fff"
-        case .codebuddy:  "#fca5a5"
-        case .kimiCLI:    "#fde047"
         case .antigravity: "#4f9bff"
         }
     }
@@ -514,7 +475,7 @@ public extension AgentSession {
     }
 
     var isTrackedLiveSession: Bool {
-        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .qoder || tool == .qwenCode || tool == .factory || tool == .codebuddy || tool == .cursor || tool == .kimiCLI || tool == .antigravity)
+        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .cursor || tool == .antigravity)
     }
 
     var isTrackedLiveCodexSession: Bool {

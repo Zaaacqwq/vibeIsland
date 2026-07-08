@@ -474,7 +474,7 @@ struct TerminalJumpService {
         return result == "matched"
     }
 
-    // MARK: - VS Code family (VS Code, Insiders, Cursor, Windsurf, Trae, Qoder)
+    // MARK: - VS Code family (VS Code, Insiders, Cursor, Windsurf, Trae)
 
     /// Maps bundle identifiers to the CLI command used to open a workspace.
     /// Single source of truth — `vscodeFamilyBundleIDs` is derived from these
@@ -486,7 +486,6 @@ struct TerminalJumpService {
         "com.exafunction.windsurf": "windsurf",
         "com.trae.app": "trae",
         "cn.trae.app": "trae",
-        "com.qoder.qoder": "qoder",
     ]
 
     private func jumpToVSCodeFamilyWorkspace(_ workspacePath: String, bundleIdentifier: String) -> Bool {

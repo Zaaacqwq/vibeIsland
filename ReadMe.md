@@ -31,8 +31,7 @@ without taking over your desktop.
 
 ## AI agents, without the context switching
 
-VibeIsland provides one-click hook/plugin setup for **Claude Code** (and its
-hook-compatible forks — Qoder, Qwen Code, Factory, CodeBuddy, Kimi), **Codex**,
+VibeIsland provides one-click hook/plugin setup for **Claude Code**, **Codex**,
 **Gemini CLI**, **Antigravity**, **OpenCode**, and **Cursor**. Sessions can
 remain compact while they run, then surface automatically — with a red halo and
 a sound — when an agent asks a question or requests permission.
@@ -54,7 +53,7 @@ usage, so tools that do not expose live hooks can still appear as usage cards.
 
 | Provider / tool | Live sessions | Status states | In-notch actions | Usage data |
 | --- | --- | --- | --- | --- |
-| Claude Code (+ Qoder, Qwen Code, Factory, CodeBuddy, Kimi) | Yes | idle · thinking · executing · compacting · input-needed · complete | Answer questions, approve/deny permissions, jump-back | Tokens, cache, active time, cost, and Claude 5h / 7d rate-limit windows |
+| Claude Code | Yes | idle · thinking · executing · compacting · input-needed · complete | Answer questions, approve/deny permissions, jump-back | Tokens, cache, active time, cost, and Claude 5h / 7d rate-limit windows |
 | Codex | Yes | thinking · executing · input-needed · complete | Approve/deny permissions; questions are shown read-only (answer in the terminal); jump-back | Tokens, cache, reasoning, active time, cost, and 5h / weekly windows |
 | OpenCode | Yes | thinking · executing · input-needed · complete | Answer questions, approve/deny permissions, jump-back | Tokens, cache, active time, cost, and quota windows (sign-in) |
 | Antigravity | Yes | executing · complete | Session status, jump-back | Tokens, cache, active time, cost, and shared quota windows (sign-in) |
