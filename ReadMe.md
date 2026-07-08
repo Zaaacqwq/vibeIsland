@@ -31,10 +31,11 @@ without taking over your desktop.
 
 ## AI agents, without the context switching
 
-VibeIsland currently provides first-class setup for **Claude Code**, **Codex**,
-**Antigravity**, and **OpenCode**. Sessions can remain compact while they run,
-then surface automatically when an agent asks a question or requests
-permission.
+VibeIsland provides one-click hook/plugin setup for **Claude Code** (and its
+hook-compatible forks — Qoder, Qwen Code, Factory, CodeBuddy, Kimi), **Codex**,
+**Gemini CLI**, **Antigravity**, **OpenCode**, and **Cursor**. Sessions can
+remain compact while they run, then surface automatically — with a red halo and
+a sound — when an agent asks a question or requests permission.
 
 ![AI agent sessions and combined usage summary](docs/images/agent-usage.png)
 
@@ -47,6 +48,37 @@ permission.
 ### Track provider usage
 
 ![Agent sessions and provider usage details](docs/images/agent-provider-usage.png)
+
+VibeIsland's usage panel separates agent session monitoring from provider
+usage, so tools that do not expose live hooks can still appear as usage cards.
+
+| Provider / tool | Live sessions | Status states | In-notch actions | Usage data |
+| --- | --- | --- | --- | --- |
+| Claude Code (+ Qoder, Qwen Code, Factory, CodeBuddy, Kimi) | Yes | idle · thinking · executing · compacting · input-needed · complete | Answer questions, approve/deny permissions, jump-back | Tokens, cache, active time, cost, and Claude 5h / 7d rate-limit windows |
+| Codex | Yes | thinking · executing · input-needed · complete | Approve/deny permissions; questions are shown read-only (answer in the terminal); jump-back | Tokens, cache, reasoning, active time, cost, and 5h / weekly windows |
+| OpenCode | Yes | thinking · executing · input-needed · complete | Answer questions, approve/deny permissions, jump-back | Tokens, cache, active time, cost, and quota windows (sign-in) |
+| Antigravity | Yes | executing · complete | Session status, jump-back | Tokens, cache, active time, cost, and shared quota windows (sign-in) |
+| Gemini CLI | Yes | thinking · complete | Session status, jump-back | Tokens, cache, reasoning, active time, and cost |
+| Cursor | Yes | thinking · executing · input-needed · complete | Input-needed halo + sound when it waits on you; jump-back to approve in Cursor (its own allowlist governs the actual decision) | Token and cost export from cursor.com |
+| GitHub Copilot | Usage only | — | — | Token, cache, active time, and cost where local usage data is available |
+
+Questions and permission requests you can answer in the notch use each tool's
+blocking hook; Codex questions and Cursor commands are surfaced (halo, text,
+jump-back) but are answered in the terminal, because those tools provide no
+channel to send the answer back.
+
+Jump-back uses the terminal metadata captured by each hook and falls back to
+opening the owning app or workspace when exact pane targeting is not available.
+
+| Terminal / host | Jump-back behavior |
+| --- | --- |
+| iTerm, Terminal.app, Ghostty | Activates the app and targets the matching session, tab, TTY, or title when possible |
+| Warp | Activates Warp and attempts precise tab targeting using Warp's live pane state |
+| WezTerm, Kaku | Uses the app CLI to focus the matching pane by pane id, title, or working directory |
+| tmux, Zellij, cmux | Targets the recorded pane or surface, then activates the parent terminal |
+| VS Code, VS Code Insiders, Cursor, Windsurf, Trae | Reopens the recorded workspace in the matching editor family app |
+| JetBrains IDEs | Opens the recorded project in IntelliJ IDEA, WebStorm, PyCharm, GoLand, CLion, RubyMine, PhpStorm, Rider, or RustRover |
+| Codex.app | Opens the recorded Codex thread directly when a thread id is available |
 
 ## More than an agent monitor
 
