@@ -36,7 +36,7 @@ VibeIsland provides one-click hook/plugin setup for **Claude Code**, **Codex**,
 remain compact while they run, then surface automatically — with a red halo and
 a sound — when an agent asks a question or requests permission.
 
-![AI agent sessions and combined usage summary](docs/images/agent-usage.png)
+![Agent sessions with a combined all-provider usage summary](docs/images/agent-usage.png)
 
 ### Respond from the notch
 
@@ -46,7 +46,7 @@ a sound — when an agent asks a question or requests permission.
 
 ### Track provider usage
 
-![Agent sessions and provider usage details](docs/images/agent-provider-usage.png)
+![Per-provider usage details for a Claude Code session](docs/images/agent-provider-usage.png)
 
 VibeIsland's usage panel separates agent session monitoring from provider
 usage, so tools that do not expose live hooks can still appear as usage cards.
@@ -88,6 +88,32 @@ The same interface also hosts the tools that are useful throughout the day.
 | ![VibeIsland file shelf and AirDrop view](docs/images/file-shelf.png) | ![VibeIsland calendar view](docs/images/calendar.png) |
 | **Weather** | **Timer** |
 | ![VibeIsland weather view](docs/images/weather.png) | ![VibeIsland timer view](docs/images/timer.png) |
+
+## Live activities in the closed notch
+
+When the notch is collapsed, VibeIsland keeps only what matters glanceable —
+media and lyrics, the weather, a running timer, and your current Focus.
+
+| Now playing | Live lyrics |
+| --- | --- |
+| ![Media playing in the closed notch](docs/images/live-media.png) | ![Live lyrics in the closed notch](docs/images/live-lyrics.png) |
+| **Weather** | **Timer** |
+| ![Weather live activity in the closed notch](docs/images/live-weather.png) | ![Timer countdown in the closed notch](docs/images/live-timer.png) |
+| **Focus** | **Coding agent** |
+| ![Focus indicator in the closed notch](docs/images/live-focus.png) | ![Coding agent activity in the closed notch](docs/images/live-agent.png) |
+
+## Native system HUDs
+
+VibeIsland can replace selected macOS overlays with notch-aware indicators for
+power, audio devices, input source, and keyboard state.
+
+| Charging | Low battery |
+| --- | --- |
+| ![Charging HUD](docs/images/hud-charging.png) | ![Low battery HUD](docs/images/hud-low-battery.png) |
+| **AirPods connected** | **Headphone transparency** |
+| ![AirPods connection HUD](docs/images/hud-airpods.png) | ![Headphone transparency-mode HUD](docs/images/hud-transparency.png) |
+| **Input source** | **Caps Lock** |
+| ![Input-source switch HUD](docs/images/hud-input-source.png) | ![Caps Lock HUD](docs/images/hud-caps-lock.png) |
 
 ## Requirements
 
