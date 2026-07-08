@@ -28,6 +28,41 @@ respective authors and contributors:
   is reimplemented natively in SwiftUI. MIT-licensed code may be combined
   with this GPL v3 work; the MIT copyright notice is retained here.
 
+Bundled / adapted third-party code
+----------------------------------
+
+- rtaudio — https://github.com/ZephyrCodesStuff/rtaudio
+  Copyright (C) 2026 ZephyrCodesStuff. Licensed under the GNU Affero General
+  Public License v3.0 (AGPL-3.0). The live audio visualizer (DynamicIsland/
+  audio/AudioProcessor.{cpp,hpp} and AudioBridge.mm) was adapted from this
+  project. AGPL-3.0 is combinable with this GPL v3 work; the AGPL section 13
+  obligations apply to the adapted audio code.
+
+- Stats — https://github.com/exelban/stats
+  Copyright (C) Serhiy Mytrovtsiy. Licensed under the MIT License.
+  The system-metrics collection in DynamicIsland/managers/SystemStatsMonitor.swift
+  (CPU / RAM / GPU / network sampling math) was ported from the Stats readers.
+
+- SkyLightWindow — https://github.com/Lakr233/SkyLightWindow
+  Copyright (C) Lakr Aream. Licensed under the MIT License.
+  Used (via Swift Package Manager) for on-screen window rendering in the HUD /
+  OSD window managers.
+
+- DynamicNotchKit — https://github.com/MrKai77/DynamicNotchKit
+  Copyright (C) Kai Azim. Licensed under the MIT License.
+  The Apple-style squircle pill shape (DynamicIslandPillShape) is inspired by
+  DynamicNotchKit; the shape is reimplemented natively in SwiftUI.
+
+Data / API services
+-------------------
+
+- Open-Meteo — https://open-meteo.com
+  Weather data provided by the free Open-Meteo API (data licensed CC-BY 4.0).
+  Used by the notch weather feature (DynamicIsland/managers/Weather).
+
+Other MIT-licensed code combined into this GPL v3 work retains its MIT copyright
+notices above.
+
 In accordance with the GNU GPL v3, this software remains licensed under GPL v3,
 and the above copyright notices and attributions are retained.
 
