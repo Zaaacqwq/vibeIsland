@@ -909,6 +909,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.showOnboardingWindow()
             }
             playWelcomeSound()
+            // Consume first-launch mode immediately. Previously this flag was
+            // flipped by the notch "hello" animation's completion; that animation
+            // has been removed, so onboarding (shown above) is the sole first-run UI.
+            coordinator.firstLaunch = false
         }
         
         previousScreens = NSScreen.screens

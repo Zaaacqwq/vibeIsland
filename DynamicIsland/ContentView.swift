@@ -578,16 +578,6 @@ struct ContentView: View {
                 ? -(vm.closedNotchSize.height + pillTopOffset + currentShadowPadding + 10)
                 : 0
             )
-            .onAppear(perform: {
-                if coordinator.firstLaunch {
-                    // Single open during first launch; closeHello() handles the timed close.
-                    runAfter(1) {
-                        withAnimation(vm.animation) {
-                            openNotch()
-                        }
-                    }
-                }
-            })
             .onChange(of: vm.notchState) { _, newState in
                 // Reset hover state when notch state changes
                 if newState == .closed && isHovering {
@@ -804,13 +794,11 @@ struct ContentView: View {
       func NotchLayout() -> some View {
           VStack(alignment: .leading) {
               VStack(alignment: .leading) {
+                  // First-launch hello animation removed. First-launch mode is now
+                  // consumed at app launch (applicationDidFinishLaunching), so this
+                  // branch never renders; kept inert for the closed-notch layout.
                   if coordinator.firstLaunch {
-                      Spacer()
-                      HelloAnimation().frame(width: 200, height: 80).onAppear(perform: {
-                          vm.closeHello()
-                      })
-                      .padding(.top, 40)
-                      Spacer()
+                      EmptyView()
                   } else {
                         let hasMusicMetadata = !musicManager.songTitle.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
                             || !musicManager.artistName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
