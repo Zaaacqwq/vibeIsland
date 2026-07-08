@@ -23,72 +23,8 @@
 import SwiftUI
 import Defaults
 
-
-struct MusicControllerSelectionView: View {
-    let onContinue: () -> Void
-
-    @Default(.mediaController) var mediaController
-    
-    private var availableMediaControllers: [MediaControllerType] {
-        if MusicManager.shared.isNowPlayingDeprecated {
-            return MediaControllerType.allCases.filter { $0 != .nowPlaying }
-        } else {
-            return MediaControllerType.allCases
-        }
-    }
-    
-    @State private var selectedMediaController: MediaControllerType = Defaults[.mediaController]
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Choose a Music Source")
-                .font(.title)
-                .fontWeight(.bold)
-                .padding(.top, 24)
-
-            Text("Select the music source you want to use. You can change this later in the app settings.")
-                .multilineTextAlignment(.center)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-
-            ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(availableMediaControllers) { controller in
-                        ControllerOptionView(
-                            controller: controller,
-                            isSelected: self.selectedMediaController == controller
-                        )
-                        .onTapGesture {
-                            self.selectedMediaController = controller
-                        }
-                    }
-                }
-                .padding()
-            }
-
-            Spacer()
-
-            Button("Continue", action: {
-                self.mediaController = self.selectedMediaController
-                NotificationCenter.default.post(
-                    name: Notification.Name.mediaControllerChanged,
-                    object: nil
-                )
-                onContinue()
-            })
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.bottom, 24)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            VisualEffectView(material: .underWindowBackground, blendingMode: .behindWindow)
-                .ignoresSafeArea()
-        )
-    }
-}
-
+/// A single media-source option row, reused by the onboarding Music setup page
+/// (`MusicFeatureView`) and elsewhere.
 struct ControllerOptionView: View {
     let controller: MediaControllerType
     let isSelected: Bool
@@ -150,6 +86,7 @@ extension MediaControllerType {
 }
 
 #Preview {
-    MusicControllerSelectionView(onContinue: {})
-        .frame(width: 400, height: 600)
+    ControllerOptionView(controller: .spotify, isSelected: true)
+        .frame(width: 360)
+        .padding()
 }

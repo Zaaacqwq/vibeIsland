@@ -23,18 +23,19 @@
 import SwiftUI
 import Defaults
 
-enum OnboardingStep {
+/// Coarse phase of onboarding. The middle "feature setup" phase iterates a
+/// queue of per-feature pages derived from the user's bubble selection.
+private enum OnboardingPhase {
     case welcome
-    case calendarPermission
-    case musicPermission
-    case profileSelection
+    case featureSelection
+    case featurePages
     case finished
 }
 
-private let calendarService = CalendarService()
-
 struct OnboardingView: View {
-    @State private var step: OnboardingStep = .welcome
+    @State private var phase: OnboardingPhase = .welcome
+    @State private var pageQueue: [OnboardingFeature] = []
+    @State private var pageIndex = 0
     @State private var showFocusMonitoringChoice = false
     @State private var didPresentFocusMonitoringChoice = false
     let onFinish: () -> Void
@@ -42,57 +43,34 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            switch step {
+            switch phase {
             case .welcome:
                 WelcomeView {
-                    withAnimation(.easeInOut(duration: 0.6)) {
-                        step = .calendarPermission
-                    }
+                    withAnimation(.easeInOut(duration: 0.6)) { phase = .featureSelection }
                 }
                 .transition(.opacity)
 
-            case .calendarPermission:
-                PermissionRequestView(
-                    icon: Image(systemName: "calendar"),
-                    title: String(localized: "Enable Calendar Access"),
-                    description: String(localized: "VibeIsland can show all your upcoming events in one place. Access to your calendar is needed to display your schedule."),
-                    privacyNote: String(localized: "Your calendar data is only used to show your events and is never shared."),
-                    onAllow: {
-                        Task {
-                            await requestCalendarPermission()
-                            withAnimation(.easeInOut(duration: 0.6)) {
-                                step = .musicPermission
-                            }
+            case .featureSelection:
+                FeatureSelectionView(
+                    onContinue: { selected in
+                        OnboardingFeature.applySelection(selected)
+                        pageQueue = OnboardingFeature.configPages(for: selected)
+                        pageIndex = 0
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            phase = pageQueue.isEmpty ? .finished : .featurePages
                         }
                     },
-                    onSkip: {
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            step = .musicPermission
-                        }
+                    onBack: {
+                        withAnimation(.easeInOut(duration: 0.6)) { phase = .welcome }
                     }
                 )
                 .transition(.opacity)
-                
-            case .musicPermission:
-                MusicControllerSelectionView(
-                    onContinue: {
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            step = .profileSelection
-                        }
-                    }
-                )
-                .transition(.opacity)
-                
-            case .profileSelection:
-                ProfileSelectionView(
-                    onContinue: { profiles in
-                        applyProfileSettings(profiles)
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            step = .finished
-                        }
-                    }
-                )
-                .transition(.opacity)
+
+            case .featurePages:
+                featurePage(pageQueue[pageIndex])
+                    .id(pageIndex)
+                    .transition(.opacity)
+                    .overlay(alignment: .top) { progressPill }
 
             case .finished:
                 OnboardingFinishView(onFinish: onFinish, onOpenSettings: onOpenSettings)
@@ -109,24 +87,62 @@ struct OnboardingView: View {
             isPresented: $showFocusMonitoringChoice,
             titleVisibility: .visible
         ) {
-            Button("Use DevTools") {
-                Defaults[.focusMonitoringMode] = .useDevTools
-            }
-
-            Button("Use without DevTools") {
-                Defaults[.focusMonitoringMode] = .withoutDevTools
-            }
-
+            Button("Use DevTools") { Defaults[.focusMonitoringMode] = .useDevTools }
+            Button("Use without DevTools") { Defaults[.focusMonitoringMode] = .withoutDevTools }
             Button("Later", role: .cancel) {}
         } message: {
             Text("This is optional. You can change it any time from the menu bar.")
         }
     }
 
-    // MARK: - Permission Request Logic
+    // MARK: - Feature pages
 
-    func requestCalendarPermission() async {
-        await calendarService.requestAccess()
+    @ViewBuilder
+    private func featurePage(_ feature: OnboardingFeature) -> some View {
+        switch feature {
+        case .agent:
+            AgentFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .calendar:
+            CalendarFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .timer:
+            TimerFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .stats:
+            StatsFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .notification:
+            NotificationFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .music:
+            MusicFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
+        case .weather, .shelf:
+            // Page-less features are never queued; render nothing defensively.
+            Color.clear.onAppear(perform: advance)
+        }
+    }
+
+    private var progressPill: some View {
+        Text("\(pageIndex + 1) of \(pageQueue.count)")
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(.thinMaterial))
+            .padding(.top, 10)
+    }
+
+    private func advance() {
+        if pageIndex + 1 < pageQueue.count {
+            withAnimation(.easeInOut(duration: 0.5)) { pageIndex += 1 }
+        } else {
+            withAnimation(.easeInOut(duration: 0.6)) { phase = .finished }
+        }
+    }
+
+    /// Back navigation: step to the previous feature page, or return to the
+    /// feature picker from the first page.
+    private func goBack() {
+        if pageIndex > 0 {
+            withAnimation(.easeInOut(duration: 0.5)) { pageIndex -= 1 }
+        } else {
+            withAnimation(.easeInOut(duration: 0.6)) { phase = .featureSelection }
+        }
     }
 }
-
