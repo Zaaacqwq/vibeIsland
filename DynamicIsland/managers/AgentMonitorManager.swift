@@ -397,7 +397,10 @@ final class AgentMonitorManager: ObservableObject {
     private func trackHaloActivity(_ event: AgentEvent) {
         switch event {
         case let .sessionStarted(started):
-            haloActivity[started.sessionID] = .idle
+            // No fine-grained activity yet — clear any stale entry (e.g. a reused
+            // session id) and let `haloState(for:)` fall back to the phase
+            // (completed = ready, running = thinking) until the first activity.
+            haloActivity[started.sessionID] = nil
         case let .activityUpdated(activity):
             let summary = activity.summary
             if activity.phase.requiresAttention {

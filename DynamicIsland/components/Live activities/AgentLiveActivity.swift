@@ -88,7 +88,7 @@ struct AgentLiveActivity: View {
 
     @ViewBuilder
     private var leadingGlyph: some View {
-        let halo = agentMonitor.aggregateHaloState ?? .idle
+        let halo = agentMonitor.aggregateHaloState ?? .completed
         HaloRingView(state: halo, size: min(accessoryHeight, 18))
             .frame(width: accessoryHeight, height: accessoryHeight)
     }

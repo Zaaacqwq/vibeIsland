@@ -15,13 +15,11 @@
 
 import SwiftUI
 
-/// The six Claude activity states surfaced by the halo, mirroring Claude Halo's
+/// The Claude activity states surfaced by the halo, mirroring Claude Halo's
 /// model. Derived from the hook events VibeIsland already receives over the
-/// bridge (SessionStart → idle, UserPromptSubmit → thinking, PreToolUse →
-/// executing, permission/question → inputNeeded, Stop → completed, PreCompact
-/// → compacting).
+/// bridge (UserPromptSubmit → thinking, PreToolUse → executing,
+/// permission/question → inputNeeded, Stop → completed, PreCompact → compacting).
 enum HaloState: Equatable {
-    case idle
     case thinking
     case executing
     case inputNeeded
@@ -31,7 +29,6 @@ enum HaloState: Equatable {
     /// Halo's state color palette.
     var color: Color {
         switch self {
-        case .idle:        return Color(red: 0.667, green: 0.667, blue: 0.667) // #aaaaaa
         case .thinking:    return Color(red: 1.0,   green: 0.533, blue: 0.188) // #ff8830
         case .executing:   return Color(red: 0.2,   green: 0.6,   blue: 1.0)   // #3399ff
         case .inputNeeded: return Color(red: 0.933, green: 0.2,   blue: 0.2)   // #ee3333
@@ -42,7 +39,6 @@ enum HaloState: Equatable {
 
     var label: String {
         switch self {
-        case .idle:        return "Idle"
         case .thinking:    return "Thinking"
         case .executing:   return "Executing"
         case .inputNeeded: return "Needs input"
@@ -54,7 +50,6 @@ enum HaloState: Equatable {
     /// Continuous rotation speed in radians/second (0 = no rotation).
     var rotationSpeed: Double {
         switch self {
-        case .idle:        return 0.55
         case .thinking:    return 0.9
         case .executing:   return 3.2
         case .inputNeeded: return 0.0
@@ -68,7 +63,6 @@ enum HaloState: Equatable {
 
     var motion: Motion {
         switch self {
-        case .idle:        return .steady
         case .thinking:    return .breathe
         case .executing:   return .steady
         case .inputNeeded: return .pulse
@@ -86,7 +80,6 @@ enum HaloState: Equatable {
         case .compacting:  return 4
         case .thinking:    return 3
         case .completed:   return 2
-        case .idle:        return 1
         }
     }
 }
