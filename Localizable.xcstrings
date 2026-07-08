@@ -13695,7 +13695,7 @@
         }
       }
     },
-    "Atoll": {
+    "VibeIsland": {
       "localizations": {
         "ar": {
           "stringUnit": {
@@ -13712,13 +13712,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "en-GB": {
@@ -13742,7 +13742,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "gu": {
@@ -13790,7 +13790,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "sv": {
@@ -13820,100 +13820,100 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll"
+            "value": "VibeIsland"
           }
         }
       }
     },
-    "Atoll needs access to save and read AI assistant files.": {
+    "VibeIsland needs access to save and read AI assistant files.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll benötigt Zugriff, um AI-Assistent-Dateien zu speichern und zu lesen."
+            "value": "VibeIsland benötigt Zugriff, um AI-Assistent-Dateien zu speichern und zu lesen."
           }
         },
         "ru": {
           "stringUnit": {
-            "value": "Atoll нужен доступ для сохранения ИИ-файлов.",
+            "value": "VibeIsland нужен доступ для сохранения ИИ-файлов.",
             "state": "translated"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll 需要权限来保存和读取 AI 助手文件。"
+            "value": "VibeIsland 需要权限来保存和读取 AI 助手文件。"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll ต้องการสิทธิ์เพื่อบันทึกและอ่านไฟล์ผู้ช่วย AI"
+            "value": "VibeIsland ต้องการสิทธิ์เพื่อบันทึกและอ่านไฟล์ผู้ช่วย AI"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll heeft toegang nodig om AI-assistentbestanden op te slaan en te lezen."
+            "value": "VibeIsland heeft toegang nodig om AI-assistentbestanden op te slaan en te lezen."
           }
         }
       }
     },
-    "Atoll needs access to save screenshots to your desktop.": {
+    "VibeIsland needs access to save screenshots to your desktop.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll benötigt Zugriff, um Screenshots auf Ihrem Desktop zu speichern."
+            "value": "VibeIsland benötigt Zugriff, um Screenshots auf Ihrem Desktop zu speichern."
           }
         },
         "ru": {
           "stringUnit": {
-            "value": "Atoll нужен доступ для сохранения снимков экрана.",
+            "value": "VibeIsland нужен доступ для сохранения снимков экрана.",
             "state": "translated"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll 需要权限将截图保存到桌面。"
+            "value": "VibeIsland 需要权限将截图保存到桌面。"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll ต้องการสิทธิ์เพื่อบันทึกภาพหน้าจอไปยังเดสก์ท็อป"
+            "value": "VibeIsland ต้องการสิทธิ์เพื่อบันทึกภาพหน้าจอไปยังเดสก์ท็อป"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll heeft toegang nodig om schermafbeeldingen op je bureaublad op te slaan."
+            "value": "VibeIsland heeft toegang nodig om schermafbeeldingen op je bureaublad op te slaan."
           }
         }
       }
     },
-    "Atoll needs Bluetooth access to detect when audio devices connect and display their battery status in the HUD.": {
+    "VibeIsland needs Bluetooth access to detect when audio devices connect and display their battery status in the HUD.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll benötigt Bluetooth-Zugriff, um zu erkennen, wenn Audiogeräte verbunden werden, und deren Akkustatus im HUD anzuzeigen."
+            "value": "VibeIsland benötigt Bluetooth-Zugriff, um zu erkennen, wenn Audiogeräte verbunden werden, und deren Akkustatus im HUD anzuzeigen."
           }
         },
         "gu": {
@@ -13931,30 +13931,30 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll 需要蓝牙访问权限来检测音频设备连接并在 HUD 中显示其电池状态。"
+            "value": "VibeIsland 需要蓝牙访问权限来检测音频设备连接并在 HUD 中显示其电池状态。"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll ต้องการสิทธิ์บลูทูธเพื่อตรวจจับเมื่ออุปกรณ์เสียงเชื่อมต่อและแสดงสถานะแบตเตอรี่ใน HUD"
+            "value": "VibeIsland ต้องการสิทธิ์บลูทูธเพื่อตรวจจับเมื่ออุปกรณ์เสียงเชื่อมต่อและแสดงสถานะแบตเตอรี่ใน HUD"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll heeft Bluetooth-toegang nodig om te detecteren wanneer audioapparaten verbinding maken en om hun batterijstatus in de HUD weer te geven."
+            "value": "VibeIsland heeft Bluetooth-toegang nodig om te detecteren wanneer audioapparaten verbinding maken en om hun batterijstatus in de HUD weer te geven."
           }
         }
       }
     },
-    "Atoll uses AppleScripts to control Spotify and Apple Music": {
+    "VibeIsland uses AppleScripts to control Spotify and Apple Music": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll verwendet AppleScripts zur Steuerung von Spotify und Apple Music."
+            "value": "VibeIsland verwendet AppleScripts zur Steuerung von Spotify und Apple Music."
           }
         },
         "gu": {
@@ -13965,26 +13965,26 @@
         },
         "ru": {
           "stringUnit": {
-            "value": "Atoll использует AppleScript для управления Spotify и Apple Music",
+            "value": "VibeIsland использует AppleScript для управления Spotify и Apple Music",
             "state": "translated"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll 使用 AppleScript 控制 Spotify 和 Apple Music"
+            "value": "VibeIsland 使用 AppleScript 控制 Spotify 和 Apple Music"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll ใช้ AppleScripts เพื่อควบคุม Spotify และ Apple Music"
+            "value": "VibeIsland ใช้ AppleScripts เพื่อควบคุม Spotify และ Apple Music"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll gebruikt AppleScripts om Spotify en Apple Music te besturen"
+            "value": "VibeIsland gebruikt AppleScripts om Spotify en Apple Music te besturen"
           }
         }
       }
@@ -16031,7 +16031,7 @@
         }
       }
     },
-    "Blue dashed box shows actual size in Atoll": {
+    "Blue dashed box shows actual size in VibeIsland": {
       "localizations": {
         "ar": {
           "stringUnit": {
@@ -16048,13 +16048,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blau gestriffelte Box zeigt die tatsächliche Größe im Atoll an"
+            "value": "Blau gestriffelte Box zeigt die tatsächliche Größe im VibeIsland an"
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Blue dashed box shows actual size in Atoll"
+            "value": "Blue dashed box shows actual size in VibeIsland"
           }
         },
         "en-GB": {
@@ -16066,7 +16066,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La caja de puntos azul muestra el tamaño real en Atoll"
+            "value": "La caja de puntos azul muestra el tamaño real en VibeIsland"
           }
         },
         "fi": {
@@ -16078,7 +16078,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La boîte bleue en pointillés affiche la taille actuelle dans la Atoll"
+            "value": "La boîte bleue en pointillés affiche la taille actuelle dans la VibeIsland"
           }
         },
         "gu": {
@@ -16126,7 +16126,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Синяя пунктирная рамка — реальный размер в Atoll"
+            "value": "Синяя пунктирная рамка — реальный размер в VibeIsland"
           }
         },
         "sv": {
@@ -16156,19 +16156,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "蓝色虚线框显示 Atoll 中的实际大小"
+            "value": "蓝色虚线框显示 VibeIsland 中的实际大小"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "กล่องเส้นประสีน้ำเงินแสดงขนาดจริงใน Atoll"
+            "value": "กล่องเส้นประสีน้ำเงินแสดงขนาดจริงใน VibeIsland"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Het blauw gestippelde vak geeft de werkelijke grootte op Atoll weer"
+            "value": "Het blauw gestippelde vak geeft de werkelijke grootte op VibeIsland weer"
           }
         }
       }
@@ -20375,7 +20375,7 @@
         }
       }
     },
-    "Choose animation to display when Atoll is idle. Tap to select, hold to delete custom animations.": {
+    "Choose animation to display when VibeIsland is idle. Tap to select, hold to delete custom animations.": {
       "comment": "A footer label under the section that lists their idle animations.",
       "localizations": {
         "ar": {
@@ -20387,19 +20387,19 @@
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vyberte animaci, která se zobrazí, když je Atoll nečinný. Klepnutím vyberte, podržením smažte vlastní animace."
+            "value": "Vyberte animaci, která se zobrazí, když je VibeIsland nečinný. Klepnutím vyberte, podržením smažte vlastní animace."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wählen Sie die Animation aus, die angezeigt werden soll, wenn Atoll im Leerlauf ist. Tippen Sie zum Auswählen und halten Sie zum Löschen benutzerdefinierter Animationen gedrückt."
+            "value": "Wählen Sie die Animation aus, die angezeigt werden soll, wenn VibeIsland im Leerlauf ist. Tippen Sie zum Auswählen und halten Sie zum Löschen benutzerdefinierter Animationen gedrückt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Choose animation to display when Atoll is idle. Tap to select, hold to delete custom animations."
+            "value": "Choose animation to display when VibeIsland is idle. Tap to select, hold to delete custom animations."
           }
         },
         "en-GB": {
@@ -20411,19 +20411,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elige la animación para que se muestre cuando Atoll esté inactivo. Toque para seleccionar, mantenga presionado para eliminar animaciones personalizadas."
+            "value": "Elige la animación para que se muestre cuando VibeIsland esté inactivo. Toque para seleccionar, mantenga presionado para eliminar animaciones personalizadas."
           }
         },
         "fi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Valitse animaatio, joka näytetään, kun Atoll on lepotilassa. Napauta valitaksesi, pidä painettuna poistaaksesi mukautetut animaatiot."
+            "value": "Valitse animaatio, joka näytetään, kun VibeIsland on lepotilassa. Napauta valitaksesi, pidä painettuna poistaaksesi mukautetut animaatiot."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisir une animation à afficher lorsque la Atoll est inactive. Touchez pour sélectionner, maintenez pour supprimer."
+            "value": "Choisir une animation à afficher lorsque la VibeIsland est inactive. Touchez pour sélectionner, maintenez pour supprimer."
           }
         },
         "gu": {
@@ -20459,7 +20459,7 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Velg animasjon som skal vises når Atoll er inaktiv. Trykk for å velge, hold nede for å slette tilpassede animasjoner."
+            "value": "Velg animasjon som skal vises når VibeIsland er inaktiv. Trykk for å velge, hold nede for å slette tilpassede animasjoner."
           }
         },
         "pl": {
@@ -20483,7 +20483,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Välj animation som ska visas när Atoll är inaktiv. Tryck för att välja, håll ned för att radera anpassade animationer."
+            "value": "Välj animation som ska visas när VibeIsland är inaktiv. Tryck för att välja, håll ned för att radera anpassade animationer."
           }
         },
         "ta": {
@@ -20507,19 +20507,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择在Atoll闲置时显示的动画效果。轻点选择，长按删除自定义动画。"
+            "value": "选择在VibeIsland闲置时显示的动画效果。轻点选择，长按删除自定义动画。"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เลือกแอนิเมชันที่จะแสดงเมื่อ Atoll ไม่ได้ใช้งาน แตะเพื่อเลือก กดค้างเพื่อลบแอนิเมชันกำหนดเอง"
+            "value": "เลือกแอนิเมชันที่จะแสดงเมื่อ VibeIsland ไม่ได้ใช้งาน แตะเพื่อเลือก กดค้างเพื่อลบแอนิเมชันกำหนดเอง"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kies een animatie die moet worden weergegeven wanneer het Atoll inactief is. Tik om te selecteren, houd ingedrukt om aangepaste animaties te verwijderen."
+            "value": "Kies een animatie die moet worden weergegeven wanneer het VibeIsland inactief is. Tik om te selecteren, houd ingedrukt om aangepaste animaties te verwijderen."
           }
         }
       }
@@ -36372,7 +36372,7 @@
         }
       }
     },
-    "Enable built-in system monitoring to replace macOS HUD notifications with Atoll displays.": {
+    "Enable built-in system monitoring to replace macOS HUD notifications with VibeIsland displays.": {
       "extractionState": "manual",
       "localizations": {
         "ar": {
@@ -36384,7 +36384,7 @@
         "be": {
           "stringUnit": {
             "state": "translated",
-            "value": "Уключыце ўбудаваны маніторынг сістэмы, каб замяніць апавяшчэнні HUD macOS на дысплеі Atoll."
+            "value": "Уключыце ўбудаваны маніторынг сістэмы, каб замяніць апавяшчэнні HUD macOS на дысплеі VibeIsland."
           }
         },
         "cs": {
@@ -36396,13 +36396,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktivieren Sie die integrierte Systemüberwachung, um macOS HUD-Benachrichtigungen durch Atoll-Displays zu ersetzen."
+            "value": "Aktivieren Sie die integrierte Systemüberwachung, um macOS HUD-Benachrichtigungen durch VibeIsland-Displays zu ersetzen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Enable built-in system monitoring to replace macOS HUD notifications with Atoll displays."
+            "value": "Enable built-in system monitoring to replace macOS HUD notifications with VibeIsland displays."
           }
         },
         "en-GB": {
@@ -36414,7 +36414,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Habilite la supervisión del sistema integrado para reemplazar las notificaciones de macOS HUD con pantallas Atoll."
+            "value": "Habilite la supervisión del sistema integrado para reemplazar las notificaciones de macOS HUD con pantallas VibeIsland."
           }
         },
         "fi": {
@@ -36426,7 +36426,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activez le système de suivi intégré pour remplacer les notifications macOS avec celles de Atoll."
+            "value": "Activez le système de suivi intégré pour remplacer les notifications macOS avec celles de VibeIsland."
           }
         },
         "gu": {
@@ -36438,7 +36438,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS HUD सूचनाओं को Atoll डिस्प्ले से बदलने के लिए अंतर्निहित सिस्टम निगरानी सक्षम करें।"
+            "value": "macOS HUD सूचनाओं को VibeIsland डिस्प्ले से बदलने के लिए अंतर्निहित सिस्टम निगरानी सक्षम करें।"
           }
         },
         "hu": {
@@ -36480,7 +36480,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Заменяет стандартные HUD-уведомления macOS (яркость/громкость) красивыми элементами Atoll."
+            "value": "Заменяет стандартные HUD-уведомления macOS (яркость/громкость) красивыми элементами VibeIsland."
           }
         },
         "sv": {
@@ -36492,13 +36492,13 @@
         "ta": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS HUD அறிவிப்புகளுக்குப் பதிலாக Atoll காட்சிகளைப் பயன்படுத்த, உள்ளமைக்கப்பட்ட சிஸ்டம் கண்காணிப்பை இயக்கவும்."
+            "value": "macOS HUD அறிவிப்புகளுக்குப் பதிலாக VibeIsland காட்சிகளைப் பயன்படுத்த, உள்ளமைக்கப்பட்ட சிஸ்டம் கண்காணிப்பை இயக்கவும்."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS HUD bildirimlerini Atoll ekranlarıyla değiştirmek için yerleşik sistem izlemeyi etkinleştirin."
+            "value": "macOS HUD bildirimlerini VibeIsland ekranlarıyla değiştirmek için yerleşik sistem izlemeyi etkinleştirin."
           }
         },
         "uk": {
@@ -36510,19 +36510,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启用内置系统监控，用 Atoll 显示替代 macOS HUD 通知。"
+            "value": "启用内置系统监控，用 VibeIsland 显示替代 macOS HUD 通知。"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เปิดใช้การตรวจสอบระบบในตัวเพื่อแทนที่การแจ้งเตือน HUD macOS ด้วยการแสดงผล Atoll"
+            "value": "เปิดใช้การตรวจสอบระบบในตัวเพื่อแทนที่การแจ้งเตือน HUD macOS ด้วยการแสดงผล VibeIsland"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schakel ingebouwde systeemmonitoring in om macOS HUD-meldingen te vervangen door Atoll-schermen."
+            "value": "Schakel ingebouwde systeemmonitoring in om macOS HUD-meldingen te vervangen door VibeIsland-schermen."
           }
         }
       }
@@ -70781,7 +70781,7 @@
       }
     },
     "Recording Detected": {
-      "comment": "A text description of a red dot displayed in the Atoll header when screen recording is active.",
+      "comment": "A text description of a red dot displayed in the VibeIsland header when screen recording is active.",
       "localizations": {
         "ar": {
           "stringUnit": {
@@ -72742,7 +72742,7 @@
         }
       }
     },
-    "Restart Atoll": {
+    "Restart VibeIsland": {
       "localizations": {
         "ar": {
           "stringUnit": {
@@ -72759,13 +72759,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll Neu Starten"
+            "value": "VibeIsland Neu Starten"
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Restart Atoll"
+            "value": "Restart VibeIsland"
           }
         },
         "en-GB": {
@@ -72789,7 +72789,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relancer Atoll"
+            "value": "Relancer VibeIsland"
           }
         },
         "gu": {
@@ -72837,7 +72837,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Перезапустить Atoll"
+            "value": "Перезапустить VibeIsland"
           }
         },
         "sv": {
@@ -72867,19 +72867,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重启 Atoll"
+            "value": "重启 VibeIsland"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "รีสตาร์ท Atoll"
+            "value": "รีสตาร์ท VibeIsland"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atoll opnieuw starten"
+            "value": "VibeIsland opnieuw starten"
           }
         }
       }
@@ -96298,7 +96298,7 @@
         }
       }
     },
-    "When enabled, the Atoll will expand horizontally to match the animation size": {
+    "When enabled, the VibeIsland will expand horizontally to match the animation size": {
       "localizations": {
         "ar": {
           "stringUnit": {
@@ -96309,19 +96309,19 @@
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokud je tato funkce povolena, Atoll se rozbalí horizontálně tak, aby odpovídal velikosti animace."
+            "value": "Pokud je tato funkce povolena, VibeIsland se rozbalí horizontálně tak, aby odpovídal velikosti animace."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wenn aktiviert, erweitert sich das Atoll horizontal, um der Animationsgröße zu entsprechen"
+            "value": "Wenn aktiviert, erweitert sich das VibeIsland horizontal, um der Animationsgröße zu entsprechen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "When enabled, the Atoll will expand horizontally to match the animation size"
+            "value": "When enabled, the VibeIsland will expand horizontally to match the animation size"
           }
         },
         "en-GB": {
@@ -96381,13 +96381,13 @@
         "nb": {
           "stringUnit": {
             "state": "translated",
-            "value": "Når denne funksjonen er aktivert, vil Atoll utvides horisontalt for å tilpasse seg animasjonens størrelse."
+            "value": "Når denne funksjonen er aktivert, vil VibeIsland utvides horisontalt for å tilpasse seg animasjonens størrelse."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Po włączeniu Atoll rozszerzy się poziomo, aby dopasować się do rozmiaru animacji."
+            "value": "Po włączeniu VibeIsland rozszerzy się poziomo, aby dopasować się do rozmiaru animacji."
           }
         },
         "pt-BR": {
@@ -96399,7 +96399,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "При включении Atoll будет расширяться по горизонтали в соответствии с размером анимации."
+            "value": "При включении VibeIsland будет расширяться по горизонтали в соответствии с размером анимации."
           }
         },
         "sv": {
@@ -96417,7 +96417,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Etkinleştirildiğinde, Atoll animasyon boyutuna uyacak şekilde yatay olarak genişleyecektir"
+            "value": "Etkinleştirildiğinde, VibeIsland animasyon boyutuna uyacak şekilde yatay olarak genişleyecektir"
           }
         },
         "uk": {
@@ -96429,19 +96429,19 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启用后，Atoll 将水平扩展以匹配动画大小"
+            "value": "启用后，VibeIsland 将水平扩展以匹配动画大小"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เมื่อเปิดใช้ Atoll จะขยายแนวนอนตามขนาดแอนิเมชัน"
+            "value": "เมื่อเปิดใช้ VibeIsland จะขยายแนวนอนตามขนาดแอนิเมชัน"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Als deze optie is ingeschakeld, wordt het Atoll horizontaal uitgevouwen zodat het overeenkomt met de animatiegrootte"
+            "value": "Als deze optie is ingeschakeld, wordt het VibeIsland horizontaal uitgevouwen zodat het overeenkomt met de animatiegrootte"
           }
         }
       }
@@ -97329,7 +97329,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Etkinleştirildiğinde, Atoll animasyon boyutuna uyacak şekilde yatay olarak genişleyecektir"
+            "value": "Etkinleştirildiğinde, VibeIsland animasyon boyutuna uyacak şekilde yatay olarak genişleyecektir"
           }
         },
         "uk": {

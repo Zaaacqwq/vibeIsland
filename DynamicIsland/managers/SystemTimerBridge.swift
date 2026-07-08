@@ -27,7 +27,7 @@ import os
 final class SystemTimerBridge {
     static let shared = SystemTimerBridge()
 
-    private let logger = os.Logger(subsystem: "com.Ebullioscopic.VibeIsland", category: "SystemTimerBridge")
+    private let logger = os.Logger(subsystem: "com.zaaacqwq.VibeIsland", category: "SystemTimerBridge")
 
     private struct TimerMetadata: Equatable {
         enum State: Int {

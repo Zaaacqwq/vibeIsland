@@ -319,7 +319,7 @@ final class LocalSendService: NSObject, ObservableObject {
             for path in paths {
                 guard var components = URLComponents(string: "\(scheme)://\(ip):\(port)\(path)") else { continue }
                 components.queryItems = [
-                    URLQueryItem(name: "fingerprint", value: "atoll.localsend.bridge"),
+                    URLQueryItem(name: "fingerprint", value: "vibeisland.localsend.bridge"),
                 ]
                 guard let url = components.url else { continue }
 
@@ -334,7 +334,7 @@ final class LocalSendService: NSObject, ObservableObject {
                           let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                           let fingerprint = json["fingerprint"] as? String,
                           let alias = json["alias"] as? String,
-                          fingerprint != "atoll.localsend.bridge"
+                          fingerprint != "vibeisland.localsend.bridge"
                     else {
                         continue
                     }
@@ -603,7 +603,7 @@ final class LocalSendService: NSObject, ObservableObject {
             "version": "2.1",
             "deviceModel": "Mac",
             "deviceType": "desktop",
-            "fingerprint": "atoll.localsend.bridge",
+            "fingerprint": "vibeisland.localsend.bridge",
             "port": defaultPort,
             // Use HTTP here so LocalSend peers can quickly fail over to UDP response
             // when Atoll is not serving LocalSend register endpoint.
@@ -699,7 +699,7 @@ final class LocalSendService: NSObject, ObservableObject {
                let fingerprint = json["fingerprint"] as? String,
                let alias = json["alias"] as? String,
                let callerIP,
-               fingerprint != "atoll.localsend.bridge" {
+               fingerprint != "vibeisland.localsend.bridge" {
                 let device = LocalSendDeviceInfo(
                     id: fingerprint,
                     alias: alias,
@@ -730,8 +730,8 @@ final class LocalSendService: NSObject, ObservableObject {
                 "version": "2.1",
                 "deviceModel": "Mac",
                 "deviceType": "desktop",
-                "token": "atoll.localsend.bridge",
-                "fingerprint": "atoll.localsend.bridge",
+                "token": "vibeisland.localsend.bridge",
+                "fingerprint": "vibeisland.localsend.bridge",
                 "download": false,
                 "hasWebInterface": false,
             ]
@@ -744,7 +744,7 @@ final class LocalSendService: NSObject, ObservableObject {
                 "version": "2.1",
                 "deviceModel": "Mac",
                 "deviceType": "desktop",
-                "fingerprint": "atoll.localsend.bridge",
+                "fingerprint": "vibeisland.localsend.bridge",
                 "port": defaultPort,
                 "protocol": "http",
                 "download": false,
@@ -783,7 +783,7 @@ final class LocalSendService: NSObject, ObservableObject {
               let alias = json["alias"] as? String
         else { return }
 
-        if fingerprint == "atoll.localsend.bridge" { return }
+        if fingerprint == "vibeisland.localsend.bridge" { return }
 
         let ip: String
         if let announced = json["ip"] as? String {
@@ -891,8 +891,8 @@ final class LocalSendService: NSObject, ObservableObject {
                 "version": "2.1",
                 "deviceModel": "Mac",
                 "deviceType": "desktop",
-                "fingerprint": "atoll.localsend.bridge",
-                "token": "atoll.localsend.bridge",
+                "fingerprint": "vibeisland.localsend.bridge",
+                "token": "vibeisland.localsend.bridge",
                 "port": defaultPort,
                 "protocol": device.https ? "https" : "http",
                 "download": false,

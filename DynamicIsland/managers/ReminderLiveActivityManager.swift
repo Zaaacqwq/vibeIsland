@@ -46,7 +46,7 @@ final class ReminderLiveActivityManager: ObservableObject {
     @Published private(set) var upcomingEntries: [ReminderEntry] = []
     @Published private(set) var activeWindowReminders: [ReminderEntry] = []
 
-    private let logger: os.Logger = os.Logger(subsystem: "com.ebullioscopic.VibeIsland", category: "ReminderLiveActivity")
+    private let logger: os.Logger = os.Logger(subsystem: "com.zaaacqwq.VibeIsland", category: "ReminderLiveActivity")
 
     private var nextReminder: ReminderEntry?
     private var cancellables = Set<AnyCancellable>()

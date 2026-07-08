@@ -51,7 +51,7 @@ enum LogCategory: String {
 }
 
 struct Logger {
-    private static let subsystem = "com.ebullioscopic.VibeIsland"
+    private static let subsystem = "com.zaaacqwq.VibeIsland"
     private static let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
