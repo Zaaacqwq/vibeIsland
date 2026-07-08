@@ -32,7 +32,16 @@ struct DynamicIslandHeader: View {
     @Default(.showBatteryIndicator) var showBatteryIndicator
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
-    
+
+    /// When the notch is open and a brightness/volume/backlight HUD is peeking,
+    /// it temporarily replaces the header context widget (stats/usage/next event/
+    /// device name) with a compact level bar, fading in and out.
+    private var headerSystemHUDActive: Bool {
+        vm.notchState == .open
+            && coordinator.sneakPeek.show
+            && [.brightness, .volume, .backlight].contains(coordinator.sneakPeek.type)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             HStack {
@@ -62,9 +71,26 @@ struct DynamicIslandHeader: View {
             }
 
             HStack(spacing: 4) {
-                if vm.notchState == .open && !enableMinimalisticUI && Defaults[.showHeaderContextWidgets] {
-                    NotchHeaderContextWidget()
-                    Spacer(minLength: 8)
+                if vm.notchState == .open && !enableMinimalisticUI {
+                    let showContext = Defaults[.showHeaderContextWidgets]
+                    if headerSystemHUDActive || showContext {
+                        ZStack {
+                            if headerSystemHUDActive {
+                                HeaderSystemHUD(
+                                    icon: coordinator.sneakPeek.icon,
+                                    type: coordinator.sneakPeek.type,
+                                    value: coordinator.sneakPeek.value,
+                                    accent: coordinator.sneakPeek.accentColor
+                                )
+                                .transition(.opacity)
+                            } else {
+                                NotchHeaderContextWidget()
+                                    .transition(.opacity)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.25), value: headerSystemHUDActive)
+                        Spacer(minLength: 8)
+                    }
                 }
 
                 if vm.notchState == .open && !enableMinimalisticUI {
@@ -176,6 +202,47 @@ private extension DynamicIslandHeader {
     var shouldSuppressStatusIndicators: Bool {
         Defaults[.settingsIconInNotch]
             && Defaults[.enableTimerFeature]
+    }
+}
+
+/// Compact volume/brightness level shown in the open-notch header (icon + bar)
+/// in place of the tab context widget while a system HUD is peeking.
+private struct HeaderSystemHUD: View {
+    let icon: String
+    let type: SneakContentType
+    let value: CGFloat
+    let accent: Color?
+
+    /// The sneak-peek `icon` is often empty for brightness/backlight, so fall
+    /// back to a type-appropriate glyph rather than a hardcoded speaker.
+    private var resolvedIcon: String {
+        if !icon.isEmpty { return icon }
+        switch type {
+        case .brightness: return "sun.max.fill"
+        case .backlight: return "keyboard"
+        case .volume: return value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill"
+        default: return "speaker.wave.2.fill"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: resolvedIcon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(NotchDesign.Colors.textPrimary)
+                .frame(width: 16)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.15))
+                    Capsule()
+                        .fill(accent ?? NotchDesign.Colors.textPrimary)
+                        .frame(width: max(2, geo.size.width * min(max(value, 0), 1)))
+                }
+            }
+            .frame(width: 84, height: 4)
+        }
+        .frame(height: 30)
+        .padding(.leading, 2)
     }
 }
 

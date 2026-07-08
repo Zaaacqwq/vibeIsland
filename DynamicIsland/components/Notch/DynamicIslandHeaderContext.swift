@@ -163,7 +163,10 @@ struct NotchHeaderContextWidget: View {
                 .frame(width: 12, height: 12)
                 .foregroundStyle(NotchDesign.Colors.textPrimary)
             ForEach(cells) { cell in
-                StatCell(label: cell.label, value: "\(cell.percent)%", tint: tint(for: Double(cell.percent)))
+                // Debug override forces MAX; at the cap show "MAX" (three chars)
+                // rather than the four-char "100%" which gets truncated here.
+                let percent = Defaults[.debugForceUsageMax] ? 100 : cell.percent
+                StatCell(label: cell.label, value: percent >= 100 ? "MAX" : "\(percent)%", tint: tint(for: Double(percent)))
             }
         }
     }

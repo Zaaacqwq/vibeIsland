@@ -580,6 +580,8 @@ extension Defaults.Keys {
     static let debugTabInsetBorderEnabled = Key<Bool>("debugTabInsetBorderEnabled", default: false)
     /// Debug: force-show these closed-pill activities (with sample data) to preview combinations.
     static let debugForcedActivities = Key<Set<ClosedNotchActivityKind>>("debugForcedActivities", default: [])
+    /// Debug: render every agent usage badge/row at 100% ("MAX") to preview the capped styling.
+    static let debugForceUsageMax = Key<Bool>("debugForceUsageMax", default: false)
     static let enableShadow = Key<Bool>("enableShadow", default: true)
     static let cornerRadiusScaling = Key<Bool>("cornerRadiusScaling", default: true)
     static let useModernCloseAnimation = Key<Bool>("useModernCloseAnimation", default: true)

@@ -26,6 +26,7 @@ struct DebugSettings: View {
     @Default(.debugNotchBackgroundColor) private var debugNotchBackgroundColor
     @Default(.debugTabInsetBorderEnabled) private var debugTabInsetBorderEnabled
     @Default(.debugForcedActivities) private var debugForcedActivities
+    @Default(.debugForceUsageMax) private var debugForceUsageMax
 
     @Default(.showPowerStatusNotifications) private var showPowerStatusNotifications
     @Default(.showChargingBatteryHUD) private var showChargingBatteryHUD
@@ -92,6 +93,17 @@ struct DebugSettings: View {
                 GeistToggleRow(
                     title: "Show tab inset border",
                     isOn: $debugTabInsetBorderEnabled,
+                    divider: false
+                )
+            }
+
+            GeistSection(
+                title: "Agent usage",
+                footer: "Renders every agent rate-limit badge and row at 100% (shown as “MAX”) so you can preview the capped styling without hitting a real limit."
+            ) {
+                GeistToggleRow(
+                    title: "Force usage to MAX",
+                    isOn: $debugForceUsageMax,
                     divider: false
                 )
             }

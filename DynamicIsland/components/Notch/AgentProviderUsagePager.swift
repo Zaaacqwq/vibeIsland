@@ -482,13 +482,14 @@ private struct AgentProviderUsageCard: View {
     }
 
     private func quotaGauge(_ row: AgentProviderUsageCardModel.QuotaRow) -> some View {
-        let fraction = min(max(row.usedPercentage / 100, 0), 1)
+        let effectivePercentage = Defaults[.debugForceUsageMax] ? 100 : row.usedPercentage
+        let fraction = min(max(effectivePercentage / 100, 0), 1)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Text(row.label)
                     .font(NotchDesign.Typography.mono(9, weight: .semibold))
                     .foregroundStyle(NotchDesign.Colors.textSecondary)
-                Text("\(Int(row.usedPercentage.rounded()))%")
+                Text(Int(effectivePercentage.rounded()) >= 100 ? "MAX" : "\(Int(effectivePercentage.rounded()))%")
                     .font(NotchDesign.Typography.mono(10, weight: .bold))
                     .foregroundStyle(fraction >= 0.8 ? NotchDesign.Colors.warning : NotchDesign.Colors.textPrimary)
                 Spacer(minLength: 4)
@@ -522,23 +523,26 @@ private struct AgentProviderUsageCard: View {
     }
 
     private func statTile(_ label: String, _ value: String, _ valueColor: Color) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text(label)
-                .font(NotchDesign.Typography.mono(7))
+                .font(NotchDesign.Typography.mono(6.5))
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.55)
+                .minimumScaleFactor(0.85)
             Spacer(minLength: 0)
+            // Small fixed size so the longest realistic value (e.g. "119.7M",
+            // "1d 20h") fits without truncating, and every tile's number renders
+            // at the same size instead of each auto-scaling to its own length.
             Text(value)
-                .font(NotchDesign.Typography.mono(13.5, weight: .bold))
+                .font(NotchDesign.Typography.mono(9.5, weight: .bold))
                 .foregroundStyle(valueColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .minimumScaleFactor(0.7)
         }
         // Equal share of the row width (all four tiles say maxWidth .infinity) and
         // a fixed compact height so they never stretch or size to their content.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 7)
+        .padding(.horizontal, 5)
         .frame(height: 34)
         .background(NotchDesign.Colors.cardFillRaised, in: RoundedRectangle(cornerRadius: NotchDesign.Radius.sm, style: .continuous))
         .overlay {

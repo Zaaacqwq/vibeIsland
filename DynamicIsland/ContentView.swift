@@ -161,6 +161,12 @@ struct ContentView: View {
 
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
+    /// Auto-collapses the agent approve/ask overlay after a delay, mirroring the
+    /// completion popup's auto-close. Cancelled when the prompt changes/resolves.
+    @State private var inputAutoCollapseTask: Task<Void, Never>?
+    /// Delay before an unattended approve/ask overlay tucks away and the notch
+    /// closes — matches `expandToAgentsTab`'s 6s completion auto-close.
+    private static let inputAutoCollapseDelay: TimeInterval = 6
     @State private var lastHapticTime: Date = Date()
     @State private var hoverClickMonitor: Any?
     @State private var hoverClickLocalMonitor: Any?
@@ -661,12 +667,27 @@ struct ContentView: View {
         .background(dragDetector)
         .environmentObject(vm)
         .onChange(of: agentMonitor.activeInputSession?.id) { _, newID in
-            if newID != nil {
+            inputAutoCollapseTask?.cancel()
+            inputAutoCollapseTask = nil
+            if let newID {
                 // Surface the approve/ask overlay on the Agents tab (it's rendered
                 // inside that tab), expanding the notch if needed.
                 guard !Defaults[.enableMinimalisticUI] else { return }
                 if Defaults[.enableAgentMonitoring] { coordinator.currentView = .agents }
                 if vm.notchState != .open { openNotch() }
+                // Like the completion popup, auto-collapse the prompt after a delay
+                // if the user hasn't engaged (isn't hovering). It stays pending and
+                // can be reopened via "Respond" on the agent row.
+                inputAutoCollapseTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(Self.inputAutoCollapseDelay))
+                    guard !Task.isCancelled,
+                          agentMonitor.activeInputSession?.id == newID,
+                          !isHovering else { return }
+                    withAnimation(.smooth(duration: 0.3)) {
+                        agentMonitor.collapseActiveInput()
+                        vm.close()
+                    }
+                }
             } else if vm.notchState == .open, agentMonitor.pendingInputSession == nil,
                       !isHovering, !shouldPreventAutoClose() {
                 // Everything resolved (not merely collapsed) and the cursor isn't

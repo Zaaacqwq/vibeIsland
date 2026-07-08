@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import Defaults
 import OpenIslandCore
 import SwiftUI
 
@@ -82,9 +83,14 @@ struct AgentUsageBadges: View {
     }
 
     private func badge(title: String, percent: Int, warn: Bool, help: String) -> some View {
-        Text("\(title) \(percent)%")
+        // Debug override: preview the capped "MAX" styling on every badge.
+        let effectivePercent = Defaults[.debugForceUsageMax] ? 100 : percent
+        let effectiveWarn = warn || Defaults[.debugForceUsageMax]
+        // At the cap, show "MAX" instead of "100%" — three chars fit the pill
+        // without the four-char "100%" getting compressed/truncated.
+        return Text(effectivePercent >= 100 ? "\(title) MAX" : "\(title) \(effectivePercent)%")
             .font(NotchDesign.Typography.mono(10, weight: .medium))
-            .foregroundStyle(warn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
+            .foregroundStyle(effectiveWarn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
             // Keep the pill on one line — without this, a wider value (two digits
             // or 100%) gets compressed by the parent HStack and wraps to two rows,
             // making the badge taller than its neighbours.

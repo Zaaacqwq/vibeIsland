@@ -56,6 +56,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case calendar
     case hudAndOSD
     case battery
+    case notchHeader
     case downloads
     case shelf
     case shortcuts
@@ -72,7 +73,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general, .appearance, .accessibility: return .core
         case .media, .liveActivities:          return .mediaAndLiveActivities
-        case .hudAndOSD, .devices, .battery:   return .hudsAndHardware
+        case .hudAndOSD, .devices, .battery, .notchHeader: return .hudsAndHardware
         case .timer, .calendar:                return .productivity
         case .weather, .notifications:         return .notchWidgets
         case .shelf, .downloads, .shortcuts:   return .utilities
@@ -93,6 +94,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return String(localized: "Calendar")
         case .hudAndOSD: return String(localized: "Controls")
         case .battery: return String(localized: "Battery")
+        case .notchHeader: return String(localized: "Notch Header")
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
@@ -116,6 +118,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .hudAndOSD: return "slider.horizontal.3"
         case .battery: return "battery.100"
+        case .notchHeader: return "menubar.rectangle"
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "tray.full"
         case .shortcuts: return "keyboard"
@@ -139,6 +142,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: return .cyan
         case .hudAndOSD: return .indigo
         case .battery: return Color(red: 0.202, green: 0.783, blue: 0.348, opacity: 1.000)
+        case .notchHeader: return .blue
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
@@ -444,6 +448,7 @@ struct SettingsView: View {
             .hudAndOSD,
             .devices,
             .battery,
+            .notchHeader,
             // Productivity
             .timer,
             .calendar,
@@ -841,6 +846,10 @@ struct SettingsView: View {
             SettingsForm(tab: .battery) {
                 Charge()
             }
+        case .notchHeader:
+            SettingsForm(tab: .notchHeader) {
+                NotchHeaderSettings()
+            }
         case .downloads:
             SettingsForm(tab: .downloads) {
                 Downloads()
@@ -897,23 +906,6 @@ struct GeneralSettings: View {
     @Default(.openNotchOnHover) var openNotchOnHover
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
-    @Default(.showHeaderContextWidgets) private var showHeaderContextWidgets
-    @Default(.homeHeaderStats) private var homeHeaderStats
-
-    private enum SubPage: String, Hashable { case notchHeader }
-
-    /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
-    /// in canonical `allCases` order so the header layout stays stable.
-    private func homeStatBinding(_ kind: HeaderStatKind) -> Binding<Bool> {
-        Binding(
-            get: { homeHeaderStats.contains(kind) },
-            set: { isOn in
-                var selected = Set(homeHeaderStats)
-                if isOn { selected.insert(kind) } else { selected.remove(kind) }
-                homeHeaderStats = HeaderStatKind.allCases.filter { selected.contains($0) }
-            }
-        )
-    }
 
     var body: some View {
         NavigationStack {
@@ -936,17 +928,6 @@ struct GeneralSettings: View {
                 notchHeightSection()
 
                 notchBehaviour()
-
-                GeistSection {
-                    GeistNavRow(
-                        title: "Notch header",
-                        subtitle: "Tab-aware info shown on the right of the open notch",
-                        systemImage: "menubar.rectangle",
-                        tint: .blue,
-                        value: SubPage.notchHeader,
-                        divider: false
-                    )
-                }
             }
             .toolbar {
                 Button("Quit app") {
@@ -958,35 +939,6 @@ struct GeneralSettings: View {
                 if !openNotchOnHover {
                     // Gestures live in the Accessibility tab now; keep the invariant.
                     Defaults[.enableGestures] = true
-                }
-            }
-            .navigationDestination(for: SubPage.self) { page in
-                switch page {
-                case .notchHeader: notchHeaderPage
-                }
-            }
-        }
-    }
-
-    private var notchHeaderPage: some View {
-        GeistSettingsPage(title: "Notch header") {
-            GeistSection {
-                GeistToggleRow(title: "Show tab info in notch header", isOn: geistBinding(.showHeaderContextWidgets), divider: false, info: "Fills the open notch's right side with info for the active tab — Home CPU/RAM, Shelf device name, Agents usage, Calendar's next event, and Weather location.")
-            }
-
-            if showHeaderContextWidgets {
-                GeistSection(
-                    title: "Home header stats",
-                    footer: "Keep it to about 3 at a time — the notch header has limited room, and more may not fit."
-                ) {
-                    let kinds = HeaderStatKind.allCases
-                    ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
-                        GeistToggleRow(
-                            title: kind.settingsTitle,
-                            isOn: homeStatBinding(kind),
-                            divider: index != kinds.count - 1
-                        )
-                    }
                 }
             }
         }
@@ -1671,6 +1623,51 @@ private struct DevicesSettingsView: View {
     }
 }
 
+/// Notch-header configuration — lives under the HUDs & Hardware group. Controls
+/// the tab-aware info shown on the right of the open notch and which Home stats
+/// appear there. Relocated from General.
+struct NotchHeaderSettings: View {
+    @Default(.showHeaderContextWidgets) private var showHeaderContextWidgets
+    @Default(.homeHeaderStats) private var homeHeaderStats
+
+    /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
+    /// in canonical `allCases` order so the header layout stays stable.
+    private func homeStatBinding(_ kind: HeaderStatKind) -> Binding<Bool> {
+        Binding(
+            get: { homeHeaderStats.contains(kind) },
+            set: { isOn in
+                var selected = Set(homeHeaderStats)
+                if isOn { selected.insert(kind) } else { selected.remove(kind) }
+                homeHeaderStats = HeaderStatKind.allCases.filter { selected.contains($0) }
+            }
+        )
+    }
+
+    var body: some View {
+        GeistSettingsPage(title: "Notch header") {
+            GeistSection {
+                GeistToggleRow(title: "Show tab info in notch header", isOn: geistBinding(.showHeaderContextWidgets), divider: false, info: "Fills the open notch's right side with info for the active tab — Home CPU/RAM, Shelf device name, Agents usage, Calendar's next event, and Weather location.")
+            }
+
+            if showHeaderContextWidgets {
+                GeistSection(
+                    title: "Home header stats",
+                    footer: "Keep it to about 3 at a time — the notch header has limited room, and more may not fit."
+                ) {
+                    let kinds = HeaderStatKind.allCases
+                    ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
+                        GeistToggleRow(
+                            title: kind.settingsTitle,
+                            isOn: homeStatBinding(kind),
+                            divider: index != kinds.count - 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct HUD: View {
     @EnvironmentObject var vm: DynamicIslandViewModel
     @Default(.inlineHUD) var inlineHUD
@@ -2234,6 +2231,14 @@ struct CalendarSettings: View {
                             Text(calendar.title)
                                 .font(Geist.Typography.bodyStrong)
                                 .foregroundStyle(Geist.Colors.ink)
+                            Text(calendar.isReminder ? "Reminder" : "Calendar")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(Geist.Colors.mute)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .overlay(
+                                    Capsule().strokeBorder(Geist.Colors.hairlineStrong, lineWidth: 1)
+                                )
                             Spacer(minLength: Geist.Spacing.sm)
                             Toggle("", isOn: Binding(
                                 get: { calendarManager.getCalendarSelected(calendar) },
