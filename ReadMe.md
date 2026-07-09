@@ -1,4 +1,5 @@
 <div align="center">
+<img width="144" height="144" alt="Icon x1" src="https://github.com/user-attachments/assets/5e649a0e-bcc5-403a-9c98-9bb4239262fe" />
 
 # VibeIsland
 
