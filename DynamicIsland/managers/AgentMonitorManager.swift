@@ -949,14 +949,16 @@ final class AgentMonitorManager: ObservableObject {
 
     func refreshCodexHookStatus() {
         applyHookChange(label: "check Codex hooks", assign: { self.codexHookStatus = $0 }) {
-            try CodexHookInstallationManager().status().managedHooksPresent
+            // Present but untrusted hooks never run (Codex 0.130+ trust gate),
+            // so only report "installed" when the trust entries are in place.
+            try CodexHookInstallationManager().status().managedHooksActive
         }
     }
 
     func installCodexHooks() {
         let binary = bundledHooksBinaryURL
         applyHookChange(label: "install Codex hooks", assign: { self.codexHookStatus = $0 }) {
-            try CodexHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+            try CodexHookInstallationManager().install(hooksBinaryURL: binary).managedHooksActive
         }
     }
 

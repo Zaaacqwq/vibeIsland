@@ -8,7 +8,14 @@ public struct CodexHookInstallationStatus: Equatable, Sendable {
     public var hooksBinaryURL: URL?
     public var featureFlagEnabled: Bool
     public var managedHooksPresent: Bool
+    public var managedHooksTrusted: Bool
     public var manifest: CodexHookInstallerManifest?
+
+    /// Present AND trusted: without persisted trust entries Codex discovers
+    /// the hooks but never executes them, so "installed" must mean both.
+    public var managedHooksActive: Bool {
+        managedHooksPresent && managedHooksTrusted
+    }
 
     public init(
         codexDirectory: URL,
@@ -18,6 +25,7 @@ public struct CodexHookInstallationStatus: Equatable, Sendable {
         hooksBinaryURL: URL?,
         featureFlagEnabled: Bool,
         managedHooksPresent: Bool,
+        managedHooksTrusted: Bool,
         manifest: CodexHookInstallerManifest?
     ) {
         self.codexDirectory = codexDirectory
@@ -27,6 +35,7 @@ public struct CodexHookInstallationStatus: Equatable, Sendable {
         self.hooksBinaryURL = hooksBinaryURL
         self.featureFlagEnabled = featureFlagEnabled
         self.managedHooksPresent = managedHooksPresent
+        self.managedHooksTrusted = managedHooksTrusted
         self.manifest = manifest
     }
 }
@@ -63,6 +72,12 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
             existingData: hooksData,
             managedCommand: managedCommand
         ))?.changed) == true
+        let managedHooksTrusted = CodexHookTrust.managedHooksTrusted(
+            configContents: configContents,
+            hooksData: hooksData,
+            hooksFilePath: hooksURL.path,
+            managedCommand: managedCommand
+        )
 
         return CodexHookInstallationStatus(
             codexDirectory: codexDirectory,
@@ -72,6 +87,7 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
             hooksBinaryURL: resolvedHooksBinaryURL,
             featureFlagEnabled: CodexHookInstaller.isCodexHooksFeatureEnabled(in: configContents),
             managedHooksPresent: managedHooksPresent,
+            managedHooksTrusted: managedHooksTrusted,
             manifest: manifest
         )
     }
@@ -100,14 +116,33 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
         )
         let hooksMutation = try CodexHookInstaller.installHooksJSON(existingData: existingHooks, hookCommand: command)
 
-        if featureMutation.changed, fileManager.fileExists(atPath: configURL.path) {
+        // Trust the hooks we just wrote, and drop entries for the managed or
+        // legacy hooks the install scrubbed (their positional keys are stale).
+        let staleTrustKeys = CodexHookTrust.managedEntries(
+            hooksData: existingHooks,
+            hooksFilePath: hooksURL.path,
+            managedCommand: command,
+            includeLegacyCommands: true
+        ).map(\.key)
+        let trustEntries = CodexHookTrust.managedEntries(
+            hooksData: hooksMutation.contents,
+            hooksFilePath: hooksURL.path,
+            managedCommand: command
+        )
+        let trustMutation = CodexHookTrust.applying(
+            entries: trustEntries,
+            removingKeys: staleTrustKeys,
+            to: featureMutation.contents
+        )
+
+        if featureMutation.changed || trustMutation.changed, fileManager.fileExists(atPath: configURL.path) {
             try backupFile(at: configURL)
         }
         if hooksMutation.changed, fileManager.fileExists(atPath: hooksURL.path) {
             try backupFile(at: hooksURL)
         }
 
-        try featureMutation.contents.write(to: configURL, atomically: true, encoding: .utf8)
+        try trustMutation.contents.write(to: configURL, atomically: true, encoding: .utf8)
         if let hooksData = hooksMutation.contents {
             try hooksData.write(to: hooksURL, options: .atomic)
         }
@@ -152,16 +187,32 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
             try fileManager.removeItem(at: hooksURL)
         }
 
-        if let manifest, manifest.enabledCodexHooksFeature, !hooksMutation.hasRemainingHooks {
-            let existingConfig = (try? String(contentsOf: configURL, encoding: .utf8)) ?? ""
-            let featureMutation = CodexHookInstaller.disableCodexHooksFeatureIfManaged(in: existingConfig)
+        let existingConfig = (try? String(contentsOf: configURL, encoding: .utf8)) ?? ""
+        var updatedConfig = existingConfig
 
-            if featureMutation.changed {
-                if fileManager.fileExists(atPath: configURL.path) {
-                    try backupFile(at: configURL)
-                }
-                try featureMutation.contents.write(to: configURL, atomically: true, encoding: .utf8)
+        if let manifest, manifest.enabledCodexHooksFeature, !hooksMutation.hasRemainingHooks {
+            updatedConfig = CodexHookInstaller.disableCodexHooksFeatureIfManaged(in: updatedConfig).contents
+        }
+
+        // Drop the trust entries for the managed (and stale legacy) hooks we
+        // just removed from hooks.json.
+        let managedTrustKeys = CodexHookTrust.managedEntries(
+            hooksData: existingHooks,
+            hooksFilePath: hooksURL.path,
+            managedCommand: manifest?.hookCommand,
+            includeLegacyCommands: true
+        ).map(\.key)
+        updatedConfig = CodexHookTrust.applying(
+            entries: [],
+            removingKeys: managedTrustKeys,
+            to: updatedConfig
+        ).contents
+
+        if updatedConfig != existingConfig {
+            if fileManager.fileExists(atPath: configURL.path) {
+                try backupFile(at: configURL)
             }
+            try updatedConfig.write(to: configURL, atomically: true, encoding: .utf8)
         }
 
         for candidate in [primaryManifestURL, legacyManifestURL] where fileManager.fileExists(atPath: candidate.path) {

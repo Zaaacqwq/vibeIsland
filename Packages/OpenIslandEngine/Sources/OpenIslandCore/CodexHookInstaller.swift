@@ -377,7 +377,7 @@ public enum CodexHookInstaller {
         return group
     }
 
-    private static func isManagedHook(_ hook: [String: Any], managedCommand: String?) -> Bool {
+    static func isManagedHook(_ hook: [String: Any], managedCommand: String?) -> Bool {
         if let statusMessage = hook["statusMessage"] as? String,
            statusMessage == managedStatusMessage || statusMessage == legacyManagedStatusMessage {
             return true
@@ -402,7 +402,7 @@ public enum CodexHookInstaller {
         return isLegacyOpenIslandHookCommand(command)
     }
 
-    private static func isLegacyOpenIslandHookCommand(_ command: String) -> Bool {
+    static func isLegacyOpenIslandHookCommand(_ command: String) -> Bool {
         let normalized = command.lowercased()
         if normalized.contains("openislandhooks") || normalized.contains("vibeislandhooks") {
             return true

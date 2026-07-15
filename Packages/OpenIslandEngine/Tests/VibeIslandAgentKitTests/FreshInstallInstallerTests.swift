@@ -178,6 +178,133 @@ func codexUninstall() throws {
     #expect(!removed.hasRemainingHooks)
 }
 
+// MARK: - Codex hook trust (config.toml `[hooks.state."…"]` entries)
+//
+// Codex 0.130+ discovers user-level hooks but refuses to RUN them until each
+// carries a matching `trusted_hash` in config.toml. Install must therefore
+// persist trust entries or the integration silently does nothing.
+
+private let codexHooksPath = "/Users/tester/.codex/hooks.json"
+
+// Golden vectors captured from a real codex-cli 0.144.1 install: the hashes
+// below are the exact `trusted_hash` values Codex itself persisted for these
+// hooks. They pin our Swift implementation to codex-rs `command_hook_hash`.
+@Test("Codex trust hashes match values persisted by codex-cli itself")
+func codexTrustHashGoldenVectors() throws {
+    let command = "'/Users/zaaac/Library/Application Support/OpenIsland/bin/OpenIslandHooks'"
+    let hooksJSON = try JSONSerialization.data(withJSONObject: [
+        "hooks": [
+            "SessionStart": [[
+                "matcher": "startup|resume",
+                "hooks": [["type": "command", "command": command, "timeout": 45]],
+            ]],
+            "UserPromptSubmit": [["hooks": [["type": "command", "command": command, "timeout": 45]]]],
+            "PermissionRequest": [["hooks": [["type": "command", "command": command, "timeout": 3600]]]],
+            "Stop": [["hooks": [["type": "command", "command": command, "timeout": 45]]]],
+        ]
+    ])
+
+    let path = "/Users/zaaac/.codex/hooks.json"
+    let entries = CodexHookTrust.managedEntries(
+        hooksData: hooksJSON, hooksFilePath: path, managedCommand: command
+    )
+    let byKey = Dictionary(uniqueKeysWithValues: entries.map { ($0.key, $0.trustedHash) })
+
+    #expect(byKey["\(path):session_start:0:0"]
+        == "sha256:557d1cfc0634e7d2a80c06a5054af6954a810c885077bdbd0a20769c2c582dab")
+    #expect(byKey["\(path):user_prompt_submit:0:0"]
+        == "sha256:f780fcb21d29f75309911ce76d8bb213edb0a9fe6e73f6c153faaf6d3240dbce")
+    #expect(byKey["\(path):permission_request:0:0"]
+        == "sha256:af957e298db8180e76e07ace034b8560176e366273c4bf1191d1c36780402352")
+    #expect(byKey["\(path):stop:0:0"]
+        == "sha256:049bb38070a8ebc8101c9288bf9b14e1c149fe9651c152a8e561bcf664be4c63")
+}
+
+@Test("Codex fresh install produces trust entries for every managed hook")
+func codexFreshInstallTrustEntries() throws {
+    let command = CodexHookInstaller.hookCommand(for: freshBinary)
+    let mutation = try CodexHookInstaller.installHooksJSON(existingData: nil, hookCommand: command)
+
+    let entries = CodexHookTrust.managedEntries(
+        hooksData: mutation.contents, hooksFilePath: codexHooksPath, managedCommand: command
+    )
+    let labels = entries.map(\.key).sorted()
+    #expect(labels == [
+        "\(codexHooksPath):permission_request:0:0",
+        "\(codexHooksPath):session_start:0:0",
+        "\(codexHooksPath):stop:0:0",
+        "\(codexHooksPath):user_prompt_submit:0:0",
+    ].sorted())
+
+    // Writing them into an existing config marks the hooks trusted; a second
+    // apply is a no-op (idempotent re-install).
+    let config = CodexHookTrust.applying(entries: entries, removingKeys: [], to: "[features]\nhooks = true\n")
+    #expect(config.changed)
+    #expect(config.contents.contains("[hooks.state.\"\(codexHooksPath):stop:0:0\"]"))
+    #expect(CodexHookTrust.managedHooksTrusted(
+        configContents: config.contents, hooksData: mutation.contents,
+        hooksFilePath: codexHooksPath, managedCommand: command
+    ))
+
+    let again = CodexHookTrust.applying(entries: entries, removingKeys: [], to: config.contents)
+    #expect(!again.changed)
+}
+
+@Test("Codex trust removal drops only our entries and preserves others")
+func codexTrustRemovalPreservesOthers() throws {
+    let command = CodexHookInstaller.hookCommand(for: freshBinary)
+    let mutation = try CodexHookInstaller.installHooksJSON(existingData: nil, hookCommand: command)
+    let entries = CodexHookTrust.managedEntries(
+        hooksData: mutation.contents, hooksFilePath: codexHooksPath, managedCommand: command
+    )
+
+    let foreign = "[hooks.state.\"\(codexHooksPath):pre_tool_use:3:0\"]\ntrusted_hash = \"sha256:abc\"\n"
+    let installed = CodexHookTrust.applying(entries: entries, removingKeys: [], to: foreign)
+    let removed = CodexHookTrust.applying(
+        entries: [], removingKeys: entries.map(\.key), to: installed.contents
+    )
+
+    #expect(removed.changed)
+    #expect(!removed.contents.contains(":stop:0:0"))
+    #expect(removed.contents.contains(":pre_tool_use:3:0"), "unrelated trust entries must survive")
+    #expect(!CodexHookTrust.managedHooksTrusted(
+        configContents: removed.contents, hooksData: mutation.contents,
+        hooksFilePath: codexHooksPath, managedCommand: command
+    ))
+}
+
+@Test("Codex end-to-end install/uninstall keeps config.toml trust in sync")
+func codexManagerTrustLifecycle() throws {
+    let dir = try makeTempDir()
+    defer { try? FileManager.default.removeItem(at: dir) }
+
+    let bundled = dir.appendingPathComponent("OpenIslandHooks")
+    try Data("#!/bin/sh\n".utf8).write(to: bundled)
+    try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: bundled.path)
+
+    let manager = CodexHookInstallationManager(
+        codexDirectory: dir.appendingPathComponent(".codex"),
+        managedHooksBinaryURL: dir.appendingPathComponent("managed/VibeIslandAgentHooks"),
+        featureKeyProvider: { .current }
+    )
+
+    let installed = try manager.install(hooksBinaryURL: bundled)
+    #expect(installed.managedHooksPresent)
+    #expect(installed.managedHooksTrusted)
+    #expect(installed.managedHooksActive)
+
+    let config = try String(contentsOf: installed.configURL, encoding: .utf8)
+    #expect(config.contains("hooks = true"))
+    #expect(config.contains("[hooks.state.\""))
+    #expect(config.contains("trusted_hash = \"sha256:"))
+
+    let removed = try manager.uninstall()
+    #expect(!removed.managedHooksPresent)
+    #expect(!removed.managedHooksTrusted)
+    let cleaned = try String(contentsOf: removed.configURL, encoding: .utf8)
+    #expect(!cleaned.contains("[hooks.state.\""), "uninstall must drop our trust entries")
+}
+
 // MARK: - Cursor
 
 @Test("Cursor fresh install registers a managed hook for every event")
