@@ -1,0 +1,82 @@
+name: Release DMG
+
+# Push a tag like v1.2.0 to build an ad-hoc-signed DMG and attach it to a
+# GitHub release. The app is not notarized (no paid developer account), so
+# first launch requires System Settings > Privacy & Security > Open Anyway —
+# documented in the ReadMe install section.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-dmg:
+    name: Build & Package
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build (Release, ad-hoc signed)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          xcodebuild build \
+            -project DynamicIsland.xcodeproj \
+            -scheme DynamicIsland \
+            -configuration Release \
+            -destination "platform=macOS" \
+            -derivedDataPath build \
+            -resultBundlePath BuildResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            MARKETING_VERSION="$VERSION"
+
+      - name: Package DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          APP="build/Build/Products/Release/VibeIsland.app"
+          test -d "$APP"
+
+          STAGING="$(mktemp -d)/VibeIsland"
+          mkdir -p "$STAGING"
+          cp -R "$APP" "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+
+          hdiutil create \
+            -volname "VibeIsland" \
+            -srcfolder "$STAGING" \
+            -ov -format UDZO \
+            "VibeIsland-$VERSION.dmg"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "VibeIsland $VERSION" \
+            --generate-notes \
+            "VibeIsland-$VERSION.dmg" \
+          || gh release upload "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            "VibeIsland-$VERSION.dmg"
+
+      - name: Surface failure diagnostics
+        if: failure()
+        run: |
+          xcrun xcresulttool get build-results --path BuildResults.xcresult 2>/dev/null \
+            || echo "No xcresult available."

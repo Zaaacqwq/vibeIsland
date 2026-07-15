@@ -1,0 +1,9 @@
+// Copy this file to Local.xcconfig (same directory, gitignored) to sign with
+// your own Apple ID instead of the ad-hoc default. A stable identity keeps
+// TCC permissions (Accessibility, Calendar, ...) across rebuilds.
+//
+// A free Apple ID works: add it in Xcode > Settings > Accounts, then find the
+// team ID under the account's team details (or in your keychain certificate).
+
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = YOUR_TEAM_ID

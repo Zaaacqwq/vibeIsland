@@ -121,7 +121,29 @@ power, audio devices, input source, and keyboard state.
 - A Mac running macOS 14.6 or later
 - Xcode 16 or later to build from source
 
+## Install
+
+Download the latest `VibeIsland-x.y.z.dmg` from
+[Releases](https://github.com/Zaaacqwq/vibeIsland/releases), open it, and drag
+**VibeIsland** into **Applications**.
+
+The app is not notarized (it ships without a paid Apple Developer
+certificate), so the first launch needs one extra step:
+
+1. Double-click the app once — macOS will say it can't verify the developer.
+2. Open **System Settings → Privacy & Security**, scroll down, and click
+   **Open Anyway**.
+
+Or skip the dialog entirely from a terminal:
+
+```bash
+xattr -cr /Applications/VibeIsland.app
+```
+
 ## Build from source
+
+No Apple Developer account or signing setup is needed — the project signs with
+an ad-hoc identity by default, so it builds out of the box:
 
 ```bash
 git clone https://github.com/Zaaacqwq/vibeIsland.git
@@ -139,6 +161,12 @@ xcodebuild -project DynamicIsland.xcodeproj \
   -destination 'platform=macOS' \
   build
 ```
+
+Ad-hoc signing produces a new identity on every build, which makes macOS
+forget TCC permission grants (Accessibility, Calendar, notifications DB, ...)
+across rebuilds. If you rebuild frequently, copy
+`Configs/Local.xcconfig.example` to `Configs/Local.xcconfig` and set your own
+team ID — a free Apple ID is enough — for a stable signing identity.
 
 The agent-monitoring engine is a local Swift package in
 `Packages/OpenIslandEngine`. Run its tests with:

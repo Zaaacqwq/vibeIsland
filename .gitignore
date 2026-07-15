@@ -165,3 +165,13 @@ COMPREHENSIVE_DOCUMENTATION.md
 /todos/
 /instructions/
 /notes/
+
+# Personal signing overrides
+Configs/Local.xcconfig
+
+# Internal agent / design handoff docs
+/AGENTS.md
+/CLAUDE.md
+/DESIGN.md
+/docs/AGENT_HOOK_TESTING.md
+/design_handoff_notch_ui_redesign/

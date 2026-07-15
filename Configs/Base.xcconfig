@@ -1,0 +1,16 @@
+// Signing defaults for VibeIsland.
+//
+// Out of the box the app is signed ad hoc ("Sign to Run Locally"), so anyone
+// can clone and build without an Apple Developer account or any setup.
+//
+// The ad-hoc identity changes on every build, which makes macOS forget TCC
+// grants (Accessibility, Calendar, Full Disk Access, ...) across rebuilds.
+// If you rebuild often, copy Local.xcconfig.example to Local.xcconfig and set
+// your own team there for a stable signing identity.
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+// Personal overrides, not tracked by git.
+#include? "Local.xcconfig"

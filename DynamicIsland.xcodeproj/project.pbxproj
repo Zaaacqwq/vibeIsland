@@ -45,6 +45,8 @@
 		7EE1D73C2E6B1E0B00997219 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		7EE1D73E2E6B1E1200997219 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		7EF10C112F817ECF004229A0 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		7EC0F16A2F80000100C0F160 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		7EC0F16B2F80000200C0F160 /* Local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig.example; sourceTree = "<group>"; };
 		F4C1DD09EC134302938E84F6 /* MediaRemoteAdapter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaRemoteAdapter.framework; path = Frameworks/MediaRemoteAdapter.framework; sourceTree = SOURCE_ROOT; };
 		F54406E72CD4987A00C7AFD9 /* VibeIsland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -149,9 +151,19 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		7EC0F16C2F80000300C0F160 /* Configs */ = {
+			isa = PBXGroup;
+			children = (
+				7EC0F16A2F80000100C0F160 /* Base.xcconfig */,
+				7EC0F16B2F80000200C0F160 /* Local.xcconfig.example */,
+			);
+			path = Configs;
+			sourceTree = "<group>";
+		};
 		F54406DE2CD4987A00C7AFD9 = {
 			isa = PBXGroup;
 			children = (
+				7EC0F16C2F80000300C0F160 /* Configs */,
 				7EA69B1C2F5AE15C00EB2D16 /* Contents */,
 				7E81304F2E3FB42700E08F3F /* Frameworks */,
 				7E81303F2E3FB40500E08F3F /* mediaremote-adapter */,
@@ -422,18 +434,15 @@
 		};
 		F54406F72CD4987B00C7AFD9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7EC0F16A2F80000100C0F160 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DynamicIsland/DynamicIsland.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
-				DEVELOPMENT_TEAM = 66M8FY87U6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -493,19 +502,15 @@
 		};
 		F54406F82CD4987B00C7AFD9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7EC0F16A2F80000100C0F160 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DynamicIsland/DynamicIsland.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = 66M8FY87U6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
