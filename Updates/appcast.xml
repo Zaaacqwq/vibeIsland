@@ -3,6 +3,15 @@
     <channel>
         <title>VibeIsland</title>
         <item>
+            <title>1.1.1</title>
+            <pubDate>Fri, 17 Jul 2026 06:34:31 +0000</pubDate>
+            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.1</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.1.1/VibeIsland-1.1.1.dmg" length="18073510" type="application/octet-stream" sparkle:edSignature="xEdasuY3qOIQvUSfBWOvL2j7JH1VWbx/Vq8tYRsRHzTbdwGT83NRETy5t4ORq87fuHPkfDc0MF+nSQ1+c4xIAw=="/>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Fri, 17 Jul 2026 02:06:03 -0400</pubDate>
             <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.0</link>
