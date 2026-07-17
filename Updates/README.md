@@ -1,19 +1,22 @@
 # Publishing VibeIsland updates
 
 VibeIsland checks this repository's `Updates/appcast.xml` through Sparkle.
-The signing private key is stored in the macOS login Keychain under Sparkle's
-default `ed25519` account. The matching public key is configured as
+The Sparkle signing private key is stored in the macOS login Keychain under
+Sparkle's default `ed25519` account. The matching public key is configured as
 `SUPublicEDKey` in `DynamicIsland/Info.plist`.
 
 The GitHub Release workflow now performs the update publishing steps
 automatically whenever a `v*` tag is pushed. It builds the app with the tag's
 marketing version and a monotonically increasing workflow build number,
-creates the GitHub Release, signs the archive with Sparkle, and commits the
-updated appcast to `main`.
+creates the GitHub Release, signs the application with a stable Apple
+Development identity, signs the archive with Sparkle, and commits the updated
+appcast to `main`. Keeping the application signing identity stable is required
+for macOS privacy permissions to survive an update.
 
-The workflow requires the `SPARKLE_PRIVATE_KEY` repository Actions secret. To
-set or rotate it from the machine whose Keychain contains the matching key,
-pipe the key directly to `gh secret set`; never print it or commit it.
+The workflow requires `SPARKLE_PRIVATE_KEY`, `MACOS_CERTIFICATE_BASE64`, and
+`MACOS_CERTIFICATE_PASSWORD` repository Actions secrets. Set or rotate them
+from the machine whose Keychain contains the matching keys. Pipe secret values
+directly to `gh secret set`; never print them or commit them.
 
 Manual publishing reference:
 

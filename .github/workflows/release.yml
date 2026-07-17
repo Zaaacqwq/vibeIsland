@@ -1,7 +1,7 @@
 name: Release DMG
 
-# Push a tag like v1.2.0 to build an ad-hoc-signed DMG and attach it to a
-# GitHub release. The app is not notarized (no paid developer account), so
+# Push a tag like v1.2.0 to build a consistently signed DMG and attach it to a
+# GitHub release. The app is not notarized (no Developer ID certificate), so
 # first launch requires System Settings > Privacy & Security > Open Anyway —
 # documented in the ReadMe install section.
 
@@ -33,7 +33,37 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build (Release, ad-hoc signed)
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          test -n "$MACOS_CERTIFICATE_BASE64"
+          test -n "$MACOS_CERTIFICATE_PASSWORD"
+
+          CERTIFICATE_PATH="$RUNNER_TEMP/vibeisland-signing.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/vibeisland-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          printf '%s' "$MACOS_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          rm -f "$CERTIFICATE_PATH"
+
+      - name: Build (Release, consistently signed)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           xcodebuild build \
@@ -43,8 +73,11 @@ jobs:
             -destination "platform=macOS" \
             -derivedDataPath build \
             -resultBundlePath BuildResults.xcresult \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Development: zacchenzy@gmail.com (2BM54B4CS9)" \
+            DEVELOPMENT_TEAM=66M8FY87U6 \
+            PRODUCT_BUNDLE_IDENTIFIER=com.zaaacqwq.VibeIsland \
+            CODE_SIGNING_REQUIRED=YES \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
 
