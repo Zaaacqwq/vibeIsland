@@ -24,6 +24,54 @@ import Sparkle
 import SwiftUI
 import SkyLightWindow
 
+enum LegacyPreferencesMigration {
+    static let legacyBundleIdentifier = "com.zaaacqwq.VibeIsland.dev"
+    static let productionBundleIdentifier = "com.zaaacqwq.VibeIsland"
+    static let migrationMarker = "didMigrateLegacyDebugPreferencesV1"
+
+    private static let excludedKeys: Set<String> = [
+        // Sparkle uses this value to identify an installation cohort. Carrying the
+        // Debug app's value into Release can make update state cross-contaminate.
+        "SUUpdateGroupIdentifier",
+        // Never enable developer-only simulation state in a Release installation.
+        "debugForceUsageMax",
+        "debugForcedActivities",
+    ]
+
+    static func migrateIfNeeded(
+        defaults: UserDefaults = .standard,
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier
+    ) {
+        guard bundleIdentifier == productionBundleIdentifier else { return }
+
+        var productionPreferences =
+            defaults.persistentDomain(forName: productionBundleIdentifier) ?? [:]
+        guard productionPreferences[migrationMarker] == nil else { return }
+
+        guard let legacyPreferences = defaults.persistentDomain(forName: legacyBundleIdentifier) else {
+            productionPreferences[migrationMarker] = true
+            defaults.setPersistentDomain(
+                productionPreferences,
+                forName: productionBundleIdentifier
+            )
+            return
+        }
+
+        var migratedCount = 0
+        for (key, value) in legacyPreferences where !excludedKeys.contains(key) {
+            productionPreferences[key] = value
+            migratedCount += 1
+        }
+        productionPreferences[migrationMarker] = true
+        defaults.setPersistentDomain(
+            productionPreferences,
+            forName: productionBundleIdentifier
+        )
+
+        print("[PreferencesMigration] Restored \(migratedCount) legacy settings.")
+    }
+}
+
 @main
 struct DynamicNotchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -33,6 +81,8 @@ struct DynamicNotchApp: App {
     let updaterController: SPUStandardUpdaterController
 
     init() {
+        LegacyPreferencesMigration.migrateIfNeeded()
+
         // `showCalendar` historically controlled the combined event/reminder view.
         // Preserve that choice when introducing the independent Reminders content switch.
         if UserDefaults.standard.object(forKey: "showReminders") == nil {
