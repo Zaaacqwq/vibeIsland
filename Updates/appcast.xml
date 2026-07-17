@@ -1,9 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" standalone="yes"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
-        <title>VibeIsland Updates</title>
-        <link>https://github.com/Zaaacqwq/vibeIsland/releases</link>
-        <description>VibeIsland software updates</description>
-        <language>en</language>
+        <title>VibeIsland</title>
+        <item>
+            <title>1.1.0</title>
+            <pubDate>Fri, 17 Jul 2026 02:06:03 -0400</pubDate>
+            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.0</link>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.1.0/VibeIsland-1.1.0.dmg" length="18037663" type="application/octet-stream" sparkle:edSignature="EfQnbN4egZ3AseehCfhYxZ5qlDOApCXNb4UQm4oxXfC2yEtqdNpnRHJXw/j2OYuUyWiJWi3MceECogUc/5VOCQ=="/>
+        </item>
     </channel>
 </rss>
