@@ -13,6 +13,12 @@ Development identity, signs the archive with Sparkle, and commits the updated
 appcast to `main`. Keeping the application signing identity stable is required
 for macOS privacy permissions to survive an update.
 
+Release builds intentionally retain the historical
+`com.zaaacqwq.VibeIsland.dev` bundle identifier because v1.0.0 shipped with
+that identifier. Changing it would make macOS treat the update as a different
+application and invalidate existing privacy permissions. The suffix is now a
+compatibility identifier and does not indicate a Debug build.
+
 The workflow requires `SPARKLE_PRIVATE_KEY`, `MACOS_CERTIFICATE_BASE64`, and
 `MACOS_CERTIFICATE_PASSWORD` repository Actions secrets. Set or rotate them
 from the machine whose Keychain contains the matching keys. Pipe secret values
