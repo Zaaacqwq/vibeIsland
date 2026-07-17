@@ -76,7 +76,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Development: zacchenzy@gmail.com (2BM54B4CS9)" \
             DEVELOPMENT_TEAM=66M8FY87U6 \
-            PRODUCT_BUNDLE_IDENTIFIER=com.zaaacqwq.VibeIsland \
+            PRODUCT_BUNDLE_IDENTIFIER=com.zaaacqwq.VibeIsland.dev \
             CODE_SIGNING_REQUIRED=YES \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"

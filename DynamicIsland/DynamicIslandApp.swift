@@ -27,12 +27,15 @@ import SkyLightWindow
 enum LegacyPreferencesMigration {
     static let legacyBundleIdentifier = "com.zaaacqwq.VibeIsland.dev"
     static let productionBundleIdentifier = "com.zaaacqwq.VibeIsland"
-    static let migrationMarker = "didMigrateLegacyDebugPreferencesV1"
+    static let legacyToProductionMarker = "didMigrateLegacyDebugPreferencesV1"
+    static let productionToLegacyMarker = "didMigrateProductionPreferencesToStableLegacyV1"
 
     private static let excludedKeys: Set<String> = [
         // Sparkle uses this value to identify an installation cohort. Carrying the
         // Debug app's value into Release can make update state cross-contaminate.
         "SUUpdateGroupIdentifier",
+        legacyToProductionMarker,
+        productionToLegacyMarker,
         // Never enable developer-only simulation state in a Release installation.
         "debugForceUsageMax",
         "debugForcedActivities",
@@ -42,33 +45,53 @@ enum LegacyPreferencesMigration {
         defaults: UserDefaults = .standard,
         bundleIdentifier: String? = Bundle.main.bundleIdentifier
     ) {
-        guard bundleIdentifier == productionBundleIdentifier else { return }
-
-        var productionPreferences =
-            defaults.persistentDomain(forName: productionBundleIdentifier) ?? [:]
-        guard productionPreferences[migrationMarker] == nil else { return }
-
-        guard let legacyPreferences = defaults.persistentDomain(forName: legacyBundleIdentifier) else {
-            productionPreferences[migrationMarker] = true
-            defaults.setPersistentDomain(
-                productionPreferences,
-                forName: productionBundleIdentifier
+        switch bundleIdentifier {
+        case productionBundleIdentifier:
+            migrate(
+                from: legacyBundleIdentifier,
+                to: productionBundleIdentifier,
+                marker: legacyToProductionMarker,
+                defaults: defaults
             )
+        case legacyBundleIdentifier:
+            // v1.0.0 established the .dev identifier as the public release identity.
+            // Keep it stable so existing macOS privacy grants remain valid, while
+            // bringing back settings changed in the short-lived production-ID build.
+            migrate(
+                from: productionBundleIdentifier,
+                to: legacyBundleIdentifier,
+                marker: productionToLegacyMarker,
+                defaults: defaults
+            )
+        default:
+            break
+        }
+    }
+
+    private static func migrate(
+        from sourceDomain: String,
+        to destinationDomain: String,
+        marker: String,
+        defaults: UserDefaults
+    ) {
+        var destinationPreferences = defaults.persistentDomain(forName: destinationDomain) ?? [:]
+        guard destinationPreferences[marker] == nil else { return }
+
+        guard let sourcePreferences = defaults.persistentDomain(forName: sourceDomain) else {
+            destinationPreferences[marker] = true
+            defaults.setPersistentDomain(destinationPreferences, forName: destinationDomain)
             return
         }
 
         var migratedCount = 0
-        for (key, value) in legacyPreferences where !excludedKeys.contains(key) {
-            productionPreferences[key] = value
+        for (key, value) in sourcePreferences where !excludedKeys.contains(key) {
+            destinationPreferences[key] = value
             migratedCount += 1
         }
-        productionPreferences[migrationMarker] = true
-        defaults.setPersistentDomain(
-            productionPreferences,
-            forName: productionBundleIdentifier
-        )
+        destinationPreferences[marker] = true
+        defaults.setPersistentDomain(destinationPreferences, forName: destinationDomain)
 
-        print("[PreferencesMigration] Restored \(migratedCount) legacy settings.")
+        print("[PreferencesMigration] Restored \(migratedCount) settings into \(destinationDomain).")
     }
 }
 
