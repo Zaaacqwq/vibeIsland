@@ -124,7 +124,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
         if Defaults[.dynamicShelf] { tabs.append(.shelf) }
         if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab { tabs.append(.timer) }
         if Defaults[.enableAgentMonitoring] { tabs.append(.agents) }
-        if Defaults[.showCalendar] { tabs.append(.calendar) }
+        if Defaults[.showCalendar] || Defaults[.showReminders] { tabs.append(.calendar) }
         if Defaults[.enableNotificationMonitoring] { tabs.append(.notifications) }
         if Defaults[.enableWeather] { tabs.append(.weather) }
         return tabs
@@ -210,6 +210,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
         Publishers.MergeMany(
             Defaults.publisher(.showStandardMediaControls).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.showReminders).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),

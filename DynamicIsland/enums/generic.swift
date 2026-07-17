@@ -233,3 +233,17 @@ enum CalendarTabLayout: String, CaseIterable, Defaults.Serializable, Identifiabl
         }
     }
 }
+
+enum CalendarContentMode: String, CaseIterable, Defaults.Serializable, Identifiable {
+    case events
+    case reminders
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .events: return String(localized: "Events")
+        case .reminders: return String(localized: "Reminders")
+        }
+    }
+}

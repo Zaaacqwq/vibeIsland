@@ -94,7 +94,7 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
     // Calendar tab
-    if Defaults[.showCalendar] {
+    if Defaults[.showCalendar] || Defaults[.showReminders] {
         count += 1
     }
     // Notifications tab

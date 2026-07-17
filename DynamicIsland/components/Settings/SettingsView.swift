@@ -2032,6 +2032,7 @@ struct Media: View {
 struct CalendarSettings: View {
     @ObservedObject private var calendarManager = CalendarManager.shared
     @Default(.showCalendar) var showCalendar: Bool
+    @Default(.showReminders) var showReminders: Bool
     @Default(.enableReminderLiveActivity) var enableReminderLiveActivity
     @Default(.reminderPresentationStyle) var reminderPresentationStyle
     @Default(.reminderLeadTime) var reminderLeadTime
@@ -2064,20 +2065,26 @@ struct CalendarSettings: View {
                 GeistSection {
                     GeistRow(divider: false) {
                         VStack(alignment: .leading, spacing: Geist.Spacing.sm) {
-                            Text("Calendar or Reminder access is denied. Please enable it in System Settings.")
+                            Text("Calendar and Reminders access are managed separately. Enable the permission needed for each visible mode.")
                                 .font(Geist.Typography.body)
                                 .foregroundStyle(Geist.Colors.error)
                                 .fixedSize(horizontal: false, vertical: true)
                             HStack(spacing: Geist.Spacing.xs) {
-                                Button("Request Access") {
-                                    Task {
-                                        await calendarManager.checkCalendarAuthorization()
-                                        await calendarManager.checkReminderAuthorization()
+                                if !calendarManager.hasCalendarAccess {
+                                    Button("Request Calendar") {
+                                        Task { await calendarManager.checkCalendarAuthorization() }
                                     }
+                                    .buttonStyle(.geistProminent)
                                 }
-                                .buttonStyle(.geistProminent)
+                                if !calendarManager.hasReminderAccess {
+                                    Button("Request Reminders") {
+                                        Task { await calendarManager.checkReminderAuthorization() }
+                                    }
+                                    .buttonStyle(.geistProminent)
+                                }
                                 Button("Open System Settings") {
-                                    if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                                    let pane = calendarManager.hasCalendarAccess ? "Privacy_Reminders" : "Privacy_Calendars"
+                                    if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
                                         NSWorkspace.shared.open(settingsURL)
                                     }
                                 }
@@ -2086,8 +2093,9 @@ struct CalendarSettings: View {
                         }
                     }
                 }
-            } else {
-                GeistSection(title: "Permissions") {
+            }
+
+            GeistSection(title: "Permissions") {
                     GeistLabeledRow(title: "Calendars") {
                         Text(statusText(for: calendarManager.calendarAuthorizationStatus))
                             .font(Geist.Typography.body)
@@ -2100,9 +2108,10 @@ struct CalendarSettings: View {
                     }
                 }
 
-                GeistSection {
-                    GeistToggleRow(title: "Show calendar", isOn: geistBinding(.showCalendar), divider: false)
-                }
+            GeistSection(title: "Notch Content") {
+                GeistToggleRow(title: "Show events", isOn: geistBinding(.showCalendar))
+                GeistToggleRow(title: "Show reminders", isOn: geistBinding(.showReminders), divider: false)
+            }
 
                 GeistSection(
                     title: "Notch Tab",
@@ -2188,7 +2197,6 @@ struct CalendarSettings: View {
                         divider: false
                     )
                 }
-            }
         }
         .onAppear {
             Task {
@@ -2220,7 +2228,7 @@ struct CalendarSettings: View {
                         Task { await calendarManager.setCalendarsSelected(accountCalendars, isSelected: isSelected) }
                     }
                 ), divider: !accountCalendars.isEmpty)
-                .disabled(!showCalendar)
+                .disabled(!showCalendar && !showReminders)
 
                 ForEach(Array(accountCalendars.enumerated()), id: \.element.id) { index, calendar in
                     GeistRow(divider: index < accountCalendars.count - 1) {
@@ -2249,7 +2257,7 @@ struct CalendarSettings: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .controlSize(.small)
-                            .disabled(!showCalendar)
+                            .disabled(calendar.isReminder ? !showReminders : !showCalendar)
                         }
                     }
                 }

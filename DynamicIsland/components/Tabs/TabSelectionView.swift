@@ -46,6 +46,7 @@ struct TabSelectionView: View {
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
     @Default(.showCalendar) private var showCalendar
+    @Default(.showReminders) private var showReminders
     @Default(.showStandardMediaControls) private var showStandardMediaControls
     @Default(.enableMinimalisticUI) private var enableMinimalisticUI
     @Namespace var animation
@@ -67,7 +68,7 @@ struct TabSelectionView: View {
         if Defaults[.enableAgentMonitoring] {
             tabsArray.append(TabModel(label: "Agents", icon: "sparkles", view: .agents))
         }
-        if Defaults[.showCalendar] {
+        if showCalendar || showReminders {
             tabsArray.append(TabModel(label: "Calendar", icon: "calendar", view: .calendar))
         }
         if Defaults[.enableNotificationMonitoring] {
@@ -108,6 +109,9 @@ struct TabSelectionView: View {
         }
         .animation(.smooth(duration: 0.3), value: coordinator.currentView)
         .onAppear {
+            ensureValidSelection(with: tabs)
+        }
+        .onChange(of: tabs.map(\.id)) { _, _ in
             ensureValidSelection(with: tabs)
         }
     }

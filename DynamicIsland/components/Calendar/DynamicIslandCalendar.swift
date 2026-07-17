@@ -433,11 +433,20 @@ struct StandaloneCalendarView: View {
     @Default(.hideCompletedReminders) private var hideCompletedReminders
     @Default(.showFullEventTitles) private var showFullEventTitles
     @Default(.calendarTabLayout) private var layout
+    @Default(.showCalendar) private var showEvents
+    @Default(.showReminders) private var showReminders
+    @Default(.calendarContentMode) private var contentMode
+    @State private var showCreatePopover = false
 
     private let calendar = Calendar.current
     private let weekColumns: [GridItem] = Array(repeating: GridItem(.flexible(minimum: 14), spacing: 4), count: 7)
 
     private var isWeek: Bool { layout == .week }
+
+    private var activeContentMode: CalendarContentMode {
+        if showEvents && showReminders { return contentMode }
+        return showEvents ? .events : .reminders
+    }
 
     private var headerHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
 
@@ -522,7 +531,13 @@ struct StandaloneCalendarView: View {
         // let the notch stay content-driven. A fixed `height:` pin here forces the
         // full budget and makes the calendar taller than the content-driven tabs.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .onAppear { resetToToday() }
+        .onAppear {
+            ensureValidContentMode()
+            resetToToday()
+            if showReminders {
+                Task { await calendarManager.updateReminders() }
+            }
+        }
         .onChange(of: selectedDate) { _, newDate in
             withAnimation(.smooth(duration: 0.22)) { displayedMonth = newDate.startOfMonth }
             Task { await calendarManager.updateCurrentDate(newDate) }
@@ -534,6 +549,20 @@ struct StandaloneCalendarView: View {
             guard newState == .open else { return }
             resetToToday()
         }
+        .onChange(of: showEvents) { _, _ in ensureValidContentMode() }
+        .onChange(of: showReminders) { _, _ in ensureValidContentMode() }
+        .onChange(of: showCreatePopover) { _, isActive in
+            vm.isCalendarCreatePopoverActive = isActive
+            if !isActive {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    vm.shouldRecheckHover.toggle()
+                }
+            }
+        }
+        .onDisappear {
+            showCreatePopover = false
+            vm.isCalendarCreatePopoverActive = false
+        }
     }
 
     private func resetToToday() {
@@ -542,6 +571,14 @@ struct StandaloneCalendarView: View {
         Task {
             await calendarManager.updateCurrentDate(selectedDate)
             await calendarManager.loadEventDates(forMonth: displayedMonth)
+        }
+    }
+
+    private func ensureValidContentMode() {
+        if !showEvents && showReminders {
+            contentMode = .reminders
+        } else if showEvents && !showReminders {
+            contentMode = .events
         }
     }
 
@@ -563,7 +600,10 @@ struct StandaloneCalendarView: View {
                     .frame(maxWidth: .infinity)
             }
             HStack(spacing: 8) {
-                Spacer(minLength: 0)
+                contentControls
+
+                Spacer(minLength: 4)
+
                 navButton(icon: "chevron.left", action: showPrevious)
                 Text(monthLabel.uppercased())
                     .font(NotchDesign.Typography.mono(10, weight: .medium))
@@ -591,19 +631,108 @@ struct StandaloneCalendarView: View {
     // MARK: - Week mode
 
     private var agenda: some View {
-        CalendarAgendaList(
-            events: filteredEvents,
-            showFullEventTitles: showFullEventTitles,
-            selectedDate: selectedDate,
-            scrollResetID: calendar.startOfDay(for: selectedDate),
-            onToggleReminder: { reminderID, completed in
-                Task { await calendarManager.setReminderCompleted(reminderID: reminderID, completed: completed) }
+        Group {
+            switch activeContentMode {
+            case .events:
+                if calendarManager.hasCalendarAccess {
+                    CalendarAgendaList(
+                        events: filteredEvents,
+                        showFullEventTitles: showFullEventTitles,
+                        selectedDate: selectedDate,
+                        scrollResetID: calendar.startOfDay(for: selectedDate),
+                        onToggleReminder: { _, _ in }
+                    )
+                } else {
+                    CalendarPermissionStateView(mode: .events) {
+                        Task { await calendarManager.checkCalendarAuthorization() }
+                    }
+                }
+            case .reminders:
+                if calendarManager.hasReminderAccess {
+                    ReminderGroupsList(
+                        reminders: calendarManager.reminders,
+                        hideCompleted: hideCompletedReminders,
+                        onToggle: { reminderID, completed in
+                            Task {
+                                await calendarManager.setReminderCompleted(
+                                    reminderID: reminderID,
+                                    completed: completed
+                                )
+                            }
+                        }
+                    )
+                } else {
+                    CalendarPermissionStateView(mode: .reminders) {
+                        Task { await calendarManager.checkReminderAuthorization() }
+                    }
+                }
             }
-        )
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .notchCard(radius: NotchDesign.Radius.md)
+    }
+
+    private var contentControls: some View {
+        HStack(spacing: 6) {
+            if showEvents && showReminders {
+                HStack(spacing: 2) {
+                    ForEach(CalendarContentMode.allCases) { mode in
+                        Button {
+                            withAnimation(.smooth(duration: 0.18)) {
+                                contentMode = mode
+                            }
+                        } label: {
+                            Text(mode.displayName)
+                                .font(NotchDesign.Typography.voice(11, weight: .semibold))
+                                .foregroundStyle(contentMode == mode ? Color.white : CalendarStyle.muted)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .padding(.horizontal, 10)
+                                .frame(height: 22)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(contentMode == mode ? CalendarStyle.accent : CalendarStyle.surface)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(2)
+                .background(CalendarStyle.surface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            } else {
+                NotchMonoEyebrow(text: activeContentMode.displayName)
+            }
+
+            Button {
+                showCreatePopover = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(CalendarStyle.ink)
+                    .frame(width: 22, height: 22)
+                    .background(CalendarStyle.surfaceHover, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!canCreateActiveContent)
+            .help(activeContentMode == .events ? "New Event" : "New Reminder")
+            .popover(isPresented: $showCreatePopover, arrowEdge: .bottom) {
+                CalendarCreatePopover(mode: activeContentMode, selectedDate: selectedDate) {
+                    showCreatePopover = false
+                }
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var canCreateActiveContent: Bool {
+        switch activeContentMode {
+        case .events:
+            return calendarManager.hasCalendarAccess && !calendarManager.writableEventCalendars.isEmpty
+        case .reminders:
+            return calendarManager.hasReminderAccess && !calendarManager.writableReminderLists.isEmpty
+        }
     }
 
     // MARK: - Month mode

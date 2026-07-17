@@ -73,7 +73,7 @@ final class ReminderLiveActivityManager: ObservableObject {
     var isActive: Bool { activeReminder != nil }
 
     private init() {
-        latestEvents = calendarManager.events
+        latestEvents = calendarManager.reminders
         lastEventsSignature = makeEventsSignature(for: latestEvents)
         setupObservers()
         if !latestEvents.isEmpty {
@@ -136,7 +136,7 @@ final class ReminderLiveActivityManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        calendarManager.$events
+        calendarManager.$reminders
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] events in
@@ -290,6 +290,7 @@ final class ReminderLiveActivityManager: ObservableObject {
         entries.reserveCapacity(events.count)
         for event in events {
             if Task.isCancelled { return [] }
+            guard event.reminderDueDate != nil else { continue }
             if hideAllDayEvents && event.isAllDay {
                 continue
             }

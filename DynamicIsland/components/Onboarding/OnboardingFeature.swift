@@ -103,7 +103,9 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
     func setEnabled(_ enabled: Bool) {
         switch self {
         case .agent: Defaults[.enableAgentMonitoring] = enabled
-        case .calendar: Defaults[.showCalendar] = enabled
+        case .calendar:
+            Defaults[.showCalendar] = enabled
+            Defaults[.showReminders] = enabled
         case .timer: Defaults[.enableTimerFeature] = enabled
         case .weather: Defaults[.enableWeather] = enabled
         case .stats: Defaults[.showHeaderContextWidgets] = enabled

@@ -45,6 +45,7 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var hideOnClosed: Bool = true
     @Published var isBatteryPopoverActive: Bool = false
     @Published var isReminderPopoverActive: Bool = false
+    @Published var isCalendarCreatePopoverActive: Bool = false
     @Published var isMediaOutputPopoverActive: Bool = false
     @Published var isTimerPopoverActive: Bool = false
     @Published var shouldRecheckHover: Bool = false

@@ -31,7 +31,11 @@ class CalendarManager: ObservableObject {
     static let shared = CalendarManager()
 
     @Published var currentWeekStartDate: Date
+    /// Calendar events for the currently selected day. Reminders are deliberately
+    /// stored separately so every calendar surface can avoid mixing the two types.
     @Published var events: [EventModel] = []
+    /// All reminders from the selected reminder lists, including items without a due date.
+    @Published var reminders: [EventModel] = []
     /// Days (start-of-day) in the currently displayed month range that have at
     /// least one event/reminder — used to draw dots on the calendar tab grid.
     @Published var eventDates: Set<Date> = []
@@ -77,12 +81,30 @@ class CalendarManager: ObservableObject {
 
     var hasCalendarAccess: Bool { isAuthorized(calendarAuthorizationStatus) }
     var hasReminderAccess: Bool { isAuthorized(reminderAuthorizationStatus) }
+    var writableEventCalendars: [CalendarModel] { eventCalendars.filter(\.isWritable) }
+    var writableReminderLists: [CalendarModel] { reminderLists.filter(\.isWritable) }
+
+    var defaultEventCalendarID: String? {
+        let preferred = calendarService.defaultCalendarIdentifier(for: .event)
+        return writableEventCalendars.first(where: { $0.id == preferred })?.id
+            ?? writableEventCalendars.first?.id
+    }
+
+    var defaultReminderListID: String? {
+        let preferred = calendarService.defaultCalendarIdentifier(for: .reminder)
+        return writableReminderLists.first(where: { $0.id == preferred })?.id
+            ?? writableReminderLists.first?.id
+    }
 
     private init() {
         currentWeekStartDate = CalendarManager.startOfDay(Date())
+        calendarAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        reminderAuthorizationStatus = EKEventStore.authorizationStatus(for: .reminder)
         setupEventStoreChangedObserver()
         Task {
             await reloadCalendarAndReminderLists()
+            if hasCalendarAccess { await updateEvents(force: true) }
+            if hasReminderAccess { await updateReminders() }
         }
     }
 
@@ -134,7 +156,7 @@ class CalendarManager: ObservableObject {
     private func performEventStoreRefresh() async {
         pendingEventStoreRefreshTask = nil
         await reloadCalendarAndReminderLists()
-        await maybeRefreshEventsAfterReload()
+        await maybeRefreshContentAfterReload()
         nextAllowedEventStoreRefresh = Date().addingTimeInterval(eventStoreChangeThrottle)
         ignoreEventStoreChangesUntil = Date().addingTimeInterval(selfInducedChangeSuppression)
     }
@@ -145,17 +167,35 @@ class CalendarManager: ObservableObject {
         eventCalendars = allCalendars.filter { !$0.isReminder }
         reminderLists = allCalendars.filter { $0.isReminder }
         self.allCalendars = allCalendars
+        migrateReminderListSelectionIfNeeded()
         updateSelectedCalendars()
     }
 
+    /// Before events and reminders had separate views, saved selections commonly
+    /// contained only event calendar identifiers. Preserve those choices while
+    /// making existing reminder lists visible on the first upgraded launch.
+    private func migrateReminderListSelectionIfNeeded() {
+        guard !Defaults[.didMigrateReminderListSelection], !reminderLists.isEmpty else { return }
+        defer { Defaults[.didMigrateReminderListSelection] = true }
+
+        guard case .selected(var identifiers) = Defaults[.calendarSelectionState] else { return }
+        let reminderIDs = Set(reminderLists.map(\.id))
+        guard identifiers.isDisjoint(with: reminderIDs) else { return }
+
+        identifiers.formUnion(reminderIDs)
+        Defaults[.calendarSelectionState] = .selected(identifiers)
+    }
+
     @MainActor
-    private func maybeRefreshEventsAfterReload() async {
-        guard hasCalendarAccess else { return }
+    private func maybeRefreshContentAfterReload() async {
         let now = Date()
-        if let lastFetch = lastEventsFetchDate, now.timeIntervalSince(lastFetch) < reloadRefreshInterval {
-            return
+        if hasCalendarAccess,
+           lastEventsFetchDate == nil || now.timeIntervalSince(lastEventsFetchDate ?? .distantPast) >= reloadRefreshInterval {
+            await updateEvents()
         }
-        await updateEvents()
+        if hasReminderAccess {
+            await updateReminders()
+        }
     }
 
     private func isAuthorized(_ status: EKAuthorizationStatus) -> Bool {
@@ -201,11 +241,13 @@ class CalendarManager: ObservableObject {
             reminderAuthorizationStatus = granted ? .fullAccess : .denied
             if granted {
                 await reloadCalendarAndReminderLists()
+                await updateReminders()
             }
         case .restricted, .denied:
             NSLog("Reminder access denied or restricted")
         case .authorized, .fullAccess:
             await reloadCalendarAndReminderLists()
+            await updateReminders()
         case .writeOnly:
             NSLog("Reminder write only")
         @unknown default:
@@ -254,6 +296,7 @@ class CalendarManager: ObservableObject {
         Defaults[.calendarSelectionState] = selectionState
         updateSelectedCalendars()
         await updateEvents(force: true)
+        await updateReminders()
     }
 
     static func startOfDay(_ date: Date) -> Date {
@@ -273,11 +316,11 @@ class CalendarManager: ObservableObject {
         guard let monthInterval = cal.dateInterval(of: .month, for: date) else { return }
         let start = cal.date(byAdding: .day, value: -7, to: monthInterval.start) ?? monthInterval.start
         let end = cal.date(byAdding: .day, value: 7, to: monthInterval.end) ?? monthInterval.end
-        let calendarIDs = selectedCalendars.map { $0.id }
+        let calendarIDs = selectedCalendars.filter { !$0.isReminder }.map { $0.id }
         let service = calendarService
 
         let monthEvents = await eventFetchLimiter.run {
-            await service.events(from: start, to: end, calendars: calendarIDs)
+            await service.calendarEvents(from: start, to: end, calendars: calendarIDs)
         }
 
         self.eventDates = Set(monthEvents.map { cal.startOfDay(for: $0.start) })
@@ -316,13 +359,13 @@ class CalendarManager: ObservableObject {
         
         Logger.log("CalendarManager: Updating events (force: \(force))", category: .lifecycle)
 
-        let calendarIDs = selectedCalendars.map { $0.id }
+        let calendarIDs = selectedCalendars.filter { !$0.isReminder }.map { $0.id }
         let startDate = currentWeekStartDate
         guard let endDate = Calendar.current.date(byAdding: .day, value: 1, to: currentWeekStartDate) else { return }
         let service = calendarService
 
         let events = await eventFetchLimiter.run {
-            await service.events(
+            await service.calendarEvents(
                 from: startDate,
                 to: endDate,
                 calendars: calendarIDs
@@ -331,6 +374,18 @@ class CalendarManager: ObservableObject {
 
         self.events = events
         lastEventsFetchDate = Date()
+    }
+
+    func updateReminders() async {
+        guard hasReminderAccess else {
+            reminders = []
+            return
+        }
+        let listIDs = selectedCalendars.filter(\.isReminder).map(\.id)
+        let service = calendarService
+        reminders = await eventFetchLimiter.run {
+            await service.reminders(calendars: listIDs)
+        }
     }
 
     func setCalendarsSelected(_ calendars: [CalendarModel], isSelected: Bool) async {
@@ -360,11 +415,25 @@ class CalendarManager: ObservableObject {
         Defaults[.calendarSelectionState] = selectionState
         updateSelectedCalendars()
         await updateEvents(force: true)
+        await updateReminders()
     }
 
     func setReminderCompleted(reminderID: String, completed: Bool) async {
         await calendarService.setReminderCompleted(reminderID: reminderID, completed: completed)
+        await updateReminders()
+    }
+
+    func createEvent(_ draft: CalendarEventDraft) async throws {
+        ignoreEventStoreChangesUntil = Date().addingTimeInterval(selfInducedChangeSuppression)
+        try await calendarService.createEvent(draft)
         await updateEvents(force: true)
+        await loadEventDates(forMonth: draft.startDate)
+    }
+
+    func createReminder(_ draft: ReminderDraft) async throws {
+        ignoreEventStoreChangesUntil = Date().addingTimeInterval(selfInducedChangeSuppression)
+        try await calendarService.createReminder(draft)
+        await updateReminders()
     }
 }
 

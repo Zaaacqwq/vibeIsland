@@ -33,6 +33,12 @@ struct DynamicNotchApp: App {
     let updaterController: SPUStandardUpdaterController
 
     init() {
+        // `showCalendar` historically controlled the combined event/reminder view.
+        // Preserve that choice when introducing the independent Reminders content switch.
+        if UserDefaults.standard.object(forKey: "showReminders") == nil {
+            Defaults[.showReminders] = Defaults[.showCalendar]
+        }
+
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 

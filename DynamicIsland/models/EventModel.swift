@@ -40,6 +40,8 @@ struct EventModel: Equatable, Identifiable {
     let hasRecurrenceRules: Bool
     let priority: Priority?
     let conferenceURL: URL?
+    /// Populated only for reminders. `nil` represents a reminder without a due date.
+    let reminderDueDate: Date?
 }
 
 enum AttendanceStatus: Comparable {
@@ -217,8 +219,45 @@ struct Participant: Hashable {
     let isCurrentUser: Bool
 }
 
-enum Priority {
+enum Priority: Equatable {
     case high
     case medium
     case low
+}
+
+enum ReminderDraftPriority: Int, CaseIterable, Identifiable {
+    case none = 0
+    case low = 9
+    case medium = 5
+    case high = 1
+
+    var id: Int { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .none: return String(localized: "None")
+        case .low: return String(localized: "Low")
+        case .medium: return String(localized: "Medium")
+        case .high: return String(localized: "High")
+        }
+    }
+}
+
+struct CalendarEventDraft {
+    let title: String
+    let calendarID: String
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+    let location: String?
+    let notes: String?
+}
+
+struct ReminderDraft {
+    let title: String
+    let calendarID: String
+    let dueDate: Date?
+    let includesTime: Bool
+    let priority: ReminderDraftPriority
+    let notes: String?
 }

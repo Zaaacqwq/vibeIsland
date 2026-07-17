@@ -2173,6 +2173,7 @@ struct ContentView: View {
      return vm.isBatteryPopoverActive || 
          vm.isTimerPopoverActive ||
          vm.isMediaOutputPopoverActive ||
+         vm.isCalendarCreatePopoverActive ||
          vm.isReminderPopoverActive
     }
 
