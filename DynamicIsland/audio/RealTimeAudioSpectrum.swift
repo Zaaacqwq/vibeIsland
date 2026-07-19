@@ -82,56 +82,67 @@ class RealTimeAudioSpectrum: NSView {
 
     private func startAnimating() {
         guard animationTimer == nil else { return }
-        // Use a timer at ~30fps for smooth animation
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 1.0/30.0, repeats: true) { [weak self] _ in
+        // 20fps is visually indistinguishable for 2pt bars but cuts the
+        // window's CA commit rate by a third versus the old 30fps timer —
+        // every commit forces a synchronous round-trip to WindowServer.
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
             self?.updateBarsFromAudio()
         }
+        timer.tolerance = 0.01
+        animationTimer = timer
     }
-    
+
     private func stopAnimating() {
         animationTimer?.invalidate()
         animationTimer = nil
         resetBars()
     }
-    
-    private var debugLogCounter = 0
-    
+
+    private var lastScales = SIMD4<Double>(repeating: -1)
+
     private func updateBarsFromAudio() {
         guard isPlaying else {
             resetBars()
             return
         }
-        
+
+        // Nothing on screen can change while the notch window is occluded
+        // (fullscreen app, display asleep) — skip the layer commits entirely.
+        guard let window, window.occlusionState.contains(.visible) else { return }
+
         // Get real-time magnitudes from AudioTap
         let magnitudes = AudioTap.shared.getSmoothedMagnitudes()
-        
-        // Debug: log magnitudes periodically
-        debugLogCounter += 1
-        if debugLogCounter % 60 == 0 { // Every 2 seconds at 30fps
-            print("📊 [Spectrum] Magnitudes: [\(magnitudes.x), \(magnitudes.y), \(magnitudes.z), \(magnitudes.w)]")
+
+        // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal.
+        // Higher multiplier = bars reach full height more readily (more lively).
+        var scales = SIMD4<Double>()
+        for index in 0 ..< 4 {
+            scales[index] = max(0.2, min(1.0, Double(magnitudes[index]) * 4.0 + 0.2))
         }
-        
-        // Update each bar with its corresponding band magnitude
+
+        // Quiet or steady audio produces near-identical frames; dropping
+        // sub-pixel deltas (< ~0.1pt on an 18pt bar) avoids waking
+        // WindowServer for invisible changes.
+        let maxDelta = simd_reduce_max(simd_abs(scales - lastScales))
+        guard maxDelta > 0.005 else { return }
+        lastScales = scales
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         for (index, barLayer) in barLayers.enumerated() {
-            let magnitude = magnitudes[index]
-            // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal.
-            // Higher multiplier = bars reach full height more readily (more lively).
-            let scale = max(0.2, min(1.0, CGFloat(magnitude) * 4.0 + 0.2))
-            
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            barLayer.transform = CATransform3DMakeScale(1, scale, 1)
-            CATransaction.commit()
+            barLayer.transform = CATransform3DMakeScale(1, CGFloat(scales[index]), 1)
         }
+        CATransaction.commit()
     }
-    
+
     private func resetBars() {
+        lastScales = SIMD4<Double>(repeating: -1)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         for barLayer in barLayers {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
             barLayer.transform = CATransform3DMakeScale(1, 0.2, 1)
-            CATransaction.commit()
         }
+        CATransaction.commit()
     }
     
     func setPlaying(_ playing: Bool) {

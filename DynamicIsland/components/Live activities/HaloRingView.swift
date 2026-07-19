@@ -26,7 +26,12 @@ struct HaloRingView: View {
     var size: CGFloat = 16
 
     var body: some View {
-        TimelineView(.animation) { timeline in
+        // Cap at 20fps: an uncapped .animation schedule redraws at the display
+        // refresh rate (120fps on ProMotion), and every Canvas redraw forces a
+        // full window commit that blocks the main thread on WindowServer.
+        // The fastest motion here (pulse, ~1s period; rotation ≤3.2 rad/s) is
+        // indistinguishable at 20fps on an 18pt ring.
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
             Canvas { context, canvasSize in
                 draw(
                     in: &context,

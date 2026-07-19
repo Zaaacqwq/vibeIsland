@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import Darwin
 import Foundation
 import os
 
@@ -44,13 +45,12 @@ class SystemOSDManager {
     
     private static func enableSystemHUDAsync() async {
         do {
-            // First, stop any existing OSDUIHelper process
-            let stopTask = Process()
-            stopTask.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            stopTask.arguments = ["-9", "OSDUIHelper"]
-            try stopTask.run()
-            stopTask.waitUntilExit()
-            
+            // First, stop any existing OSDUIHelper process (SIGKILL also reaps
+            // a SIGSTOPped incarnation)
+            for pid in osduiHelperPIDs() {
+                kill(pid, SIGKILL)
+            }
+
             // Small delay to ensure process is fully stopped
             try await Task.sleep(nanoseconds: 200_000_000) // 200ms
             
@@ -182,9 +182,9 @@ class SystemOSDManager {
     /// helper after a short idle period (JETSAM_REASON_MEMORY_IDLE_EXIT) and
     /// launchd spins up a brand-new process on the next volume/brightness
     /// keypress — that fresh PID renders the native OSD before any one-shot
-    /// SIGSTOP can hit it. Polling every 150ms is cheap (a single pgrep per
-    /// tick when nothing changed) and shrinks the visible-OSD window enough
-    /// to feel instant.
+    /// SIGSTOP can hit it. Polling every 150ms is cheap (an in-process
+    /// proc_listpids scan, no child processes) and shrinks the visible-OSD
+    /// window enough to feel instant.
     private static func startSuppressionWatcher() {
         let newTask = Task.detached(priority: .background) {
             while !Task.isCancelled {
@@ -217,67 +217,40 @@ class SystemOSDManager {
         previous?.cancel()
     }
 
+    /// Returns the PIDs of all running OSDUIHelper processes via an in-process
+    /// libproc scan — the watcher calls this every 150ms, so it must not
+    /// fork/exec child processes (the old pgrep-based version spawned ~7
+    /// processes per second and showed up prominently in time profiles).
+    private static func osduiHelperPIDs() -> [pid_t] {
+        let bytesNeeded = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
+        guard bytesNeeded > 0 else { return [] }
+        var pids = [pid_t](repeating: 0, count: Int(bytesNeeded) / MemoryLayout<pid_t>.stride)
+        let bytesUsed = proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, bytesNeeded)
+        guard bytesUsed > 0 else { return [] }
+
+        var nameBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        return pids.prefix(Int(bytesUsed) / MemoryLayout<pid_t>.stride).filter { pid in
+            guard pid > 0 else { return false }
+            nameBuffer[0] = 0
+            guard proc_name(pid, &nameBuffer, UInt32(nameBuffer.count)) > 0 else { return false }
+            return String(cString: nameBuffer) == "OSDUIHelper"
+        }
+    }
+
     /// Returns the newest OSDUIHelper PID, or nil if none.
     private static func osduiHelperPID() -> Int32? {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        task.arguments = ["-n", "OSDUIHelper"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        do {
-            try task.run()
-            task.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let trimmed = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return Int32(trimmed)
-        } catch {
-            return nil
-        }
+        osduiHelperPIDs().max()
     }
 
     /// Sends SIGSTOP to all OSDUIHelper processes. Idempotent.
     private static func suspendOSDUIHelper() {
-        let stop = Process()
-        stop.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        stop.arguments = ["-STOP", "OSDUIHelper"]
-        do {
-            try stop.run()
-            stop.waitUntilExit()
-        } catch {
-            NSLog("Suppression watcher: failed to SIGSTOP OSDUIHelper: \(error)")
+        for pid in osduiHelperPIDs() {
+            kill(pid, SIGSTOP)
         }
     }
 
     /// Check if OSDUIHelper is currently running
     public static func isOSDUIHelperRunning() -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        task.arguments = ["OSDUIHelper"]
-        
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            return task.terminationStatus == 0 && !output!.isEmpty
-        } catch {
-            return false
-        }
-    }
-    
-    /// Async version of status checking to avoid main thread blocking
-    public static func isOSDUIHelperRunningAsync() async -> Bool {
-        return await withCheckedContinuation { continuation in
-            Task.detached(priority: .background) {
-                let result = isOSDUIHelperRunning()
-                continuation.resume(returning: result)
-            }
-        }
+        !osduiHelperPIDs().isEmpty
     }
 }
