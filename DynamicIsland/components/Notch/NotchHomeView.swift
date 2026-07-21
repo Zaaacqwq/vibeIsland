@@ -788,9 +788,13 @@ struct NotchHomeView: View {
             }
         }
         // No root `.transition` here either — ContentView owns open/close (top-down
-        // drop + blur) and tab-switch (horizontal slide). The `.blur` below is a
-        // separate closed-state effect and stays.
-        .blur(radius: vm.notchState == .closed ? 30 : 0)
+        // drop + blur + fade) and tab-switch (horizontal slide).
+        // There used to be a `.blur(radius: notchState == .closed ? 30 : 0)` here.
+        // This view only exists while the notch is open, so that blur only ever ran
+        // during the close transition — nested inside ContentView's own transition
+        // blur, i.e. the same pixels were Gaussian-blurred twice per frame with an
+        // animating radius. ContentView's blur is the single source now; do not
+        // reintroduce a second one here.
         // Uniform tab insets come from the shared tab container in ContentView
         // (`NotchDesign.TabInset`) — no root padding here.
         // Claim the full (fixed) open-notch height so the two cards inside have a

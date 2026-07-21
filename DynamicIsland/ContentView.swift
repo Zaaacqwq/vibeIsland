@@ -34,7 +34,12 @@ import UIKit
 #endif
 
 /// Blur + opacity applied via `AnyTransition.modifier` so the open notch content
-/// can blur out on close (used for the non-"simpler" close animation).
+/// can blur in/out as the notch expands and collapses.
+///
+/// Do NOT add `drawingGroup()` here as a "GPU optimization" — it was measured and
+/// it is dramatically worse. It moves rasterization onto the main thread, where it
+/// blocks in `RB::SurfacePool::wait_image_queue` waiting on the texture pool
+/// (~1700 samples in an 8s trace vs ~0 without it), tripling main-thread busy time.
 private struct BlurFadeModifier: ViewModifier {
     let radius: CGFloat
     let opacity: Double
@@ -255,15 +260,22 @@ struct ContentView: View {
     }
 
     /// Open/close transition for the whole content stack: a top-down drop that
-    /// blurs + fades in (and collapses back upward on close), restoring the
+    /// fades + scales in (and collapses back upward on close), restoring the
     /// original expand feel. Symmetric so closing mirrors opening. This is owned
     /// by the open-state container, distinct from `tabSwitchTransition` which
     /// handles horizontal slides between tabs while already open.
     private var notchOpenTransition: AnyTransition {
-        .move(edge: .top).combined(with: .modifier(
-            active: BlurFadeModifier(radius: 14, opacity: 0),
-            identity: BlurFadeModifier(radius: 0, opacity: 1)
-        ))
+        // Keep this the ONLY animated blur in the open/close path. Nesting a
+        // second one inside (NotchHomeView used to add its own) blurs the same
+        // pixels twice per frame and was measured at +8pt of main-thread busy
+        // time. Radius is 10 rather than 14: cost scales with the blurred area
+        // and the difference is not visible at this duration.
+        .move(edge: .top)
+            .combined(with: .scale(scale: 0.96, anchor: .top))
+            .combined(with: .modifier(
+                active: BlurFadeModifier(radius: 10, opacity: 0),
+                identity: BlurFadeModifier(radius: 0, opacity: 1)
+            ))
     }
     
     private var standardMediaControlsActive: Bool {
