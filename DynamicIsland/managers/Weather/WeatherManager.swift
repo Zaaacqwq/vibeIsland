@@ -123,6 +123,11 @@ final class WeatherManager: ObservableObject {
         if let location = await locationProvider.currentLocation() {
             return location
         }
+        // A stale precise fix still beats IP geolocation, which is only accurate
+        // to ~10km and routinely reports a neighbouring town.
+        if let lastKnown = locationProvider.lastKnownLocation {
+            return lastKnown
+        }
         return await ipLocationProvider.currentLocation()
     }
 

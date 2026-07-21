@@ -19,6 +19,7 @@
 import CoreLocation
 import Defaults
 import Foundation
+import OSLog
 
 /// Fetches weather snapshots from Open-Meteo (free, no key) with a wttr.in
 /// fallback. Pure data layer, decoupled from any UI.
@@ -419,9 +420,24 @@ private func symbolAdjustedForDaylight(_ symbol: String, isDaytime: Bool) -> Str
 
 @MainActor
 final class WeatherLocationProvider: NSObject, CLLocationManagerDelegate {
+    /// Deadline for a fix. Continuous updates can stay silent indefinitely when
+    /// locationd has nothing to report, so without this the awaiting continuation
+    /// never resumes and the whole weather refresh hangs.
+    private static let fixTimeout: Duration = .seconds(12)
+    /// How long to wait for a `.notDetermined` authorization to settle before
+    /// giving up, so a cold launch doesn't immediately degrade to IP geolocation.
+    private static let authorizationTimeout: Duration = .seconds(5)
+    /// A cached fix stays usable this long before we ask for a fresh one.
+    private static let fixLifetime: TimeInterval = 1800
+
+    private let logger = os.Logger(subsystem: "com.zaaacqwq.VibeIsland", category: "WeatherLocation")
     private let manager: CLLocationManager
     private var pendingContinuations: [CheckedContinuation<CLLocation?, Never>] = []
+    private var authorizationContinuations: [CheckedContinuation<Void, Never>] = []
     private var lastLocation: CLLocation?
+    /// Continuous updates are only ever run to service one pending request, so
+    /// they're torn down as soon as that request resolves.
+    private var isUpdating = false
 
     override init() {
         manager = CLLocationManager()
@@ -432,6 +448,10 @@ final class WeatherLocationProvider: NSObject, CLLocationManagerDelegate {
 
     var authorizationStatus: CLAuthorizationStatus { manager.authorizationStatus }
 
+    /// The most recent CoreLocation fix regardless of age. Callers prefer this
+    /// over IP geolocation, which is accurate only to ~10km.
+    var lastKnownLocation: CLLocation? { lastLocation }
+
     func prepareAuthorization() {
         if manager.authorizationStatus == .notDetermined {
             manager.requestWhenInUseAuthorization()
@@ -439,27 +459,80 @@ final class WeatherLocationProvider: NSObject, CLLocationManagerDelegate {
     }
 
     func currentLocation() async -> CLLocation? {
+        if manager.authorizationStatus == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+            await awaitAuthorization()
+        }
+
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
-            if let lastLocation, abs(lastLocation.timestamp.timeIntervalSinceNow) < 1800 {
+            if let lastLocation, abs(lastLocation.timestamp.timeIntervalSinceNow) < Self.fixLifetime {
                 return lastLocation
             }
-            manager.requestLocation()
+            // `requestLocation()` is one-shot: it gives up with
+            // kCLErrorLocationUnknown the moment locationd has no cached fix,
+            // which on Wi-Fi-only Macs is most of the time. Continuous updates
+            // let locationd run a scan and deliver a fix a few seconds later, so
+            // we start those and stop as soon as the first one lands.
+            isUpdating = true
+            manager.startUpdatingLocation()
             return await withCheckedContinuation { continuation in
-                self.pendingContinuations.append(continuation)
+                pendingContinuations.append(continuation)
+                // Deadline: if locationd stays silent, resume with whatever fix
+                // we already have (possibly nil) instead of hanging forever.
+                Task { [weak self] in
+                    try? await Task.sleep(for: Self.fixTimeout)
+                    guard let self, !self.pendingContinuations.isEmpty else { return }
+                    self.logger.error("CoreLocation fix timed out after \(Self.fixTimeout.components.seconds)s")
+                    self.stopUpdatingIfNeeded()
+                    self.flushContinuations(with: self.lastLocation)
+                }
             }
         default:
             return nil
         }
     }
 
+    /// Waits for the authorization prompt to resolve, capped so a prompt the user
+    /// never answers doesn't stall the refresh forever.
+    private func awaitAuthorization() async {
+        await withCheckedContinuation { continuation in
+            authorizationContinuations.append(continuation)
+            Task { [weak self] in
+                try? await Task.sleep(for: Self.authorizationTimeout)
+                self?.flushAuthorizationContinuations()
+            }
+        }
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        lastLocation = locations.last
+        // Reject the sentinel/garbage fixes CoreLocation occasionally emits.
+        if let fix = locations.last, fix.horizontalAccuracy >= 0 {
+            logger.info("CoreLocation fix accuracy \(fix.horizontalAccuracy, privacy: .public)m")
+            lastLocation = fix
+        }
+        stopUpdatingIfNeeded()
         flushContinuations(with: lastLocation)
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        flushContinuations(with: nil)
+        logger.error("CoreLocation fix failed: \(error.localizedDescription, privacy: .public) (code \((error as NSError).code, privacy: .public))")
+        // `kCLErrorLocationUnknown` is transient — locationd is still trying, so
+        // keep waiting and let the deadline decide. Anything else is terminal.
+        guard (error as NSError).code != CLError.locationUnknown.rawValue else { return }
+        stopUpdatingIfNeeded()
+        flushContinuations(with: lastLocation)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard manager.authorizationStatus != .notDetermined else { return }
+        flushAuthorizationContinuations()
+    }
+
+    private func stopUpdatingIfNeeded() {
+        guard isUpdating else { return }
+        isUpdating = false
+        manager.stopUpdatingLocation()
     }
 
     private func flushContinuations(with location: CLLocation?) {
@@ -467,5 +540,12 @@ final class WeatherLocationProvider: NSObject, CLLocationManagerDelegate {
         let continuations = pendingContinuations
         pendingContinuations.removeAll()
         continuations.forEach { $0.resume(returning: location) }
+    }
+
+    private func flushAuthorizationContinuations() {
+        guard !authorizationContinuations.isEmpty else { return }
+        let continuations = authorizationContinuations
+        authorizationContinuations.removeAll()
+        continuations.forEach { $0.resume() }
     }
 }
