@@ -3,6 +3,15 @@
     <channel>
         <title>VibeIsland</title>
         <item>
+            <title>1.1.4</title>
+            <pubDate>Tue, 21 Jul 2026 22:11:17 +0000</pubDate>
+            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.4</link>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>1.1.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.1.4/VibeIsland-1.1.4.dmg" length="18074390" type="application/octet-stream" sparkle:edSignature="y4lKP0LJV+4s1qaB7ri5j/LJwDDExu76RdRaYZU1oMuLPLIQi5fzSPQjadLV1aiZNDOuT8LDnUuB5stJidZgCA=="/>
+        </item>
+        <item>
             <title>1.1.3</title>
             <pubDate>Tue, 21 Jul 2026 15:23:30 +0000</pubDate>
             <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.3</link>
@@ -19,15 +28,6 @@
             <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.1.2/VibeIsland-1.1.2.dmg" length="18073845" type="application/octet-stream" sparkle:edSignature="k9JGiASpJH8Jb4maHiy9AtoVR/6FWNZa7A5PmijAo5BB5CNHlMeraP4+nE4tOHd5vJOCw4UKY69qvSpgswKkCg=="/>
-        </item>
-        <item>
-            <title>1.1.1</title>
-            <pubDate>Fri, 17 Jul 2026 06:34:31 +0000</pubDate>
-            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.1.1</link>
-            <sparkle:version>3</sparkle:version>
-            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.1.1/VibeIsland-1.1.1.dmg" length="18073510" type="application/octet-stream" sparkle:edSignature="xEdasuY3qOIQvUSfBWOvL2j7JH1VWbx/Vq8tYRsRHzTbdwGT83NRETy5t4ORq87fuHPkfDc0MF+nSQ1+c4xIAw=="/>
         </item>
     </channel>
 </rss>
