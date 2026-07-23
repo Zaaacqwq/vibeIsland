@@ -44,6 +44,12 @@ extension View {
                     .onChanged { value in
                         let s = direction.signed(from: value.translation)
                         guard s > 0, s.magnitude >= threshold else { return }
+                        // Dominant-axis lock: a diagonal drag must resolve to a
+                        // single axis so a mostly-horizontal tab swipe can't also
+                        // fire the vertical close/open (and vice versa).
+                        let along = direction.isHorizontal ? abs(value.translation.width) : abs(value.translation.height)
+                        let perpendicular = direction.isHorizontal ? abs(value.translation.height) : abs(value.translation.width)
+                        guard along >= perpendicular else { return }
                         action(s.magnitude, .changed)
                     }
                     .onEnded { _ in action(0, .ended) }
@@ -146,6 +152,17 @@ private struct ScrollMonitor: NSViewRepresentable {
                     action(0, .ended)
                 }
                 active = false
+                accumulated = 0
+                return
+            }
+
+            // Dominant-axis lock: when the swipe moves more along the other
+            // axis than this direction's, cancel accumulation. This stops a
+            // slow, mostly-horizontal tab swipe (with a little upward drift)
+            // from also driving the vertical close blur, and vice versa.
+            let along = direction.isHorizontal ? event.scrollingDeltaX : event.scrollingDeltaY
+            let perpendicular = direction.isHorizontal ? event.scrollingDeltaY : event.scrollingDeltaX
+            if abs(perpendicular) > abs(along) {
                 accumulated = 0
                 return
             }
