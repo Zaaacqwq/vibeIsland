@@ -38,6 +38,25 @@ struct LyricLine: Identifiable, Codable {
     }
 }
 
+/// What a lyrics lookup found.
+///
+/// `plainOnly` is deliberately distinct from `none`: the track *does* have
+/// lyrics, they just carry no timestamps. Everything that renders lyrics here
+/// is line-by-line and driven by timing — the closed-notch band picks the line
+/// for the current position, and the KTV highlight fills it between its own
+/// start and the next line's start.
+///
+/// Folding that case into a single synthesised `LyricLine(timestamp: 0)` (which
+/// is what this used to do) broke both: the band pinned the whole blob at
+/// position 0 and showed only its first line for the entire song, and the
+/// highlight, having no next line to end at, stretched across the full track
+/// duration and crawled.
+enum LyricsLookupResult {
+    case synced([LyricLine])
+    case plainOnly(String)
+    case none
+}
+
 private struct LyricsLookupKey: Hashable {
     let title: String
     let artist: String
@@ -523,7 +542,15 @@ class MusicManager: ObservableObject {
 
     /// Placeholder strings used while fetching / when nothing is found. These
     /// are not real lyric lines.
-    static let lyricsPlaceholders: Set<String> = [loadingLyricsPlaceholder, "No lyrics found"]
+    /// Shown when the track has lyrics but no timestamps — the line-by-line
+    /// modes cannot use those, so say so rather than faking a synced line.
+    static let unsyncedLyricsPlaceholder = "No synced lyrics"
+
+    static let lyricsPlaceholders: Set<String> = [
+        loadingLyricsPlaceholder,
+        "No lyrics found",
+        unsyncedLyricsPlaceholder,
+    ]
 
     /// True when `currentLyrics` holds a real lyric line (not empty / placeholder).
     var hasDisplayableLyricLine: Bool {
@@ -573,7 +600,7 @@ class MusicManager: ObservableObject {
     private var lyricsFetchTask: Task<Void, Never>?
     private var lyricsFetchKey: LyricsLookupKey?
     private var activeLyricsKey: LyricsLookupKey?
-    private var lyricsCache: [LyricsLookupKey: [LyricLine]] = [:]
+    private var lyricsCache: [LyricsLookupKey: LyricsLookupResult] = [:]
     // Bounded, insertion-order eviction so the cache cannot grow unboundedly.
     private static let lyricsCacheLimit = 80
     private var lyricsCacheOrder: [LyricsLookupKey] = []
@@ -581,7 +608,7 @@ class MusicManager: ObservableObject {
     private var explicitLookupKey: String?
 
     /// Inserts lyrics with insertion-order eviction to keep the cache bounded.
-    private func storeLyricsInCache(_ lyrics: [LyricLine], for key: LyricsLookupKey) {
+    private func storeLyricsInCache(_ result: LyricsLookupResult, for key: LyricsLookupKey) {
         if lyricsCache[key] == nil {
             lyricsCacheOrder.append(key)
             while lyricsCacheOrder.count > Self.lyricsCacheLimit {
@@ -589,7 +616,7 @@ class MusicManager: ObservableObject {
                 lyricsCache.removeValue(forKey: evicted)
             }
         }
-        lyricsCache[key] = lyrics
+        lyricsCache[key] = result
     }
 
     private(set) var artworkData: Data? = nil
@@ -1411,8 +1438,8 @@ class MusicManager: ObservableObject {
             stopLyricSync()
         }
 
-        if !forceFetch, let cachedLyrics = lyricsCache[key] {
-            applyLyricsToDisplay(cachedLyrics)
+        if !forceFetch, let cachedResult = lyricsCache[key] {
+            applyLyricsToDisplay(cachedResult)
             return
         }
 
@@ -1439,7 +1466,7 @@ class MusicManager: ObservableObject {
             guard let self else { return }
 
             do {
-                let lyrics = try await self.fetchLyricsFromAPI(
+                let result = try await self.fetchLyricsFromAPI(
                     artist: requestArtist,
                     title: requestTitle,
                     album: requestAlbum,
@@ -1449,10 +1476,10 @@ class MusicManager: ObservableObject {
 
                 await MainActor.run {
                     guard self.activeLyricsKey == key else { return }
-                    self.storeLyricsInCache(lyrics, for: key)
+                    self.storeLyricsInCache(result, for: key)
                     self.lyricsFetchKey = nil
                     self.lyricsFetchTask = nil
-                    self.applyLyricsToDisplay(lyrics)
+                    self.applyLyricsToDisplay(result)
                 }
             } catch {
                 print("Failed to fetch lyrics: \(error)")
@@ -1469,8 +1496,8 @@ class MusicManager: ObservableObject {
         }
     }
 
-    private func fetchLyricsFromAPI(artist: String, title: String, album: String, duration: TimeInterval = 0) async throws -> [LyricLine] {
-        guard !artist.isEmpty, !title.isEmpty else { return [] }
+    private func fetchLyricsFromAPI(artist: String, title: String, album: String, duration: TimeInterval = 0) async throws -> LyricsLookupResult {
+        guard !artist.isEmpty, !title.isEmpty else { return .none }
 
         // Normalize input and percent-encode
         let cleanArtist = artist.folding(options: .diacriticInsensitive, locale: .current)
@@ -1478,12 +1505,12 @@ class MusicManager: ObservableObject {
         let cleanAlbum = album.folding(options: .diacriticInsensitive, locale: .current)
         guard let encodedArtist = cleanArtist.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let encodedTitle = cleanTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return []
+            return .none
         }
 
         // Use LRCLIB search endpoint which returns an array JSON with `plainLyrics` and/or `syncedLyrics`.
         let urlString = "https://lrclib.net/api/search?track_name=\(encodedTitle)&artist_name=\(encodedArtist)"
-        guard let url = URL(string: urlString) else { return [] }
+        guard let url = URL(string: urlString) else { return .none }
 
         let (data, response) = try await URLSession.shared.data(from: url)
         if let http = response as? HTTPURLResponse, http.statusCode == 200 {
@@ -1495,19 +1522,19 @@ class MusicManager: ObservableObject {
                 let synced = (first["syncedLyrics"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
                 if !synced.isEmpty {
-                    return parseLRC(synced)
-                } else if !plain.isEmpty {
-                    return [LyricLine(timestamp: 0, text: plain)]
-                } else {
-                    return []
+                    let lines = parseLRC(synced)
+                    // Malformed LRC parses to nothing; fall through to the plain
+                    // text rather than reporting the track as lyric-less.
+                    if !lines.isEmpty { return .synced(lines) }
                 }
+                return plain.isEmpty ? .none : .plainOnly(plain)
             } else {
                 // Fallback: try to decode as UTF8 and handle as LRC or plain text
                 if let lrcString = String(data: data, encoding: .utf8) {
                     let trimmed = lrcString.trimmingCharacters(in: .whitespacesAndNewlines)
 
                     if trimmed.isEmpty  {
-                        return []
+                        return .none
                     }
 
                     // If it contains a syncedLyrics key in an object, try that
@@ -1515,20 +1542,27 @@ class MusicManager: ObservableObject {
                         if let dict = json as? [String: Any],
                             let synced = dict["syncedLyrics"] as? String
                         {
-                            return parseLRC(synced)
+                            let lines = parseLRC(synced)
+                            if !lines.isEmpty { return .synced(lines) }
+                            let plain = (dict["plainLyrics"] as? String)?
+                                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                            return plain.isEmpty ? .none : .plainOnly(plain)
                         }
                         if let array = json as? [Any], array.isEmpty {
-                            return []
+                            return .none
                         }
                     }
 
-                    // Otherwise treat as plain lyrics blob
-                    return [LyricLine(timestamp: 0, text: trimmed)]
+                    // Otherwise treat as an untimed lyrics blob. It may still
+                    // be LRC that arrived without a JSON envelope, so try that
+                    // first before giving up on timing.
+                    let lines = parseLRC(trimmed)
+                    return lines.isEmpty ? .plainOnly(trimmed) : .synced(lines)
                 }
-                return []
+                return .none
             }
         } else {
-            return []
+            return .none
         }
     }
 
@@ -1624,16 +1658,26 @@ class MusicManager: ObservableObject {
         return score
     }
 
-    private func applyLyricsToDisplay(_ lyrics: [LyricLine]) {
-        syncedLyrics = lyrics
+    private func applyLyricsToDisplay(_ result: LyricsLookupResult) {
         currentLyricIndex = -1
 
-        guard !lyrics.isEmpty else {
-            currentLyrics = Defaults[.enableLyrics] ? "No lyrics found" : ""
+        // Only timestamped lyrics drive the line-by-line displays. Untimed
+        // lyrics are reported as such instead of being synthesised into a
+        // single line pinned at position 0.
+        guard case .synced(let lyrics) = result, !lyrics.isEmpty else {
+            syncedLyrics = []
+            let message: String
+            if case .plainOnly = result {
+                message = Self.unsyncedLyricsPlaceholder
+            } else {
+                message = "No lyrics found"
+            }
+            currentLyrics = Defaults[.enableLyrics] ? message : ""
             stopLyricSync()
             return
         }
 
+        syncedLyrics = lyrics
         let playbackPosition = max(estimatedPlaybackPosition(), elapsedTime)
         updateCurrentLyric(for: playbackPosition)
 
