@@ -78,6 +78,7 @@ public enum NotchViews {
     case calendar
     case notifications
     case weather
+    case monitor
 }
 
 enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {

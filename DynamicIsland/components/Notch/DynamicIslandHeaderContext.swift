@@ -60,9 +60,33 @@ struct NotchHeaderContextWidget: View {
             calendarEvent
         case .weather:
             weatherLocation
+        case .monitor:
+            monitorContext
         case .timer, .notifications:
             EmptyView()
         }
+    }
+
+    // MARK: - Monitor
+
+    /// The Monitor tab already renders every metric in its own grid, so the
+    /// header states the one thing the grid does not: how long the Mac has been
+    /// up. The device name lives in the Shelf header instead — repeating it here
+    /// just crowded the row.
+    private var monitorContext: some View {
+        StatCell(label: "Uptime", value: Self.uptimeText())
+    }
+
+    /// Coarse on purpose — a header that ticks every second would repaint the
+    /// notch once a second for a number nobody reads that precisely.
+    private static func uptimeText() -> String {
+        let seconds = Int(ProcessInfo.processInfo.systemUptime)
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3600
+        let minutes = (seconds % 3600) / 60
+        if days > 0 { return "\(days)d \(hours)h" }
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        return "\(minutes)m"
     }
 
     // MARK: - Home (configurable: CPU / GPU / RAM / Disk / Network)

@@ -95,7 +95,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .agents, .calendar, .notifications, .weather]
+    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .agents, .calendar, .notifications, .weather, .monitor]
 
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
@@ -127,6 +127,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
         if Defaults[.showCalendar] || Defaults[.showReminders] { tabs.append(.calendar) }
         if Defaults[.enableNotificationMonitoring] { tabs.append(.notifications) }
         if Defaults[.enableWeather] { tabs.append(.weather) }
+        if Defaults[.enableSystemMonitor] { tabs.append(.monitor) }
         return tabs
     }
 
@@ -215,6 +216,7 @@ class DynamicIslandViewCoordinator: ObservableObject {
             Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableWeather).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableSystemMonitor).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.enableTimerFeature).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.timerDisplayMode).map { _ in () }.eraseToAnyPublisher(),
             Defaults.publisher(.autoNotchWidth).map { _ in () }.eraseToAnyPublisher(),

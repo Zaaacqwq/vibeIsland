@@ -105,6 +105,10 @@ func enabledStandardTabCount() -> Int {
     if Defaults[.enableWeather] {
         count += 1
     }
+    // Monitor tab
+    if Defaults[.enableSystemMonitor] {
+        count += 1
+    }
 
     return count
 }
@@ -116,7 +120,8 @@ func recommendedMinimumNotchWidth(forTabCount count: Int) -> CGFloat {
     case ...4: return 640
     case 5: return 720
     case 6: return 800
-    default: return 880
+    case 7: return 880
+    default: return 960
     }
 }
 
@@ -137,7 +142,8 @@ func autoNotchWidth(forTabCount count: Int) -> CGFloat {
     case 4: return 640
     case 5: return 720
     case 6: return 800
-    default: return 880
+    case 7: return 880
+    default: return 960
     }
 }
 

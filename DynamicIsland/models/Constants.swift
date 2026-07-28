@@ -855,6 +855,22 @@ extension Defaults.Keys {
     static let weatherAQIScale = Key<WeatherAirQualityScale>("weatherAQIScale", default: .us)
     static let weatherShowsDetails = Key<Bool>("weatherShowsDetails", default: true)
     static let weatherRefreshInterval = Key<TimeInterval>("weatherRefreshInterval", default: 30 * 60)
+
+    // MARK: System Monitor (notch)
+    /// Show the Monitor tab (CPU / GPU / memory / storage / network / power /
+    /// displays). Off by default: it is the eighth tab, and enabling it raises
+    /// the minimum notch width (see `recommendedMinimumNotchWidth`).
+    static let enableSystemMonitor = Key<Bool>("enableSystemMonitor", default: false)
+    /// Which cards the Monitor tab's overview grid shows, in
+    /// `MonitorCategory.allCases` order. Empty falls back to all categories —
+    /// an empty Monitor tab would be a dead end.
+    static let monitorCategories = Key<[MonitorCategory]>(
+        "monitorCategories",
+        default: MonitorCategory.allCases
+    )
+    /// Report network throughput in bits/second (Mbps, matching ISP marketing)
+    /// instead of bytes/second.
+    static let monitorNetworkUsesBits = Key<Bool>("monitorNetworkUsesBits", default: false)
     /// Play a sound when a Claude session finishes a turn (Stop).
     static let agentCompletionSoundEnabled = Key<Bool>("agentCompletionSoundEnabled", default: true)
     /// Play a sound when a Claude session needs your input (permission / question).

@@ -28,6 +28,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
     case calendar
     case timer
     case weather
+    case monitor
     case stats
     case notification
     case shelf
@@ -41,6 +42,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .calendar: return String(localized: "Calendar")
         case .timer: return String(localized: "Timer")
         case .weather: return String(localized: "Weather")
+        case .monitor: return String(localized: "System Monitor")
         case .stats: return String(localized: "System Stats")
         case .notification: return String(localized: "Notifications")
         case .shelf: return String(localized: "Shelf")
@@ -54,6 +56,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .calendar: return String(localized: "See your upcoming events in the notch.")
         case .timer: return String(localized: "Quick presets and a live countdown.")
         case .weather: return String(localized: "Current conditions at a glance.")
+        case .monitor: return String(localized: "CPU, GPU, memory, storage, network, power and displays in one tab.")
         case .stats: return String(localized: "CPU, memory, and more in the header.")
         case .notification: return String(localized: "Mirror macOS notifications into the notch.")
         case .shelf: return String(localized: "Drag-and-drop file stash.")
@@ -68,6 +71,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .timer: return "timer"
         case .weather: return "cloud.sun.fill"
+        case .monitor: return "gauge.with.dots.needle.bottom.50percent"
         case .stats: return "chart.bar.fill"
         case .notification: return "bell.fill"
         case .shelf: return "tray.full.fill"
@@ -82,6 +86,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .calendar: return [.red, .orange]
         case .timer: return [.orange, .yellow]
         case .weather: return [.cyan, .blue]
+        case .monitor: return [.teal, .green]
         case .stats: return [.green, .mint]
         case .notification: return [.pink, .red]
         case .shelf: return [.indigo, .blue]
@@ -90,10 +95,11 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
     }
 
     /// Whether selecting this feature leads to a dedicated setup page.
-    /// Weather and Shelf need no configuration — selecting them is enough.
+    /// Weather, Monitor and Shelf need no configuration — selecting them is
+    /// enough.
     var hasConfigPage: Bool {
         switch self {
-        case .weather, .shelf: return false
+        case .weather, .monitor, .shelf: return false
         default: return true
         }
     }
@@ -108,6 +114,7 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
             Defaults[.showReminders] = enabled
         case .timer: Defaults[.enableTimerFeature] = enabled
         case .weather: Defaults[.enableWeather] = enabled
+        case .monitor: Defaults[.enableSystemMonitor] = enabled
         case .stats: Defaults[.showHeaderContextWidgets] = enabled
         case .notification: Defaults[.enableNotificationMonitoring] = enabled
         case .shelf: Defaults[.dynamicShelf] = enabled

@@ -1003,6 +1003,9 @@ struct ContentView: View {
                                 case .weather:
                                     NotchWeatherView()
                                         .environmentObject(vm)
+                                case .monitor:
+                                    NotchMonitorView()
+                                        .environmentObject(vm)
                               }
                           }
                           .id(coordinator.currentView)

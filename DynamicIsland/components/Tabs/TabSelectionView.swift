@@ -77,6 +77,9 @@ struct TabSelectionView: View {
         if Defaults[.enableWeather] {
             tabsArray.append(TabModel(label: "Weather", icon: "cloud.sun.fill", view: .weather))
         }
+        if Defaults[.enableSystemMonitor] {
+            tabsArray.append(TabModel(label: "Monitor", icon: "gauge.with.dots.needle.bottom.50percent", view: .monitor))
+        }
         return tabsArray
     }
     var body: some View {
