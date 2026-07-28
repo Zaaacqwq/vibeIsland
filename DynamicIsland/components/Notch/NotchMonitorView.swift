@@ -234,27 +234,30 @@ struct NotchMonitorView: View {
 
         case .power:
             let snapshotPower = power.snapshot
-            if snapshotPower.hasBattery {
-                MonitorTile(
-                    category: category,
-                    value: MonitorFormat.percent(fraction: snapshotPower.chargeFraction),
-                    trailing: .caption(powerCaption(snapshotPower)),
-                    valueTint: MonitorTint.forCharge(
+            // Deliberately one tile whose *values* vary, not an `if` on
+            // `hasBattery`. A ViewBuilder conditional gives each branch its own
+            // identity, so flipping between them is a remove+insert rather than
+            // an update — and an inserted subtree does not join the parent's
+            // in-flight transition. On a cold start the first power sample
+            // lands a few milliseconds after the tab appears, mid-slide, which
+            // made this one tile pop into place while its neighbours were still
+            // animating in.
+            MonitorTile(
+                category: category,
+                // Desktop Macs have no battery node, so lead with the thing
+                // that is true (it is on wall power) instead of a 0% meter.
+                value: snapshotPower.hasBattery
+                    ? MonitorFormat.percent(fraction: snapshotPower.chargeFraction)
+                    : "AC",
+                trailing: .caption(powerCaption(snapshotPower)),
+                valueTint: snapshotPower.hasBattery
+                    ? MonitorTint.forCharge(
                         fraction: snapshotPower.chargeFraction,
                         isCharging: snapshotPower.isCharging
-                    ),
-                    action: { focus(category) }
-                )
-            } else {
-                // Desktop Macs: no battery node at all, so lead with the thing
-                // that is true (it is on wall power) instead of a 0% meter.
-                MonitorTile(
-                    category: category,
-                    value: "AC",
-                    trailing: .caption(snapshotPower.adapterName ?? String(localized: "Wall power")),
-                    action: { focus(category) }
-                )
-            }
+                    )
+                    : nil,
+                action: { focus(category) }
+            )
 
         case .display:
             let list = displays.displays
@@ -269,6 +272,9 @@ struct NotchMonitorView: View {
     }
 
     private func powerCaption(_ snapshot: PowerStatsMonitor.Snapshot) -> String {
+        guard snapshot.hasBattery else {
+            return snapshot.adapterName ?? String(localized: "Wall power")
+        }
         if snapshot.isCharging, let minutes = snapshot.minutesToFull {
             return String(localized: "\(MonitorFormat.duration(minutes: minutes)) to full")
         }
