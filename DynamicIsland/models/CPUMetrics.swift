@@ -18,7 +18,7 @@
 
 import Foundation
 
-struct CPULoadBreakdown: Equatable {
+struct CPULoadBreakdown: Equatable, Sendable {
     var user: Double
     var system: Double
     var idle: Double

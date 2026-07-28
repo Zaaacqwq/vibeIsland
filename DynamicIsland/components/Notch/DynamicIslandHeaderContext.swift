@@ -43,7 +43,7 @@ struct NotchHeaderContextWidget: View {
             // widget yields width first and truncates its own text.
             .layoutPriority(0)
             .onAppear { updateStatsMonitoring() }
-            .onDisappear { stats.stopMonitoring() }
+            .onDisappear { stats.stopMonitoring(token: SystemStatsMonitor.Consumer.headerWidget) }
             .onChange(of: coordinator.currentView) { _, _ in updateStatsMonitoring() }
     }
 
@@ -228,10 +228,12 @@ struct NotchHeaderContextWidget: View {
     }
 
     private func updateStatsMonitoring() {
+        // Retained under the header's own token: the Monitor tab holds a second
+        // retain, so leaving Home must not stop sampling out from under it.
         if coordinator.currentView == .home {
-            stats.startMonitoring()
+            stats.startMonitoring(token: SystemStatsMonitor.Consumer.headerWidget)
         } else {
-            stats.stopMonitoring()
+            stats.stopMonitoring(token: SystemStatsMonitor.Consumer.headerWidget)
         }
     }
 }
