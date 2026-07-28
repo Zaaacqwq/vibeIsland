@@ -33,13 +33,18 @@ struct DynamicIslandHeader: View {
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
 
-    /// When the notch is open and a brightness/volume/backlight HUD is peeking,
-    /// it temporarily replaces the header context widget (stats/usage/next event/
-    /// device name) with a compact level bar, fading in and out.
+    /// When the notch is open and a system HUD is peeking, it temporarily
+    /// replaces the header context widget (stats/usage/next event/device name),
+    /// fading in and out.
+    ///
+    /// Caps lock and input source belong here too: as full-width peeks they
+    /// displaced the header and stretched the notch, and neither is worth
+    /// resizing the window for.
     private var headerSystemHUDActive: Bool {
         vm.notchState == .open
             && coordinator.sneakPeek.show
-            && [.brightness, .volume, .backlight].contains(coordinator.sneakPeek.type)
+            && [.brightness, .volume, .backlight, .capsLock, .inputSource]
+                .contains(coordinator.sneakPeek.type)
     }
 
     var body: some View {
@@ -205,23 +210,58 @@ private extension DynamicIslandHeader {
     }
 }
 
-/// Compact volume/brightness level shown in the open-notch header (icon + bar)
-/// in place of the tab context widget while a system HUD is peeking.
+/// Compact system HUD shown in the open-notch header in place of the tab
+/// context widget while a peek is active.
+///
+/// Two shapes: a level bar for the continuous values (volume, brightness,
+/// keyboard backlight) and a text label for the discrete states (caps lock,
+/// input source), which have no level to draw.
 private struct HeaderSystemHUD: View {
     let icon: String
     let type: SneakContentType
     let value: CGFloat
     let accent: Color?
 
+    @Default(.capsLockIndicatorTintMode) private var capsLockTintMode
+    @Default(.showCapsLockLabel) private var showCapsLockLabel
+    @ObservedObject private var inputSourceManager = InputSourceManager.shared
+
+    private var isLevel: Bool {
+        ![.capsLock, .inputSource].contains(type)
+    }
+
     /// The sneak-peek `icon` is often empty for brightness/backlight, so fall
-    /// back to a type-appropriate glyph rather than a hardcoded speaker.
+    /// back to a type-appropriate glyph rather than a hardcoded speaker. The
+    /// state types always use their own glyph — the peek's icon carries a
+    /// different meaning for them.
     private var resolvedIcon: String {
-        if !icon.isEmpty { return icon }
         switch type {
-        case .brightness: return "sun.max.fill"
-        case .backlight: return "keyboard"
-        case .volume: return value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill"
-        default: return "speaker.wave.2.fill"
+        case .capsLock: return "capslock.fill"
+        case .inputSource: return "keyboard"
+        case .brightness: return icon.isEmpty ? "sun.max.fill" : icon
+        case .backlight: return icon.isEmpty ? "keyboard" : icon
+        case .volume:
+            if !icon.isEmpty { return icon }
+            return value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill"
+        default: return icon.isEmpty ? "speaker.wave.2.fill" : icon
+        }
+    }
+
+    private var tint: Color {
+        type == .capsLock ? capsLockTintMode.color : NotchDesign.Colors.textPrimary
+    }
+
+    /// Nil keeps the row icon-only — which is what Caps Lock does when its
+    /// label is switched off in settings.
+    private var label: String? {
+        switch type {
+        case .inputSource:
+            let name = inputSourceManager.currentSourceName
+            return name.isEmpty ? nil : name
+        case .capsLock:
+            return showCapsLockLabel ? String(localized: "Caps Lock") : nil
+        default:
+            return nil
         }
     }
 
@@ -229,17 +269,31 @@ private struct HeaderSystemHUD: View {
         HStack(spacing: 8) {
             Image(systemName: resolvedIcon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(NotchDesign.Colors.textPrimary)
+                .foregroundStyle(tint)
                 .frame(width: 16)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.15))
-                    Capsule()
-                        .fill(accent ?? NotchDesign.Colors.textPrimary)
-                        .frame(width: max(2, geo.size.width * min(max(value, 0), 1)))
+                .contentTransition(.interpolate)
+
+            if isLevel {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.15))
+                        Capsule()
+                            .fill(accent ?? NotchDesign.Colors.textPrimary)
+                            .frame(width: max(2, geo.size.width * min(max(value, 0), 1)))
+                    }
                 }
+                .frame(width: 84, height: 4)
+            } else if let label {
+                // Bounded so a long input-source name truncates instead of
+                // pushing the trailing timer/settings controls off-screen.
+                Text(label)
+                    .font(NotchDesign.Typography.voice(12, weight: .medium))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 170, alignment: .leading)
+                    .contentTransition(.interpolate)
             }
-            .frame(width: 84, height: 4)
         }
         .frame(height: 30)
         .padding(.leading, 2)

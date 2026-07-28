@@ -62,6 +62,24 @@ struct ContentView: View {
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
     @ObservedObject var capsLockManager = CapsLockManager.shared
     @ObservedObject var inputSourceManager = InputSourceManager.shared
+
+    /// Peek types the *open* notch renders inside its header (`HeaderSystemHUD`)
+    /// rather than by taking over the header slot entirely.
+    ///
+    /// Volume/brightness/backlight were always handled this way. Caps lock and
+    /// input source were not: toggling either while the notch was open swapped
+    /// the header for the much taller `InlineHUD`, which inflated the whole
+    /// notch and left the glyph stranded at the leading edge.
+    private static let headerHostedSneakTypes: [SneakContentType] = [
+        .volume, .brightness, .backlight, .capsLock, .inputSource,
+    ]
+
+    /// True when the current peek is allowed to replace the header slot — i.e.
+    /// the notch is closed, or the peek is not one the header hosts itself.
+    private var sneakPeekMayOwnHeaderSlot: Bool {
+        vm.notchState == .closed
+            || !Self.headerHostedSneakTypes.contains(coordinator.sneakPeek.type)
+    }
     @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
     @ObservedObject var shelfState = ShelfStateViewModel.shared
@@ -861,7 +879,7 @@ struct ContentView: View {
                             styleOverride: batteryModel.activeTemporaryHUDKind.map { resolvedBatteryNotificationStyle(for: $0) }
                         )
                         .id(batteryModel.activeTemporaryHUDToken)
-                      } else if isSneakPeekVisibleOnCurrentScreen && (Defaults[.inlineHUD] || coordinator.sneakPeek.type == .inputSource || isAirPodsListeningModeSneak) && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && ((coordinator.sneakPeek.type != .volume && coordinator.sneakPeek.type != .brightness && coordinator.sneakPeek.type != .backlight) || vm.notchState == .closed) {
+                      } else if isSneakPeekVisibleOnCurrentScreen && (Defaults[.inlineHUD] || coordinator.sneakPeek.type == .inputSource || isAirPodsListeningModeSneak) && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && (coordinator.sneakPeek.type != .timer) && (coordinator.sneakPeek.type != .reminder) && (coordinator.sneakPeek.type != .notification) && sneakPeekMayOwnHeaderSlot {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(
                                   (coordinator.sneakPeek.type == .capsLock || coordinator.sneakPeek.type == .inputSource)
