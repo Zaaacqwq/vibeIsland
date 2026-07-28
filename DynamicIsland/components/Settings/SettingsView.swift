@@ -63,6 +63,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case agents
     case notifications
     case weather
+    case monitor
     case debug
     case about
 
@@ -75,7 +76,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .media, .liveActivities:          return .mediaAndLiveActivities
         case .hudAndOSD, .devices, .battery, .notchHeader: return .hudsAndHardware
         case .timer, .calendar:                return .productivity
-        case .weather, .notifications:         return .notchWidgets
+        case .weather, .notifications, .monitor: return .notchWidgets
         case .shelf, .downloads, .shortcuts:   return .utilities
         case .agents, .debug:                  return .developer
         case .about:                           return .info
@@ -101,6 +102,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return String(localized: "Agents")
         case .notifications: return String(localized: "Notifications")
         case .weather: return String(localized: "Weather")
+        case .monitor: return String(localized: "System Monitor")
         case .debug: return String(localized: "Debug")
         case .about: return String(localized: "About")
         }
@@ -125,6 +127,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return "sparkles"
         case .notifications: return "bell"
         case .weather: return "cloud.sun"
+        case .monitor: return "gauge.with.dots.needle.bottom.50percent"
         case .debug: return "ladybug"
         case .about: return "info.circle"
         }
@@ -149,6 +152,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .notifications: return .red
         case .weather: return .cyan
+        case .monitor: return .teal
         case .debug: return .gray
         case .about: return .secondary
         }
@@ -455,6 +459,7 @@ struct SettingsView: View {
             // Notch Widgets
             .weather,
             .notifications,
+            .monitor,
             // Utilities
             .shelf,
             .downloads,
@@ -873,6 +878,10 @@ struct SettingsView: View {
         case .weather:
             SettingsForm(tab: .weather) {
                 WeatherSettings()
+            }
+        case .monitor:
+            SettingsForm(tab: .monitor) {
+                MonitorSettings()
             }
         case .debug:
             SettingsForm(tab: .debug) {
