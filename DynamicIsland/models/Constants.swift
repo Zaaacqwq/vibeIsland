@@ -570,6 +570,14 @@ extension Defaults.Keys {
     /// Which system metrics the Home tab's notch-header widget shows, in
     /// `HeaderStatKind.allCases` order. Empty hides the Home stats entirely.
     static let homeHeaderStats = Key<[HeaderStatKind]>("homeHeaderStats", default: [.cpu, .ram])
+    /// Which agent providers the Agents tab's notch-header widget shows, as
+    /// `AgentUsageProviderID` raw values in display order. Capped at
+    /// `AgentUsageProviderCatalog.headerProviderLimit` (2) — this is the header
+    /// strip, not the pageable Agents panel.
+    static let agentHeaderProviders = Key<[String]>(
+        "agentHeaderProviders",
+        default: ["claude", "codex"]
+    )
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
     static let accentColor = Key<Color>("accentColor", default: Color.blue)
     /// Debug: tint the notch background instead of black, to inspect the layout regions.

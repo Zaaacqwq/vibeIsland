@@ -14,6 +14,33 @@ enum AgentUsageProviderCatalog {
 
     static var defaultOrderRawValues: [String] { defaultOrder.map(\.rawValue) }
 
+    /// How many providers the *notch header* may show at once.
+    ///
+    /// The header strip shares its row with the tab buttons and the
+    /// timer/settings controls, and each provider contributes an icon plus two
+    /// or more percentage cells. Past two groups the cells start truncating, so
+    /// the header selection is capped here. The Agents panel has no such cap —
+    /// it pages through cards instead.
+    static let headerProviderLimit = 2
+
+    /// Providers the header should render, from the persisted raw-value list.
+    /// Applies the same drop-unknown/de-duplicate rules as `normalizedOrder`,
+    /// then clamps to `headerProviderLimit`. Unlike the panel order this does
+    /// **not** append missing providers — the header shows only what was picked.
+    static func normalizedHeaderProviders(_ raw: [String]) -> [AgentUsageProviderID] {
+        var seen = Set<AgentUsageProviderID>()
+        var result: [AgentUsageProviderID] = []
+        for rawValue in raw {
+            guard let id = AgentUsageProviderID(rawValue: rawValue),
+                  defaultOrder.contains(id),
+                  !seen.contains(id) else { continue }
+            seen.insert(id)
+            result.append(id)
+            if result.count == headerProviderLimit { break }
+        }
+        return result
+    }
+
     /// Reconciles a persisted raw-value list against the known providers: drops
     /// unknown/duplicate ids and appends any provider missing from the stored
     /// order, so a newly added provider still appears without a manual reset.

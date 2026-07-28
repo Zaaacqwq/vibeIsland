@@ -12,6 +12,7 @@ import EventKit
 import KeyboardShortcuts
 import LaunchAtLogin
 import LottieUI
+import OpenIslandCore
 import Sparkle
 import SwiftUI
 import SwiftUIIntrospect
@@ -1638,6 +1639,33 @@ private struct DevicesSettingsView: View {
 struct NotchHeaderSettings: View {
     @Default(.showHeaderContextWidgets) private var showHeaderContextWidgets
     @Default(.homeHeaderStats) private var homeHeaderStats
+    @Default(.agentHeaderProviders) private var agentHeaderProviders
+    @Default(.enableAgentMonitoring) private var enableAgentMonitoring
+
+    private var selectedAgentProviders: [AgentUsageProviderID] {
+        AgentUsageProviderCatalog.normalizedHeaderProviders(agentHeaderProviders)
+    }
+
+    /// Enabling appends, so the pick order is also the header's display order.
+    /// At the cap the remaining rows are disabled rather than silently evicting
+    /// an existing pick — dropping something the user chose without saying so
+    /// would be worse than making them turn one off first.
+    private func agentProviderBinding(_ id: AgentUsageProviderID) -> Binding<Bool> {
+        Binding(
+            get: { selectedAgentProviders.contains(id) },
+            set: { isOn in
+                var selected = selectedAgentProviders
+                if isOn {
+                    guard !selected.contains(id),
+                          selected.count < AgentUsageProviderCatalog.headerProviderLimit else { return }
+                    selected.append(id)
+                } else {
+                    selected.removeAll { $0 == id }
+                }
+                agentHeaderProviders = selected.map(\.rawValue)
+            }
+        )
+    }
 
     /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
     /// in canonical `allCases` order so the header layout stays stable.
@@ -1672,8 +1700,37 @@ struct NotchHeaderSettings: View {
                         )
                     }
                 }
+
+                if enableAgentMonitoring {
+                    GeistSection(
+                        title: "Agents header usage",
+                        footer: agentProvidersFooter
+                    ) {
+                        let providers = AgentUsageProviderCatalog.defaultOrder
+                        ForEach(Array(providers.enumerated()), id: \.element) { index, id in
+                            let isOn = selectedAgentProviders.contains(id)
+                            let atLimit = selectedAgentProviders.count
+                                >= AgentUsageProviderCatalog.headerProviderLimit
+                            GeistToggleRow(
+                                title: id.displayName,
+                                isOn: agentProviderBinding(id),
+                                divider: index != providers.count - 1
+                            )
+                            .disabled(!isOn && atLimit)
+                            .opacity(!isOn && atLimit ? 0.45 : 1)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private var agentProvidersFooter: String {
+        let limit = AgentUsageProviderCatalog.headerProviderLimit
+        if selectedAgentProviders.count >= limit {
+            return "Pick up to \(limit) — turn one off to choose another. A provider only appears once it has quota data, and they show in the order you enable them."
+        }
+        return "Pick up to \(limit) providers to show in the Agents tab's header. A provider only appears once it has quota data, and they show in the order you enable them."
     }
 }
 

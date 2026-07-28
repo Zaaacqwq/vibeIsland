@@ -158,34 +158,74 @@ struct NotchHeaderContextWidget: View {
 
     // MARK: - Agents (Claude / Codex rate-limit usage)
 
+    @Default(.agentHeaderProviders) private var agentHeaderProviders
+    @Default(.agentAntigravityCompactQuotaWindows) private var compactAntigravityQuotaWindows
+    @Default(.agentOpenCodeCompactQuotaWindows) private var compactOpenCodeQuotaWindows
+
+    /// Usage for the providers picked in Settings › Notch Header, at most two.
+    /// A selected provider with no data yet is skipped rather than rendered as
+    /// a bare icon, so an agent you have not run today costs no header width.
     @ViewBuilder
     private var agentUsage: some View {
         if Defaults[.enableAgentMonitoring] {
-            let claude = agentMonitor.usage
-            let codex = agentMonitor.codexUsage
-            let hasClaude = claude.map { !$0.isEmpty } ?? false
-            let hasCodex = codex.map { !$0.isEmpty } ?? false
-            if hasClaude || hasCodex {
+            let groups = AgentUsageProviderCatalog
+                .normalizedHeaderProviders(agentHeaderProviders)
+                .compactMap(headerGroup(for:))
+            if !groups.isEmpty {
                 HStack(spacing: 12) {
-                    if let claude, hasClaude {
-                        providerUsage(icon: "claude-icon", cells: claudeCells(claude))
-                    }
-                    if let codex, hasCodex {
-                        providerUsage(icon: "codex-icon", cells: codexCells(codex))
+                    ForEach(groups) { group in
+                        providerUsage(id: group.id, cells: group.cells)
                     }
                 }
             }
         }
     }
 
-    private func providerUsage(icon: String, cells: [UsageCell]) -> some View {
-        HStack(spacing: 8) {
-            Image(icon)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 12, height: 12)
-                .foregroundStyle(NotchDesign.Colors.textPrimary)
+    private struct ProviderUsageGroup: Identifiable {
+        let id: AgentUsageProviderID
+        let cells: [UsageCell]
+    }
+
+    /// Claude and Codex carry dedicated rate-limit snapshots; everything else
+    /// reads the shared provider-quota map through the same presentation rules
+    /// the Agents panel uses, so a window relabelled there (Antigravity/OpenCode
+    /// compact mode) reads identically here.
+    private func headerGroup(for id: AgentUsageProviderID) -> ProviderUsageGroup? {
+        let cells: [UsageCell]
+        switch id {
+        case .claude:
+            guard let usage = agentMonitor.usage, !usage.isEmpty else { return nil }
+            cells = claudeCells(usage)
+        case .codex:
+            guard let usage = agentMonitor.codexUsage, !usage.isEmpty else { return nil }
+            cells = codexCells(usage)
+        default:
+            guard let quota = AgentQuotaPresentation.snapshot(
+                providerID: id,
+                quota: agentMonitor.providerQuotas[id],
+                compactAntigravity: compactAntigravityQuotaWindows,
+                compactOpenCode: compactOpenCodeQuotaWindows
+            ) else { return nil }
+            cells = quota.windows.map {
+                UsageCell(label: $0.label, percent: Int($0.usedPercentage.rounded()))
+            }
+        }
+        guard !cells.isEmpty else { return nil }
+        return ProviderUsageGroup(id: id, cells: cells)
+    }
+
+    private func providerUsage(id: AgentUsageProviderID, cells: [UsageCell]) -> some View {
+        let icon = AgentUsageProviderCatalog.icon(for: id)
+        return HStack(spacing: 8) {
+            Group {
+                if let asset = icon.asset {
+                    Image(asset).renderingMode(.template).resizable().scaledToFit()
+                } else {
+                    Image(systemName: icon.system).resizable().scaledToFit()
+                }
+            }
+            .frame(width: 12, height: 12)
+            .foregroundStyle(NotchDesign.Colors.textPrimary)
             ForEach(cells) { cell in
                 // Debug override forces MAX; at the cap show "MAX" (three chars)
                 // rather than the four-char "100%" which gets truncated here.
