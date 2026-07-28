@@ -37,10 +37,22 @@ struct NotchWeatherView: View {
                 loading
             }
         }
-        // Uniform tab insets + height budget come from the shared tab container
-        // in ContentView (`NotchDesign.TabInset`); fill the region top-aligned.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Uniform tab insets come from the shared tab container in ContentView.
+        // The height is taken exactly (`filledContentHeight`) rather than left
+        // to the content: sizing to content left the leftover space as one big
+        // gap under the forecast card, so the bottom margin no longer matched
+        // the top one. Occupying the region lets the forecast card absorb it.
+        .frame(
+            maxWidth: .infinity,
+            minHeight: contentHeight,
+            maxHeight: contentHeight,
+            alignment: .top
+        )
         .onAppear { Task { await weather.refresh(force: false) } }
+    }
+
+    private var contentHeight: CGFloat {
+        NotchDesign.TabInset.filledContentHeight(headerHeight: max(24, vm.effectiveClosedNotchHeight))
     }
 
     // MARK: - Content
@@ -59,7 +71,10 @@ struct NotchWeatherView: View {
                 forecastRow(snapshot)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity)
+                    // Takes the leftover height so the gap below the card equals
+                    // the one above the first card, instead of pooling at the
+                    // bottom. The conditions card stays sized to its content.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .notchCard(radius: NotchDesign.Radius.md)
             }
         }

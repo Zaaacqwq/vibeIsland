@@ -139,5 +139,25 @@ enum NotchDesign {
         static func contentHeight(headerHeight: CGFloat) -> CGFloat {
             max(0, standardOpenNotchContentHeight - headerHeight - top - bottom)
         }
+
+        /// Height for a tab that wants to **fill** its region rather than size
+        /// to its own content.
+        ///
+        /// `contentHeight` is a ceiling, and no content-sized tab reaches it:
+        /// the shell's open-state chrome (`.padding([.horizontal, .bottom], 12)`
+        /// in `ContentView.mainLayoutBase`) is applied outside the budget this
+        /// function computes. A tab that occupies the ceiling exactly therefore
+        /// draws 12pt taller than every other tab — Home / Shelf / Agents /
+        /// Calendar / Weather all land on `standardOpenNotchContentHeight`
+        /// regardless of their content, while a ceiling-filling tab overshoots
+        /// it. Subtracting that slack puts a filled tab on the same line as the
+        /// rest, and it tracks `standardOpenNotchContentHeight` if that changes.
+        static func filledContentHeight(headerHeight: CGFloat) -> CGFloat {
+            max(0, contentHeight(headerHeight: headerHeight) - shellChromeSlack)
+        }
+
+        /// Measured difference between the `contentHeight` ceiling and the space
+        /// a tab can occupy without pushing the notch past its standard height.
+        private static let shellChromeSlack: CGFloat = 12
     }
 }

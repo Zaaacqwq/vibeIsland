@@ -32,7 +32,7 @@ let batterySneakSize: CGSize = .init(width: 160, height: 1)
 /// Weather, per the notch redesign's "same height everywhere" rule — tabs
 /// with shorter content top-align and leave breathing room below rather than
 /// shrinking the window (see the tab-switch container in ContentView.swift).
-let standardOpenNotchContentHeight: CGFloat = 200
+let standardOpenNotchContentHeight: CGFloat = 212
 
 var openNotchSize: CGSize {
     let maxWidth = maxAllowedNotchWidth()
