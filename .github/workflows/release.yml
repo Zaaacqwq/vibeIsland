@@ -20,7 +20,9 @@ permissions:
 jobs:
   build-dmg:
     name: Build & Package
-    runs-on: macos-15
+    # macos-15's newest Xcode is 26.3, which links against the macOS 26.2 SDK.
+    # macos-26 carries Xcode 26.5/26.6 and the 26.5 SDK.
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -31,7 +33,19 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          # Pinned, not `latest-stable`, for two reasons.
+          #
+          # AppKit and SwiftUI gate behaviour on the SDK an app was *linked*
+          # against, so the toolchain is part of what ships. Releases built on
+          # macos-15 linked the macOS 26.2 SDK and were noticeably less
+          # responsive on a 26.4 machine — hover, close and tab switches all
+          # lagged — while the identical commit built locally against the 26.5
+          # SDK was not. 26.5 is the version that was verified good.
+          #
+          # And `latest-stable` floats with the runner image, so the SDK a
+          # release links against could change without a commit touching this
+          # repo. Pinning keeps releases reproducible.
+          xcode-version: '26.5'
 
       - name: Import signing certificate
         env:
