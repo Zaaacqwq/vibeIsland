@@ -136,7 +136,18 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           UPDATES_DIR="$RUNNER_TEMP/vibeisland-updates"
           mkdir -p "$UPDATES_DIR"
-          cp Updates/appcast.xml "$UPDATES_DIR/appcast.xml"
+
+          # Seed from main, not from this tag's checkout.
+          #
+          # A tag is normally cut before CI has pushed the *previous* release's
+          # appcast commit, so the copy inside the tag lags main. Since the
+          # publish step below overwrites main with whatever is generated here,
+          # seeding from the stale copy silently drops the entries main had
+          # gained in between — v1.2.0 lost the 1.1.5 entry exactly that way.
+          git fetch --depth=1 origin main
+          if ! git show origin/main:Updates/appcast.xml > "$UPDATES_DIR/appcast.xml" 2>/dev/null; then
+            cp Updates/appcast.xml "$UPDATES_DIR/appcast.xml"
+          fi
           cp "VibeIsland-$VERSION.dmg" "$UPDATES_DIR/"
 
           GENERATOR="$(find build/SourcePackages/artifacts -type f -name generate_appcast -print -quit)"
