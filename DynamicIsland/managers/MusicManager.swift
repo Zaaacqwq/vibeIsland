@@ -773,6 +773,10 @@ class MusicManager: ObservableObject {
             newController = YouTubeMusicController()
         case .amazonMusic:
             newController = AmazonMusicController()
+        case .neteaseMusic:
+            newController = FilteredMediaRemoteController(configuration: .neteaseMusic)
+        case .qqMusic:
+            newController = FilteredMediaRemoteController(configuration: .qqMusic)
         }
 
         // Set up state observation for the new controller
@@ -1866,6 +1870,10 @@ extension MusicManager {
             return spotifyGreen
         case .amazonMusic:
             return amazonOrange
+        case .neteaseMusic:
+            return neteaseRed
+        case .qqMusic:
+            return qqMusicGreen
         case .nowPlaying:
             if let bundleIdentifier,
                let bundleColor = brandAccentColor(forBundleIdentifier: bundleIdentifier) {
@@ -1885,6 +1893,10 @@ extension MusicManager {
             return spotifyGreen
         case AmazonMusicController.bundleIdentifier:
             return amazonOrange
+        case FilteredMediaRemoteConfiguration.neteaseMusic.bundleIdentifier:
+            return neteaseRed
+        case FilteredMediaRemoteConfiguration.qqMusic.bundleIdentifier:
+            return qqMusicGreen
         default:
             return nil
         }
@@ -1893,6 +1905,8 @@ extension MusicManager {
     private static let appleMusicPink = Color(red: 0.999, green: 0.171, blue: 0.331)
     private static let spotifyGreen = Color(red: 0.0, green: 0.857, blue: 0.302)
     private static let amazonOrange = Color(red: 1.0, green: 0.6, blue: 0.0)
+    private static let neteaseRed = Color(red: 0.89, green: 0.0, blue: 0.0)
+    private static let qqMusicGreen = Color(red: 0.19, green: 0.76, blue: 0.49)
 }
 
 // MARK: - Album Art Flip Helper

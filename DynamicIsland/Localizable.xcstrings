@@ -38633,6 +38633,17 @@
         }
       }
     },
+    "NetEase Cloud Music" : {
+      "comment" : "NetEase Cloud Music media controller type.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网易云音乐"
+          }
+        }
+      }
+    },
     "Network" : {
       "comment" : "Title for the \"Network\" section in the stats view.",
       "extractionState" : "stale",
@@ -44941,6 +44952,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "提供商"
+          }
+        }
+      }
+    },
+    "QQ Music" : {
+      "comment" : "QQ Music media controller type.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QQ 音乐"
           }
         }
       }
@@ -62577,6 +62599,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Amazon Music uygulaması etkin medya kaynağı olduğunda macOS Şimdi Yürütülüyor özelliğini kullanır. Oynatma kontrolleri sistemin Şimdi Yürütülüyor hedefini takip eder. Amazon Music uygulaması uzaktan aramayı desteklemiyorsa zaman çizelgesini temizleme çalışmayabilir."
+          }
+        }
+      }
+    },
+    "Uses macOS Now Playing when NetEase Cloud Music is the active media source." : {
+      "comment" : "Description of the NetEase Cloud Music media controller.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当网易云音乐是当前媒体来源时，使用 macOS“正在播放”获取信息并控制播放。"
+          }
+        }
+      }
+    },
+    "Uses macOS Now Playing when QQ Music is the active media source." : {
+      "comment" : "Description of the QQ Music media controller.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当 QQ 音乐是当前媒体来源时，使用 macOS“正在播放”获取信息并控制播放。"
           }
         }
       }

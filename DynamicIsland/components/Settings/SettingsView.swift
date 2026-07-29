@@ -1951,7 +1951,7 @@ struct Media: View {
 
         GeistSection(title: "Media Source") {
             GeistPickerRow(title: "Music Source", selection: $mediaController, divider: false, info: "'Now Playing' was the only option on previous versions and works with all media apps. It follows the system Now Playing target — scrubbing the timeline may not work if the active app (e.g. Amazon Music) doesn't support remote seek.") {
-                ForEach(availableMediaControllers) { Text($0.rawValue).tag($0) }
+                ForEach(availableMediaControllers) { Text($0.localizedName).tag($0) }
             }
             .onChange(of: mediaController) { _, _ in
                 NotificationCenter.default.post(name: Notification.Name.mediaControllerChanged, object: nil)
