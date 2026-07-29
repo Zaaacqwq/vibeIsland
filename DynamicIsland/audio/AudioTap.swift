@@ -106,6 +106,24 @@ private func getAudioObjectID(for pid: pid_t) -> AudioObjectID? {
 /// Singleton class for real-time audio capture from music apps
 class AudioTap: NSObject {
     static let shared = AudioTap()
+
+    /// Applications whose output can drive the real-time music visualizer.
+    /// Keep launch/termination observation and CoreAudio capture on this single
+    /// source of truth so adding a media controller cannot update only one path.
+    static let supportedBundleIdentifiers: Set<String> = [
+        "com.apple.Music",
+        "com.spotify.client",
+        "com.amazon.music",
+        "com.apple.Safari",
+        "com.tidal.desktop",
+        "tv.plex.plexamp",
+        "com.roon.Roon",
+        "com.audirvana.Audirvana-Studio",
+        "com.vox.vox",
+        "com.coppertino.Vox",
+        "com.netease.163music",
+        "com.tencent.QQMusicMac",
+    ]
     
     let bridge = AudioBridge()
     var isPaused: Bool = false
@@ -122,19 +140,6 @@ class AudioTap: NSObject {
     
     // Debounce restart requests
     private var pendingRestartWorkItem: DispatchWorkItem?
-
-    private let targetBundleIDs = [
-        "com.apple.Music",
-        "com.spotify.client",
-        "com.amazon.music",
-        "com.apple.Safari",
-        "com.tidal.desktop",
-        "tv.plex.plexamp",
-        "com.roon.Roon",
-        "com.audirvana.Audirvana-Studio",
-        "com.vox.vox",
-        "com.coppertino.Vox",
-    ]
 
     private override init() {
         super.init()
@@ -173,7 +178,8 @@ class AudioTap: NSObject {
         var targetPIDs: [AudioDeviceID] = []
 
         for app in runningApps {
-            if let bundleID = app.bundleIdentifier, targetBundleIDs.contains(bundleID) {
+            if let bundleID = app.bundleIdentifier,
+               Self.supportedBundleIdentifiers.contains(bundleID) {
                 if let deviceID = getAudioObjectID(for: app.processIdentifier) {
                     targetPIDs.append(deviceID)
                     print("🎯 [AudioTap] Found \(app.localizedName ?? "App") with PID: \(app.processIdentifier), AudioObjectID: \(deviceID)")

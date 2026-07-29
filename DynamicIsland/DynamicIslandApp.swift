@@ -348,19 +348,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
 
         // Listen for app launches to restart capture when music apps are opened
-        let targetBundleIDs = [
-            "com.apple.Music",
-            "com.spotify.client",
-            "com.amazon.music",
-            "com.apple.Safari",
-            "com.tidal.desktop",
-            "tv.plex.plexamp",
-            "com.roon.Roon",
-            "com.audirvana.Audirvana-Studio",
-            "com.vox.vox",
-            "com.coppertino.Vox",
-        ]
-        
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification,
             object: nil,
@@ -368,7 +355,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { notification in
             guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                   let bundleID = app.bundleIdentifier,
-                  targetBundleIDs.contains(bundleID) else { return }
+                  AudioTap.supportedBundleIdentifiers.contains(bundleID) else { return }
             
             // A target music app was launched; only refresh capture if we're
             // actively playing (otherwise the isPlaying observer starts it fresh
@@ -390,7 +377,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { notification in
             guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                   let bundleID = app.bundleIdentifier,
-                  targetBundleIDs.contains(bundleID) else { return }
+                  AudioTap.supportedBundleIdentifiers.contains(bundleID) else { return }
             
             // A target music app was terminated; only refresh capture if still
             // playing from another source, otherwise just stop.
