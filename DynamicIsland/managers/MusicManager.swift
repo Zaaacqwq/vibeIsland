@@ -55,15 +55,66 @@ enum LyricsLookupResult {
     case synced([LyricLine])
     case plainOnly(String)
     case none
+
+    var isSynced: Bool {
+        if case .synced(let lines) = self {
+            return !lines.isEmpty
+        }
+        return false
+    }
+
+    var isAvailable: Bool {
+        if case .none = self {
+            return false
+        }
+        return true
+    }
+
+    var isPlainOnly: Bool {
+        if case .plainOnly = self {
+            return true
+        }
+        return false
+    }
 }
 
 private struct LyricsLookupKey: Hashable {
     let title: String
     let artist: String
     let album: String
+    let source: String
 
     var isValid: Bool {
         !title.isEmpty && !artist.isEmpty
+    }
+}
+
+private struct ProviderLyricsCandidate {
+    let identifier: String
+    let title: String
+    let artists: [String]
+    let album: String
+    let duration: TimeInterval
+}
+
+private enum LyricsProviderError: Error {
+    case invalidHTTPResponse
+    case httpStatus(Int)
+}
+
+private enum PlatformLyricsProvider: CaseIterable {
+    case netease
+    case qqMusic
+
+    init?(bundleIdentifier: String?) {
+        switch bundleIdentifier {
+        case FilteredMediaRemoteConfiguration.neteaseMusic.bundleIdentifier:
+            self = .netease
+        case FilteredMediaRemoteConfiguration.qqMusic.bundleIdentifier:
+            self = .qqMusic
+        default:
+            return nil
+        }
     }
 }
 
@@ -555,7 +606,9 @@ class MusicManager: ObservableObject {
     /// True when `currentLyrics` holds a real lyric line (not empty / placeholder).
     var hasDisplayableLyricLine: Bool {
         let line = currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !line.isEmpty && !Self.lyricsPlaceholders.contains(line)
+        return !line.isEmpty
+            && !Self.lyricsPlaceholders.contains(line)
+            && !Self.isNoLyricsPlaceholder(line)
     }
 
     /// True while a lyrics fetch is in flight (the band shows a loading hint).
@@ -892,6 +945,11 @@ class MusicManager: ObservableObject {
             if state.title != self.songTitle { self.songTitle = state.title }
             if state.artist != self.artistName { self.artistName = state.artist }
             if state.album != self.album { self.album = state.album }
+            // Lyrics providers are source-specific, so publish the new bundle
+            // before deriving the cache key and starting the lookup.
+            if state.bundleIdentifier != self.bundleIdentifier {
+                self.bundleIdentifier = state.bundleIdentifier
+            }
             // Capture duration early too: the lyrics lookup uses it to pick the
             // LRCLIB variant whose timeline matches THIS recording (avoids a
             // wrong-length variant whose timestamps are consistently off).
@@ -1465,6 +1523,7 @@ class MusicManager: ObservableObject {
         let requestTitle = lookup.requestTitle
         let requestAlbum = lookup.requestAlbum
         let requestDuration = lookup.requestDuration
+        let requestBundleIdentifier = bundleIdentifier
 
         lyricsFetchTask = Task { [weak self] in
             guard let self else { return }
@@ -1474,7 +1533,8 @@ class MusicManager: ObservableObject {
                     artist: requestArtist,
                     title: requestTitle,
                     album: requestAlbum,
-                    duration: requestDuration
+                    duration: requestDuration,
+                    sourceBundleIdentifier: requestBundleIdentifier
                 )
                 guard !Task.isCancelled else { return }
 
@@ -1500,9 +1560,130 @@ class MusicManager: ObservableObject {
         }
     }
 
-    private func fetchLyricsFromAPI(artist: String, title: String, album: String, duration: TimeInterval = 0) async throws -> LyricsLookupResult {
+    private func fetchLyricsFromAPI(
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval = 0,
+        sourceBundleIdentifier: String?
+    ) async throws -> LyricsLookupResult {
         guard !artist.isEmpty, !title.isEmpty else { return .none }
 
+        let sourceProvider = PlatformLyricsProvider(
+            bundleIdentifier: sourceBundleIdentifier
+        )
+        var fallbackResult: LyricsLookupResult = .none
+
+        // QQ Music and NetEase should use their own catalogue first: their song
+        // identifiers and timelines correspond to the version being played.
+        if let sourceProvider {
+            do {
+                let sourceResult = try await fetchLyrics(
+                    from: sourceProvider,
+                    artist: artist,
+                    title: title,
+                    album: album,
+                    duration: duration
+                )
+                if sourceResult.isSynced {
+                    return sourceResult
+                }
+                if sourceResult.isAvailable {
+                    fallbackResult = sourceResult
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // These are unofficial public endpoints and may change without
+                // notice. A provider failure must never prevent other fallbacks.
+                print("Source lyrics provider failed: \(error)")
+            }
+        }
+
+        let lrclibResult: LyricsLookupResult
+        do {
+            lrclibResult = try await fetchLyricsFromLRCLIB(
+                artist: artist,
+                title: title,
+                album: album,
+                duration: duration
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            print("LRCLIB lyrics provider failed: \(error)")
+            lrclibResult = .none
+        }
+
+        if lrclibResult.isSynced {
+            return lrclibResult
+        }
+        if lrclibResult.isAvailable {
+            fallbackResult = lrclibResult
+        }
+
+        // A complete plain lyric is useful evidence that the song match is
+        // correct, but it cannot drive line-by-line/KTV UI. In that specific
+        // case, use Lyricify's cross-provider strategy to look for a real
+        // timeline instead of synthesising timestamps.
+        guard fallbackResult.isPlainOnly else {
+            return fallbackResult
+        }
+
+        for provider in PlatformLyricsProvider.allCases where provider != sourceProvider {
+            do {
+                let result = try await fetchLyrics(
+                    from: provider,
+                    artist: artist,
+                    title: title,
+                    album: album,
+                    duration: duration
+                )
+                if result.isSynced {
+                    print("Lyrics: using cross-provider synced fallback from \(provider)")
+                    return result
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                print("Cross-provider lyrics lookup failed for \(provider): \(error)")
+            }
+        }
+
+        return fallbackResult
+    }
+
+    private func fetchLyrics(
+        from provider: PlatformLyricsProvider,
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval
+    ) async throws -> LyricsLookupResult {
+        switch provider {
+        case .netease:
+            return try await fetchLyricsFromNetEase(
+                artist: artist,
+                title: title,
+                album: album,
+                duration: duration
+            )
+        case .qqMusic:
+            return try await fetchLyricsFromQQMusic(
+                artist: artist,
+                title: title,
+                album: album,
+                duration: duration
+            )
+        }
+    }
+
+    private func fetchLyricsFromLRCLIB(
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval = 0
+    ) async throws -> LyricsLookupResult {
         // Normalize input and percent-encode
         let cleanArtist = artist.folding(options: .diacriticInsensitive, locale: .current)
         let cleanTitle = title.folding(options: .diacriticInsensitive, locale: .current)
@@ -1570,6 +1751,420 @@ class MusicManager: ObservableObject {
         }
     }
 
+    /// Uses the public, unauthenticated endpoints exposed by the NetEase web
+    /// player. Keeping this isolated from the rest of the lyrics pipeline makes
+    /// it safe to fall back when the private API changes.
+    private func fetchLyricsFromNetEase(
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval
+    ) async throws -> LyricsLookupResult {
+        for query in lyricsProviderSearchQueries(title: title, artist: artist) {
+            var components = URLComponents(string: "https://music.163.com/api/search/get")
+            components?.queryItems = [
+                URLQueryItem(name: "s", value: query),
+                URLQueryItem(name: "type", value: "1"),
+                URLQueryItem(name: "offset", value: "0"),
+                URLQueryItem(name: "total", value: "true"),
+                URLQueryItem(name: "limit", value: "12"),
+            ]
+            guard let url = components?.url else { continue }
+
+            var request = lyricsProviderRequest(url: url, referer: "https://music.163.com/")
+            request.httpMethod = "GET"
+            let data = try await lyricsProviderData(for: request)
+            guard
+                let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let result = root["result"] as? [String: Any],
+                let songs = result["songs"] as? [[String: Any]]
+            else {
+                continue
+            }
+
+            let candidates = songs.compactMap { song -> ProviderLyricsCandidate? in
+                guard let songID = (song["id"] as? NSNumber)?.stringValue else { return nil }
+                let artists = (song["artists"] as? [[String: Any]] ?? song["ar"] as? [[String: Any]] ?? [])
+                    .compactMap { $0["name"] as? String }
+                let albumObject = song["album"] as? [String: Any] ?? song["al"] as? [String: Any]
+                let durationMilliseconds = (song["duration"] as? NSNumber)?.doubleValue
+                    ?? (song["dt"] as? NSNumber)?.doubleValue
+                    ?? 0
+                return ProviderLyricsCandidate(
+                    identifier: songID,
+                    title: song["name"] as? String ?? "",
+                    artists: artists,
+                    album: albumObject?["name"] as? String ?? "",
+                    duration: durationMilliseconds / 1000
+                )
+            }
+
+            guard let match = bestProviderLyricsMatch(
+                in: candidates,
+                artist: artist,
+                title: title,
+                album: album,
+                duration: duration
+            ) else {
+                continue
+            }
+
+            var lyricComponents = URLComponents(string: "https://music.163.com/api/song/lyric")
+            lyricComponents?.queryItems = [
+                URLQueryItem(name: "id", value: match.identifier),
+                URLQueryItem(name: "lv", value: "-1"),
+                URLQueryItem(name: "kv", value: "-1"),
+                URLQueryItem(name: "tv", value: "-1"),
+            ]
+            guard let lyricURL = lyricComponents?.url else { return .none }
+
+            let lyricData = try await lyricsProviderData(
+                for: lyricsProviderRequest(url: lyricURL, referer: "https://music.163.com/")
+            )
+            guard
+                let lyricRoot = try? JSONSerialization.jsonObject(with: lyricData) as? [String: Any],
+                let lrc = lyricRoot["lrc"] as? [String: Any],
+                let lyric = lrc["lyric"] as? String
+            else {
+                return .none
+            }
+
+            let parsed = lyricsLookupResult(from: lyric)
+            if parsed.isAvailable {
+                print("Lyrics: matched NetEase song \(match.identifier)")
+            }
+            return parsed
+        }
+
+        return .none
+    }
+
+    /// QQ Music's `req_1` search form currently rejects some otherwise valid
+    /// queries. The named module form below is accepted by both the current web
+    /// endpoint and the response model used by Lyricify Lyrics Helper.
+    private func fetchLyricsFromQQMusic(
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval
+    ) async throws -> LyricsLookupResult {
+        for query in lyricsProviderSearchQueries(title: title, artist: artist) {
+            guard let searchURL = URL(string: "https://u.y.qq.com/cgi-bin/musicu.fcg") else {
+                continue
+            }
+
+            let payload: [String: Any] = [
+                "music.search.SearchCgiService": [
+                    "method": "DoSearchForQQMusicDesktop",
+                    "module": "music.search.SearchCgiService",
+                    "param": [
+                        "num_per_page": 12,
+                        "page_num": 1,
+                        "query": query,
+                        "search_type": 0,
+                    ],
+                ],
+            ]
+            var request = lyricsProviderRequest(url: searchURL, referer: "https://y.qq.com/")
+            request.httpMethod = "POST"
+            request.setValue("https://y.qq.com", forHTTPHeaderField: "Origin")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+            let data = try await lyricsProviderData(for: request)
+            var candidates = qqMusicModuleCandidates(from: data)
+
+            // The newer module endpoint can transiently return code 2001 with
+            // an empty list. The legacy web-search endpoint still returns the
+            // same public catalogue, so use it before giving up on this query.
+            if candidates.isEmpty {
+                var legacyComponents = URLComponents(
+                    string: "https://c.y.qq.com/soso/fcgi-bin/client_search_cp"
+                )
+                legacyComponents?.queryItems = [
+                    URLQueryItem(name: "format", value: "json"),
+                    URLQueryItem(name: "p", value: "1"),
+                    URLQueryItem(name: "n", value: "12"),
+                    URLQueryItem(name: "w", value: query),
+                ]
+                if let legacyURL = legacyComponents?.url {
+                    let legacyData = try await lyricsProviderData(
+                        for: lyricsProviderRequest(url: legacyURL, referer: "https://y.qq.com/")
+                    )
+                    candidates = qqMusicLegacyCandidates(from: legacyData)
+                }
+            }
+
+            guard let match = bestProviderLyricsMatch(
+                in: candidates,
+                artist: artist,
+                title: title,
+                album: album,
+                duration: duration
+            ) else {
+                continue
+            }
+
+            var lyricComponents = URLComponents(string: "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg")
+            lyricComponents?.queryItems = [
+                URLQueryItem(name: "songmid", value: match.identifier),
+                URLQueryItem(name: "format", value: "json"),
+                URLQueryItem(name: "nobase64", value: "1"),
+            ]
+            guard let lyricURL = lyricComponents?.url else { return .none }
+
+            let lyricData = try await lyricsProviderData(
+                for: lyricsProviderRequest(url: lyricURL, referer: "https://c.y.qq.com/")
+            )
+            guard
+                let lyricRoot = try? JSONSerialization.jsonObject(with: lyricData) as? [String: Any],
+                var lyric = lyricRoot["lyric"] as? String
+            else {
+                return .none
+            }
+
+            // Older variants ignore `nobase64=1`; accept either response.
+            if !lyric.contains("["),
+               let decodedData = Data(base64Encoded: lyric),
+               let decoded = String(data: decodedData, encoding: .utf8) {
+                lyric = decoded
+            }
+
+            let parsed = lyricsLookupResult(from: lyric)
+            if parsed.isAvailable {
+                print("Lyrics: matched QQ Music song \(match.identifier)")
+            }
+            return parsed
+        }
+
+        return .none
+    }
+
+    private func qqMusicModuleCandidates(from data: Data) -> [ProviderLyricsCandidate] {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let module = root["music.search.SearchCgiService"] as? [String: Any],
+            let resultData = module["data"] as? [String: Any],
+            let body = resultData["body"] as? [String: Any],
+            let songResult = body["song"] as? [String: Any],
+            let songs = songResult["list"] as? [[String: Any]]
+        else {
+            return []
+        }
+
+        return songs.compactMap { song in
+            guard let songMID = song["mid"] as? String, !songMID.isEmpty else { return nil }
+            let artists = (song["singer"] as? [[String: Any]] ?? [])
+                .compactMap { $0["name"] as? String }
+            let albumObject = song["album"] as? [String: Any]
+            return ProviderLyricsCandidate(
+                identifier: songMID,
+                title: song["title"] as? String ?? song["name"] as? String ?? "",
+                artists: artists,
+                album: albumObject?["name"] as? String ?? "",
+                duration: (song["interval"] as? NSNumber)?.doubleValue ?? 0
+            )
+        }
+    }
+
+    private func qqMusicLegacyCandidates(from data: Data) -> [ProviderLyricsCandidate] {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let resultData = root["data"] as? [String: Any],
+            let songResult = resultData["song"] as? [String: Any],
+            let songs = songResult["list"] as? [[String: Any]]
+        else {
+            return []
+        }
+
+        return songs.compactMap { song in
+            guard let songMID = song["songmid"] as? String, !songMID.isEmpty else { return nil }
+            let artists = (song["singer"] as? [[String: Any]] ?? [])
+                .compactMap { $0["name"] as? String }
+            return ProviderLyricsCandidate(
+                identifier: songMID,
+                title: song["songname"] as? String ?? "",
+                artists: artists,
+                album: song["albumname"] as? String ?? "",
+                duration: (song["interval"] as? NSNumber)?.doubleValue ?? 0
+            )
+        }
+    }
+
+    private func lyricsProviderRequest(url: URL, referer: String) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.setValue(referer, forHTTPHeaderField: "Referer")
+        return request
+    }
+
+    private func lyricsProviderData(for request: URLRequest) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let response = response as? HTTPURLResponse else {
+            throw LyricsProviderError.invalidHTTPResponse
+        }
+        guard response.statusCode == 200 else {
+            throw LyricsProviderError.httpStatus(response.statusCode)
+        }
+        return data
+    }
+
+    private func lyricsLookupResult(from rawLyrics: String) -> LyricsLookupResult {
+        let trimmed = rawLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .none }
+        guard !Self.isNoLyricsPlaceholder(trimmed) else { return .none }
+        let lines = parseLRC(trimmed)
+        return lines.isEmpty ? .plainOnly(trimmed) : .synced(lines)
+    }
+
+    /// Some providers return a timed, one-line notice for instrumental tracks
+    /// instead of an empty lyric payload. Treat those notices as "no lyrics";
+    /// otherwise the closed-notch band sees a valid timestamp and stays open
+    /// for the entire song.
+    private static func isNoLyricsPlaceholder(_ value: String) -> Bool {
+        let content = value
+            .components(separatedBy: .newlines)
+            .map {
+                $0.replacingOccurrences(
+                    of: "\\[[^\\]]+\\]",
+                    with: "",
+                    options: .regularExpression
+                )
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .filter { !$0.isEmpty }
+
+        // Real lyrics may occasionally mention "instrumental" or "no lyrics".
+        // Restrict this check to the short provider notices these APIs emit.
+        guard !content.isEmpty, content.count <= 2 else { return false }
+
+        let normalized = content
+            .joined(separator: " ")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: "", options: .regularExpression)
+
+        return normalized.contains("没有填词的纯音乐")
+            || normalized == "纯音乐请欣赏"
+            || normalized == "纯音乐请您欣赏"
+            || normalized == "纯音乐无歌词"
+            || normalized == "该歌曲为纯音乐请欣赏"
+            || normalized == "此歌曲为纯音乐请您欣赏"
+            || normalized == "暂无歌词"
+            || normalized == "无歌词"
+            || normalized == "instrumental"
+            || normalized == "nolyric"
+            || normalized == "nolyrics"
+    }
+
+    private func lyricsProviderSearchQueries(title: String, artist: String) -> [String] {
+        let compactTitle = title.replacingOccurrences(
+            of: "\\s*[\\(（\\[].*?[\\)）\\]]\\s*",
+            with: " ",
+            options: .regularExpression
+        )
+        let candidates = [
+            "\(title) \(artist)",
+            title,
+            "\(compactTitle) \(artist)",
+            compactTitle,
+        ]
+        var seen = Set<String>()
+        return candidates.compactMap { query in
+            let query = normalizedLyricsRequestComponent(query)
+            guard !query.isEmpty, seen.insert(query.lowercased()).inserted else { return nil }
+            return query
+        }
+    }
+
+    private func bestProviderLyricsMatch(
+        in candidates: [ProviderLyricsCandidate],
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval
+    ) -> ProviderLyricsCandidate? {
+        let scored = candidates.map {
+            (
+                candidate: $0,
+                score: providerLyricsMatchScore(
+                    for: $0,
+                    artist: artist,
+                    title: title,
+                    album: album,
+                    duration: duration
+                )
+            )
+        }
+        guard let best = scored.max(by: { $0.score < $1.score }), best.score >= 45 else {
+            return nil
+        }
+        return best.candidate
+    }
+
+    private func providerLyricsMatchScore(
+        for candidate: ProviderLyricsCandidate,
+        artist: String,
+        title: String,
+        album: String,
+        duration: TimeInterval
+    ) -> Int {
+        let expectedTitle = normalizedLyricsMatchText(title)
+        let candidateTitle = normalizedLyricsMatchText(candidate.title)
+        guard !expectedTitle.isEmpty, !candidateTitle.isEmpty else { return -10_000 }
+
+        var score = 0
+        if candidateTitle == expectedTitle {
+            score += 50
+        } else if candidateTitle.contains(expectedTitle) || expectedTitle.contains(candidateTitle) {
+            score += 28
+        } else {
+            return -10_000
+        }
+
+        let expectedArtist = normalizedLyricsMatchText(artist)
+        let candidateArtists = candidate.artists.map(normalizedLyricsMatchText)
+        let joinedArtists = normalizedLyricsMatchText(candidate.artists.joined(separator: " "))
+        let artistMatches = candidateArtists.contains(expectedArtist)
+            || candidateArtists.contains(where: { $0.contains(expectedArtist) || expectedArtist.contains($0) })
+            || joinedArtists.contains(expectedArtist)
+            || expectedArtist.contains(joinedArtists)
+        score += artistMatches ? 35 : -25
+
+        let expectedAlbum = normalizedLyricsMatchText(album)
+        let candidateAlbum = normalizedLyricsMatchText(candidate.album)
+        if !expectedAlbum.isEmpty, !candidateAlbum.isEmpty {
+            if expectedAlbum == candidateAlbum {
+                score += 12
+            } else if expectedAlbum.contains(candidateAlbum) || candidateAlbum.contains(expectedAlbum) {
+                score += 5
+            }
+        }
+
+        if duration > 0, candidate.duration > 0 {
+            switch abs(candidate.duration - duration) {
+            case ..<1.5: score += 30
+            case ..<3: score += 18
+            case ..<6: score += 6
+            case 15...: score -= 25
+            default: break
+            }
+        }
+
+        return score
+    }
+
+    private func normalizedLyricsMatchText(_ value: String) -> String {
+        value
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: "", options: .regularExpression)
+    }
+
     private func currentLyricsLookupContext() -> (key: LyricsLookupKey, requestArtist: String, requestTitle: String, requestAlbum: String, requestDuration: TimeInterval)? {
         let requestArtist = normalizedLyricsRequestComponent(artistName)
         let requestTitle = normalizedLyricsTitle(songTitle)
@@ -1579,7 +2174,8 @@ class MusicManager: ObservableObject {
         let key = LyricsLookupKey(
             title: requestTitle.lowercased(),
             artist: requestArtist.lowercased(),
-            album: requestAlbum.lowercased()
+            album: requestAlbum.lowercased(),
+            source: (bundleIdentifier ?? "").lowercased()
         )
 
         return key.isValid ? (key, requestArtist, requestTitle, requestAlbum, requestDuration) : nil
@@ -1735,7 +2331,7 @@ class MusicManager: ObservableObject {
                 let textStart = match.range.location + match.range.length
                 if textStart <= nsLine.length {
                     let text = nsLine.substring(from: textStart).trimmingCharacters(in: .whitespaces)
-                    if !text.isEmpty {
+                    if !text.isEmpty, !Self.isNoLyricsPlaceholder(text) {
                         lyrics.append(LyricLine(timestamp: timestamp, text: text))
                     }
                 }
