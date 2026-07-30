@@ -43,14 +43,14 @@ struct DynamicIslandHeader: View {
     /// replaces the header context widget (stats/usage/next event/device name),
     /// fading in and out.
     ///
-    /// Caps lock and input source belong here too: as full-width peeks they
-    /// displaced the header and stretched the notch, and neither is worth
-    /// resizing the window for.
+    /// Which peeks qualify is declared on the peek itself — see
+    /// `sneakPeek.showsInsideOpenNotchHeader`. As full-width peeks they displaced
+    /// the header and stretched the notch, and none of them is worth resizing the
+    /// window for.
     private var headerSystemHUDActive: Bool {
         vm.notchState == .open
             && coordinator.sneakPeek.show
-            && [.brightness, .volume, .backlight, .capsLock, .inputSource]
-                .contains(coordinator.sneakPeek.type)
+            && coordinator.sneakPeek.showsInsideOpenNotchHeader
     }
 
     var body: some View {
@@ -391,8 +391,12 @@ private struct HeaderSystemHUD: View {
     @Default(.showCapsLockLabel) private var showCapsLockLabel
     @ObservedObject private var inputSourceManager = InputSourceManager.shared
 
+    /// A level bar only makes sense for a continuous value. The state peeks —
+    /// caps lock, input source, AirPods listening mode — carry no level (the
+    /// listening-mode peek even reports a negative value), so they render as a
+    /// label instead.
     private var isLevel: Bool {
-        ![.capsLock, .inputSource].contains(type)
+        ![.capsLock, .inputSource, .bluetoothAudio].contains(type)
     }
 
     /// The sneak-peek `icon` is often empty for brightness/backlight, so fall
@@ -408,6 +412,9 @@ private struct HeaderSystemHUD: View {
         case .volume:
             if !icon.isEmpty { return icon }
             return value <= 0 ? "speaker.slash.fill" : "speaker.wave.2.fill"
+        case .bluetoothAudio:
+            // The peek's icon *is* the listening mode, so keep it.
+            return AirPodsListeningMode.fromHUDSymbol(icon)?.sfSymbol ?? "airpods.pro"
         default: return icon.isEmpty ? "speaker.wave.2.fill" : icon
         }
     }
@@ -425,6 +432,8 @@ private struct HeaderSystemHUD: View {
             return name.isEmpty ? nil : name
         case .capsLock:
             return showCapsLockLabel ? String(localized: "Caps Lock") : nil
+        case .bluetoothAudio:
+            return AirPodsListeningMode.fromHUDSymbol(icon)?.displayName
         default:
             return nil
         }

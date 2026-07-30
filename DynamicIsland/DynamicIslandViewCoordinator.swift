@@ -40,6 +40,27 @@ enum SneakContentType: Equatable {
 }
 
 extension SneakContentType {
+    /// True for peeks that report a momentary change to a system setting — a level
+    /// or a state that the user just toggled, with nothing to read afterwards.
+    ///
+    /// These render inside the open notch's header rather than replacing it; see
+    /// `sneakPeek.showsInsideOpenNotchHeader`. Exhaustive on purpose: a new peek
+    /// type has to declare which side it falls on rather than inheriting a default
+    /// and looking broken when the notch happens to be open.
+    var isMomentarySystemHUD: Bool {
+        switch self {
+        case .volume, .brightness, .backlight, .capsLock, .inputSource, .mic:
+            return true
+        case .bluetoothAudio:
+            // Depends on the payload, not the type — resolved by
+            // `sneakPeek.showsInsideOpenNotchHeader`.
+            return false
+        case .music, .battery, .download, .timer, .reminder, .recording,
+             .doNotDisturb, .privacy, .notification:
+            return false
+        }
+    }
+
     static func == (lhs: SneakContentType, rhs: SneakContentType) -> Bool {
         switch (lhs, rhs) {
         case (.brightness, .brightness),
@@ -75,6 +96,34 @@ struct sneakPeek {
     var accentColor: Color?
     var styleOverride: SneakPeekStyle? = nil
     var targetScreenName: String? = nil
+
+    /// Whether the **open** notch shows this peek as a compact widget inside its
+    /// header (`HeaderSystemHUD`) instead of letting it take over the header slot.
+    ///
+    /// Taking the slot swaps the tab row for the much taller `InlineHUD`, which
+    /// inflates the whole notch and strands the glyph at the leading edge. That is
+    /// right for rich, durable content (music, battery, timers, notifications) and
+    /// wrong for a momentary system-setting HUD — those belong in the header, the
+    /// way volume and brightness already did.
+    ///
+    /// The single source of truth for that split: `ContentView` decides whether to
+    /// yield the header slot and `DynamicIslandHeader` decides whether to draw the
+    /// widget, and the two lists used to be maintained separately.
+    var showsInsideOpenNotchHeader: Bool {
+        // `.bluetoothAudio` carries two very different things: a listening-mode
+        // change (a momentary HUD) and device connect/disconnect (rich content,
+        // which keeps its own row).
+        if type == .bluetoothAudio { return isAirPodsListeningMode }
+        return type.isMomentarySystemHUD
+    }
+
+    /// An AirPods listening-mode change: `.bluetoothAudio` with a negative value
+    /// (there is no level to show) and an icon that names the mode.
+    var isAirPodsListeningMode: Bool {
+        type == .bluetoothAudio
+            && value < 0
+            && AirPodsListeningMode.fromHUDSymbol(icon) != nil
+    }
 }
 
 enum BrowserType {

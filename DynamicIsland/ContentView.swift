@@ -63,22 +63,14 @@ struct ContentView: View {
     @ObservedObject var capsLockManager = CapsLockManager.shared
     @ObservedObject var inputSourceManager = InputSourceManager.shared
 
-    /// Peek types the *open* notch renders inside its header (`HeaderSystemHUD`)
-    /// rather than by taking over the header slot entirely.
+    /// True when the current peek is allowed to replace the header slot — i.e. the
+    /// notch is closed, or the peek is not one the header hosts itself.
     ///
-    /// Volume/brightness/backlight were always handled this way. Caps lock and
-    /// input source were not: toggling either while the notch was open swapped
-    /// the header for the much taller `InlineHUD`, which inflated the whole
-    /// notch and left the glyph stranded at the leading edge.
-    private static let headerHostedSneakTypes: [SneakContentType] = [
-        .volume, .brightness, .backlight, .capsLock, .inputSource,
-    ]
-
-    /// True when the current peek is allowed to replace the header slot — i.e.
-    /// the notch is closed, or the peek is not one the header hosts itself.
+    /// Which peeks the header hosts is declared once, on the peek
+    /// (`sneakPeek.showsInsideOpenNotchHeader`), because this decision and the
+    /// header's own decision to draw the widget have to agree.
     private var sneakPeekMayOwnHeaderSlot: Bool {
-        vm.notchState == .closed
-            || !Self.headerHostedSneakTypes.contains(coordinator.sneakPeek.type)
+        vm.notchState == .closed || !coordinator.sneakPeek.showsInsideOpenNotchHeader
     }
     @ObservedObject var localSendService = LocalSendService.shared
     @State private var downloadManager = DownloadManager.shared
@@ -859,9 +851,7 @@ struct ContentView: View {
                       }()
                       let scheduledActivities = closedNotchScheduledActivities(hasActiveMusicSnapshot: hasActiveMusicSnapshot)
                       let activeSneakPeekStyle = resolvedSneakPeekStyle()
-                      let isAirPodsListeningModeSneak = coordinator.sneakPeek.type == .bluetoothAudio
-                          && coordinator.sneakPeek.value < 0
-                          && AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
+                      let isAirPodsListeningModeSneak = coordinator.sneakPeek.isAirPodsListeningMode
 
                       if currentScreenExpansionType == .battery
                             && isBatteryHUDVisibleOnCurrentScreen

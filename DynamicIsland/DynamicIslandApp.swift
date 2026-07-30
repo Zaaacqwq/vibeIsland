@@ -494,11 +494,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func calculateRequiredNotchSize() -> CGSize {
         // Check if inline sneak peek is showing and notch is closed
+        // Only the *closed* notch widens for this peek; while open it renders
+        // inside the header instead (`sneakPeek.showsInsideOpenNotchHeader`).
         let airPodsListeningModeSneakActive = vm.notchState == .closed &&
                                       coordinator.sneakPeek.show &&
-                                      coordinator.sneakPeek.type == .bluetoothAudio &&
-                                      coordinator.sneakPeek.value < 0 &&
-                                      AirPodsListeningMode.fromHUDSymbol(coordinator.sneakPeek.icon) != nil
+                                      coordinator.sneakPeek.isAirPodsListeningMode
         let isInlineSneakPeekActive = vm.notchState == .closed &&
                                       Defaults[.enableSneakPeek] &&
                                       (
