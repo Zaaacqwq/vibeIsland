@@ -4,6 +4,17 @@ All notable changes to VibeIsland, newest first. Versions follow
 [semantic versioning](https://semver.org): a minor bump adds features, a patch
 bump fixes them.
 
+## 1.3.1
+
+### Fixed
+
+- The real-time waveform no longer sits still while music plays. 1.3.0 scaled it
+  by the output device's decibel amplitude, which is electrically correct and
+  visually useless — macOS maps its volume slider logarithmically, so 18% on the
+  slider is 1.5% amplitude, and every bar was pinned to the idle floor. It now
+  scales by the slider's own value, so quiet playback reads as quieter without
+  collapsing.
+
 ## 1.3.0
 
 Two new utility tools in the notch, a tab row you can arrange yourself, and a
@@ -53,8 +64,8 @@ notch that finally sizes itself correctly.
   its range from a computed minimum that could exceed its hardcoded ceiling, and
   a range whose lower bound is the larger one traps.
 - The real-time waveform now scales with the system output level instead of
-  dancing at full height at 5% volume. Gain is read from the output device's
-  decibel value rather than its UI scalar, which is not linear in amplitude.
+  dancing at full height at 5% volume. (The curve this shipped with was far too
+  steep and left the bars frozen at normal volumes — fixed in 1.3.1.)
 - Seeking inside Spotify's own player is followed again. Spotify does not
   reliably announce scrubs, so the notch kept counting from the old position.
 
