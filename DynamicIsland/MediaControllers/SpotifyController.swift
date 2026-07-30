@@ -41,10 +41,12 @@ class SpotifyController: MediaControllerProtocol {
     }
 
     private var notificationTask: Task<Void, Never>?
+    private var playbackPositionSyncTask: Task<Void, Never>?
     private var sessionChangeCancellable: AnyCancellable?
 
     // Constant for time between command and update
     private let commandUpdateDelay: Duration = .milliseconds(25)
+    private static let playbackPositionSyncInterval: Duration = .seconds(1)
 
     private var lastArtworkURL: String?
     private var artworkFetchTask: Task<Void, Never>?
@@ -59,10 +61,25 @@ class SpotifyController: MediaControllerProtocol {
 
     init() {
         setupPlaybackStateChangeObserver()
+        setupPlaybackPositionSync()
         setupSessionChangeObserver()
         Task {
             if isActive() {
                 await updatePlaybackInfo()
+            }
+        }
+    }
+
+    /// Spotify does not reliably emit `PlaybackStateChanged` when its own
+    /// progress slider is scrubbed. Periodically sample only the lightweight
+    /// position fields so external seeks reset VibeIsland's playback clock.
+    private func setupPlaybackPositionSync() {
+        playbackPositionSyncTask = Task { @Sendable [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.playbackPositionSyncInterval)
+                guard let self else { return }
+                guard !Task.isCancelled, self.isActive() else { continue }
+                await self.refreshPlaybackPosition()
             }
         }
     }
@@ -101,6 +118,7 @@ class SpotifyController: MediaControllerProtocol {
 
     deinit {
         notificationTask?.cancel()
+        playbackPositionSyncTask?.cancel()
         artworkFetchTask?.cancel()
         canvasFetchTask?.cancel()
         artistMetadataFetchTask?.cancel()
@@ -238,6 +256,28 @@ class SpotifyController: MediaControllerProtocol {
         }
     }
 
+    private func refreshPlaybackPosition() async {
+        guard let snapshot = try? await fetchPlaybackPositionAsync() else {
+            return
+        }
+
+        guard let updatedState = Self.reconciledPlaybackState(
+            playbackState,
+            currentTime: snapshot.currentTime,
+            isPlaying: snapshot.isPlaying,
+            contentIdentifier: snapshot.contentIdentifier,
+            contentURL: snapshot.contentURL,
+            observedAt: Date()
+        ) else {
+            // The lightweight sample saw a different track. Fetch full
+            // metadata instead of applying its position to the previous song.
+            await updatePlaybackInfo()
+            return
+        }
+
+        playbackState = updatedState
+    }
+
     private func scheduleArtistMetadataFetchIfNeeded(for trackURI: String) {
         guard !trackURI.isEmpty else { return }
         guard artistMetadataFetchTask == nil else { return }
@@ -333,6 +373,75 @@ class SpotifyController: MediaControllerProtocol {
         """
 
         return try await AppleScriptHelper.execute(script)
+    }
+
+    private func fetchPlaybackPositionAsync() async throws -> (
+        isPlaying: Bool,
+        currentTime: Double,
+        contentIdentifier: String,
+        contentURL: String
+    )? {
+        let script = """
+        tell application "Spotify"
+            try
+                return {player state is playing, player position, id of current track, spotify url of current track}
+            on error
+                return {false, 0, "", ""}
+            end try
+        end tell
+        """
+
+        guard
+            let descriptor = try await AppleScriptHelper.execute(script),
+            descriptor.numberOfItems >= 4
+        else {
+            return nil
+        }
+
+        return (
+            isPlaying: descriptor.atIndex(1)?.booleanValue ?? false,
+            currentTime: descriptor.atIndex(2)?.doubleValue ?? 0,
+            contentIdentifier: descriptor.atIndex(3)?.stringValue ?? "",
+            contentURL: descriptor.atIndex(4)?.stringValue ?? ""
+        )
+    }
+
+    /// Returns `nil` when the sample belongs to another track so the caller can
+    /// perform a full metadata refresh. Otherwise it rebases playback timing at
+    /// the sampled position, including large forward/backward seeks.
+    static func reconciledPlaybackState(
+        _ state: PlaybackState,
+        currentTime: TimeInterval,
+        isPlaying: Bool,
+        contentIdentifier: String,
+        contentURL: String,
+        observedAt: Date
+    ) -> PlaybackState? {
+        let currentTrackURI = canonicalTrackURI(
+            from: state.contentIdentifier ?? "",
+            spotifyURLString: state.contentURL ?? ""
+        )
+        let observedTrackURI = canonicalTrackURI(
+            from: contentIdentifier,
+            spotifyURLString: contentURL
+        )
+
+        if
+            !currentTrackURI.isEmpty,
+            !observedTrackURI.isEmpty,
+            currentTrackURI != observedTrackURI
+        {
+            return nil
+        }
+
+        var updatedState = state
+        let nonnegativeTime = max(0, currentTime)
+        updatedState.currentTime = state.duration > 0
+            ? min(nonnegativeTime, state.duration)
+            : nonnegativeTime
+        updatedState.isPlaying = isPlaying
+        updatedState.lastUpdated = observedAt
+        return updatedState
     }
 
     private static func canonicalTrackURI(from trackIdentifier: String, spotifyURLString: String) -> String {
