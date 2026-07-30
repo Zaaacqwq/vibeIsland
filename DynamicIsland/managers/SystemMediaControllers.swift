@@ -125,27 +125,30 @@ final class SystemVolumeController {
         !volumeElements().isEmpty
     }
 
-    /// Linear amplitude gain applied by the current default output device.
-    /// Prefer the device's decibel value because its UI scalar is not
-    /// guaranteed to map linearly to the signal amplitude.
+    /// Gain the audio visualiser multiplies its magnitudes by, so the bars track
+    /// what you can actually hear.
+    ///
+    /// `AudioTap` uses a *process* tap, which sees each app's output before device
+    /// volume is applied — hence the scaling. But the device's decibel value is
+    /// the wrong number to scale by, even though it is the electrically correct
+    /// one: macOS maps its volume slider logarithmically, so 18% on the slider is
+    /// −36.6 dB, i.e. 1.5% amplitude. Multiplying the magnitudes by 0.015 pinned
+    /// every bar to the visualiser's idle floor and the waveform looked frozen
+    /// while music played.
+    ///
+    /// The slider's own scalar is the perceptual number, and softening it keeps
+    /// quiet playback visibly quieter without flattening it.
     var currentOutputGain: Float {
         guard !isMuted else { return 0 }
         guard hasSoftwareVolumeControl else { return 1 }
 
-        if let decibels = getVolumeDecibels() {
-            return Self.linearGain(decibels: decibels)
-        }
-
         let scalar = currentVolume
         guard scalar.isFinite else { return 1 }
-        return min(1, max(0, scalar))
+        return Self.visualizerGain(volumeScalar: scalar)
     }
 
-    static func linearGain(decibels: Float) -> Float {
-        guard decibels.isFinite else {
-            return decibels == -Float.infinity ? 0 : 1
-        }
-        return max(0, Float(pow(10, Double(decibels) / 20)))
+    static func visualizerGain(volumeScalar: Float) -> Float {
+        sqrt(min(1, max(0, volumeScalar)))
     }
 
     func setVolume(_ value: Float) {
@@ -364,21 +367,6 @@ final class SystemVolumeController {
             return false
         }
         return fallback != 0
-    }
-
-    private func getVolumeDecibels() -> Float? {
-        for element in volumeElements() {
-            var decibels = Float32(0)
-            let status = getData(
-                selector: kAudioDevicePropertyVolumeDecibels,
-                element: element,
-                data: &decibels
-            )
-            if status == noErr {
-                return decibels
-            }
-        }
-        return nil
     }
 
     private func refreshPropertyElements() {

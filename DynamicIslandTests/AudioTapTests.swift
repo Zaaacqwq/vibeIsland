@@ -11,22 +11,34 @@ final class AudioTapTests: XCTestCase {
         )
     }
 
-    func testSystemOutputDecibelsConvertToLinearWaveformGain() {
-        XCTAssertEqual(
-            SystemVolumeController.linearGain(decibels: 0),
-            1,
-            accuracy: 0.001
+    func testVisualizerGainTracksVolumeWithoutFlatteningIt() {
+        XCTAssertEqual(SystemVolumeController.visualizerGain(volumeScalar: 1), 1, accuracy: 0.001)
+        XCTAssertEqual(SystemVolumeController.visualizerGain(volumeScalar: 0), 0, accuracy: 0.001)
+        // Monotonic: quieter output must still read as quieter.
+        XCTAssertLessThan(
+            SystemVolumeController.visualizerGain(volumeScalar: 0.25),
+            SystemVolumeController.visualizerGain(volumeScalar: 0.75)
         )
-        XCTAssertEqual(
-            SystemVolumeController.linearGain(decibels: -20),
-            0.1,
-            accuracy: 0.001
+    }
+
+    /// Regression: scaling by the device's decibel amplitude instead of its slider
+    /// scalar made 18% volume a gain of 0.015, which pinned every bar to the idle
+    /// floor and the waveform looked frozen while music played.
+    func testTypicalPlaybackStaysWellAboveTheIdleFloorAtLowVolume() {
+        let gain = SystemVolumeController.visualizerGain(volumeScalar: 0.18)
+        let typicalMagnitude: Float = 0.2
+
+        let bar = RealTimeAudioSpectrum.barScale(
+            magnitude: typicalMagnitude * gain,
+            amplitude: 1
         )
-        XCTAssertEqual(
-            SystemVolumeController.linearGain(decibels: -Float.infinity),
-            0,
-            accuracy: 0.001
-        )
+
+        XCTAssertGreaterThan(bar, 0.4, "Bars must visibly move at a normal listening volume")
+    }
+
+    func testVisualizerGainClampsOutOfRangeInput() {
+        XCTAssertEqual(SystemVolumeController.visualizerGain(volumeScalar: 1.5), 1, accuracy: 0.001)
+        XCTAssertEqual(SystemVolumeController.visualizerGain(volumeScalar: -0.5), 0, accuracy: 0.001)
     }
 
     func testWaveformAmplitudeScalesLiveBarHeight() {
