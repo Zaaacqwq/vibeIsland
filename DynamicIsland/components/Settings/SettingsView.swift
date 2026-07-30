@@ -794,6 +794,7 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .media, title: "Enable blur effect behind album art", keywords: ["blur", "album art"], highlightID: SettingsTab.media.highlightID(for: "Enable blur effect behind album art")),
             SettingsSearchEntry(tab: .media, title: "Slider color", keywords: ["slider", "accent"], highlightID: SettingsTab.media.highlightID(for: "Slider color")),
             SettingsSearchEntry(tab: .media, title: "Real-time audio waveform", keywords: ["waveform", "audio", "visualizer", "spectrum"], highlightID: SettingsTab.media.highlightID(for: "Real-time audio waveform")),
+            SettingsSearchEntry(tab: .media, title: "Waveform amplitude", keywords: ["waveform", "amplitude", "gain", "sensitivity", "audio"], highlightID: SettingsTab.media.highlightID(for: "Waveform amplitude")),
             SettingsSearchEntry(tab: .appearance, title: "Idle Animation", keywords: ["face animation", "idle", "cool face"], highlightID: SettingsTab.appearance.highlightID(for: "Idle Animation")),
             SettingsSearchEntry(tab: .appearance, title: "App icon", keywords: ["app icon", "custom icon"], highlightID: SettingsTab.appearance.highlightID(for: "App icon")),
 
@@ -1889,6 +1890,8 @@ struct Media: View {
     @Default(.showLiveCanvasInDynamicIsland) private var showLiveCanvasInDynamicIsland
     @Default(.showSongMetadataInClosedNotch) private var showSongMetadataInClosedNotch
     @Default(.sliderColor) private var sliderColor
+    @Default(.enableRealTimeWaveform) private var enableRealTimeWaveform
+    @Default(.realTimeWaveformAmplitude) private var realTimeWaveformAmplitude
 
     @ObservedObject private var musicManager = MusicManager.shared
 
@@ -2083,7 +2086,17 @@ struct Media: View {
     @ViewBuilder
     private var appearanceSections: some View {
         GeistSection(title: "Appearance") {
-            GeistToggleRow(title: "Real-time audio waveform", isOn: geistBinding(.enableRealTimeWaveform), info: "Shows a live waveform driven by system audio in the music live activity.")
+            GeistToggleRow(title: "Real-time audio waveform", isOn: $enableRealTimeWaveform, info: "Shows a live waveform driven by system audio in the music live activity.")
+            GeistSliderRow(
+                title: "Waveform amplitude",
+                valueLabel: String(format: "%.0f%%", realTimeWaveformAmplitude * 100),
+                value: $realTimeWaveformAmplitude,
+                range: RealTimeAudioSpectrum.amplitudeRange,
+                step: 0.05,
+                info: "Adjusts how strongly captured audio moves the real-time waveform."
+            )
+            .disabled(!enableRealTimeWaveform)
+            .opacity(enableRealTimeWaveform ? 1 : 0.5)
             GeistToggleRow(title: "Enable colored spectrograms", isOn: geistBinding(.coloredSpectrogram))
             GeistToggleRow(title: "Enable colored lyrics", isOn: geistBinding(.coloredLyrics))
             GeistToggleRow(title: "Enable player color tinting", isOn: geistBinding(.playerColorTinting), info: "Tints the notch media player with colors sampled from the album art.")

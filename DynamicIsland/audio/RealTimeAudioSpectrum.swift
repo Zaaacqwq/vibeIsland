@@ -26,8 +26,11 @@ import simd
 
 /// NSView-based real-time audio spectrum visualizer
 class RealTimeAudioSpectrum: NSView {
+    static let amplitudeRange = 0.25...2.0
+
     private var barLayers: [CAShapeLayer] = []
     private var isPlaying: Bool = true
+    private var amplitude: Double = 1
     private var animationTimer: Timer?
     
     override init(frame frameRect: NSRect) {
@@ -114,10 +117,14 @@ class RealTimeAudioSpectrum: NSView {
         let magnitudes = AudioTap.shared.getSmoothedMagnitudes()
 
         // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal.
-        // Higher multiplier = bars reach full height more readily (more lively).
+        // The user amplitude scales only the live portion; 100% preserves the
+        // original multiplier and the 0.2 idle floor remains unchanged.
         var scales = SIMD4<Double>()
         for index in 0 ..< 4 {
-            scales[index] = max(0.2, min(1.0, Double(magnitudes[index]) * 4.0 + 0.2))
+            scales[index] = Self.barScale(
+                magnitude: magnitudes[index],
+                amplitude: amplitude
+            )
         }
 
         // Quiet or steady audio produces near-identical frames; dropping
@@ -153,19 +160,44 @@ class RealTimeAudioSpectrum: NSView {
             stopAnimating()
         }
     }
+
+    func setAmplitude(_ value: Double) {
+        let clamped = min(
+            Self.amplitudeRange.upperBound,
+            max(Self.amplitudeRange.lowerBound, value)
+        )
+        guard clamped != amplitude else { return }
+        amplitude = clamped
+        // Force the next audio frame to commit even if its magnitude is steady.
+        lastScales = SIMD4<Double>(repeating: -1)
+    }
+
+    static func barScale(magnitude: Float, amplitude: Double) -> Double {
+        let clampedAmplitude = min(
+            amplitudeRange.upperBound,
+            max(amplitudeRange.lowerBound, amplitude)
+        )
+        return max(
+            0.2,
+            min(1, Double(magnitude) * 4 * clampedAmplitude + 0.2)
+        )
+    }
 }
 
 /// SwiftUI wrapper for RealTimeAudioSpectrum
 struct RealTimeAudioSpectrumView: NSViewRepresentable {
     @Binding var isPlaying: Bool
+    let amplitude: Double
     
     func makeNSView(context: Context) -> RealTimeAudioSpectrum {
         let spectrum = RealTimeAudioSpectrum()
+        spectrum.setAmplitude(amplitude)
         spectrum.setPlaying(isPlaying)
         return spectrum
     }
     
     func updateNSView(_ nsView: RealTimeAudioSpectrum, context: Context) {
+        nsView.setAmplitude(amplitude)
         nsView.setPlaying(isPlaying)
     }
 
@@ -175,7 +207,10 @@ struct RealTimeAudioSpectrumView: NSViewRepresentable {
 }
 
 #Preview {
-    RealTimeAudioSpectrumView(isPlaying: .constant(true))
+    RealTimeAudioSpectrumView(
+        isPlaying: .constant(true),
+        amplitude: 1
+    )
         .frame(width: 16, height: 20)
         .padding()
 }

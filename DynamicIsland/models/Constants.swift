@@ -635,6 +635,10 @@ extension Defaults.Keys {
     static let coloredSpectrogram = Key<Bool>("coloredSpectrogram", default: true)
     static let coloredLyrics = Key<Bool>("coloredLyrics", default: true)
     static let enableRealTimeWaveform = Key<Bool>("enableRealTimeWaveform", default: false)
+    static let realTimeWaveformAmplitude = Key<Double>(
+        "realTimeWaveformAmplitude",
+        default: 1
+    )
     static let enableSneakPeek = Key<Bool>("enableSneakPeek", default: false)
     static let sneakPeekStyles = Key<SneakPeekStyle>("sneakPeekStyles", default: .standard)
     static let showSneakPeekOnTrackChange = Key<Bool>("showSneakPeekOnTrackChange", default: true)

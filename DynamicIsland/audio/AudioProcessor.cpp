@@ -23,6 +23,7 @@
 #include "AudioProcessor.hpp"
 
 #include <Accelerate/Accelerate.h>
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstring>

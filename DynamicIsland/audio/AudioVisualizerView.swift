@@ -21,10 +21,14 @@ import Defaults
 struct AudioVisualizerView: View {
     @Binding var isPlaying: Bool
     @Default(.enableRealTimeWaveform) private var enableRealTimeWaveform
+    @Default(.realTimeWaveformAmplitude) private var realTimeWaveformAmplitude
     
     var body: some View {
         if enableRealTimeWaveform {
-            RealTimeAudioSpectrumView(isPlaying: $isPlaying)
+            RealTimeAudioSpectrumView(
+                isPlaying: $isPlaying,
+                amplitude: realTimeWaveformAmplitude
+            )
         } else {
             AudioSpectrumView(isPlaying: $isPlaying)
         }
