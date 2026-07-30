@@ -71,59 +71,181 @@ func maxAllowedNotchWidth() -> CGFloat {
 
 // MARK: - Tab-Based Notch Width
 
-/// Counts the number of currently enabled standard notch tabs.
-/// Mirrors the tab-building logic in ``TabSelectionView`` and
-/// ``DynamicIslandViewCoordinator.orderedVisibleTabs``.
+/// Number of tabs the row currently draws. Reads the same visibility rules as the
+/// row itself (``NotchTabOrder``) rather than re-deriving them — a fourth copy of
+/// that `if` chain is a fourth place to forget a new tab.
 func enabledStandardTabCount() -> Int {
-    var count = 0
-
-    // Home tab
-    if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] {
-        count += 1
-    }
-    // Shelf tab
-    if Defaults[.dynamicShelf] {
-        count += 1
-    }
-    // Timer tab (only when shown as a tab, not in popover mode)
-    if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab {
-        count += 1
-    }
-    // Agents tab
-    if Defaults[.enableAgentMonitoring] {
-        count += 1
-    }
-    // Calendar tab
-    if Defaults[.showCalendar] || Defaults[.showReminders] {
-        count += 1
-    }
-    // Notifications tab
-    if Defaults[.enableNotificationMonitoring] {
-        count += 1
-    }
-    // Weather tab
-    if Defaults[.enableWeather] {
-        count += 1
-    }
-    // Monitor tab
-    if Defaults[.enableSystemMonitor] {
-        count += 1
-    }
-
-    return count
+    NotchTabOrder.visibleTabs().count
 }
 
 /// Returns the recommended minimum notch width for the given tab count, sized
 /// so the tab row never extends behind the physical notch.
+///
+/// Never exceeds what the screen can show: callers build slider ranges from this,
+/// and a "minimum" above the maximum is both meaningless and, as a `ClosedRange`,
+/// a crash.
 func recommendedMinimumNotchWidth(forTabCount count: Int) -> CGFloat {
-    switch count {
-    case ...4: return 640
-    case 5: return 720
-    case 6: return 800
-    case 7: return 880
-    default: return 960
-    }
+    let required = max(openNotchContentFloorWidth, headerRowMinimumWidth(forTabCount: count))
+    return min(required, maxAllowedNotchWidth())
 }
+
+/// Narrowest the open notch goes regardless of how quiet the header is: below
+/// this the Home tab's media card and side panel get cramped.
+///
+/// This replaces the old per-tab-count width table. That table was a proxy for
+/// "the header needs room", calibrated back when the selected tab also rendered
+/// its label; now that ``headerRowMinimumWidth`` computes the requirement
+/// directly, the table only made the notch wider than it had to be.
+let openNotchContentFloorWidth: CGFloat = 640
+
+// MARK: - Header-Aware Minimum Width
+
+/// Width the open-notch header row needs to lay out without anything sliding
+/// under the physical notch.
+///
+/// The tab-count tables above assume a busy tab row is what drives width, but
+/// the header has two sides: turning tabs *off* shrinks the notch while the
+/// trailing side (stats widget, tool buttons, battery) keeps its size, so past a
+/// point the trailing content gets squeezed toward — and behind — the notch
+/// cutout, and the selected tab's label collapses to nothing. Flooring both the
+/// auto width and the manual minimum at this keeps both sides intact.
+///
+/// Deliberately an estimate rather than a measurement: the notch width has to be
+/// known before the header lays out, and it must not change when switching tabs
+/// (that would resize the window on every tab switch), so the per-tab widgets are
+/// folded in as a worst case.
+func headerRowMinimumWidth(forTabCount count: Int) -> CGFloat {
+    // The two sides split the window evenly — that is what centers the black
+    // spacer on the notch cutout — so each side gets half of (width - cutout)
+    // whether it needs it or not. The window therefore has to be sized from the
+    // *wider* side, doubled. Sizing it from the sum instead leaves the wider side
+    // short, and on the trailing side "short" means drawn behind the cutout.
+    let leading = tabRowWidthEstimate(forTabCount: count) + headerLeadingPaddingEstimate
+    let trailing = headerTrailingWidthEstimate() + headerTrailingGapEstimate
+    return 2 * (max(leading, trailing) + headerSideSlack) + centerNotchGapEstimate()
+}
+
+/// `.padding(8)` around the tab row.
+private let headerLeadingPaddingEstimate: CGFloat = 16
+/// Minimum breathing room the trailing group keeps from the notch cover.
+private let headerTrailingGapEstimate: CGFloat = 8
+/// Margin on each side so content never lands flush against the notch cutout.
+///
+/// Without it the estimates have to be exactly right: at one point the tab row
+/// needed 246pt and got exactly 246, so the last icon touched the cutout and any
+/// rounding hid part of it. 8pt of slack costs 16pt of notch width and removes a
+/// whole class of off-by-a-few clipping.
+private let headerSideSlack: CGFloat = 8
+
+/// A tab is a fixed-width button with 4pt gaps. With titles on, the selected tab
+/// also carries its label — budgeted at the widest label in the row so switching
+/// tabs never needs a wider notch than the one already on screen.
+private func tabRowWidthEstimate(forTabCount count: Int) -> CGFloat {
+    guard count > 0 else { return 0 }
+    let icons = CGFloat(count) * TabButton.iconOnlyWidth + CGFloat(count - 1) * 4
+    guard Defaults[.showNotchTabTitles] else { return icons }
+    // 7pt icon-to-label gap + "Notifications" + 12pt padding either side, less
+    // the icon-only width the selected slot no longer uses.
+    return icons + 7 + 92 + 24 - TabButton.iconOnlyWidth + 30
+}
+
+/// The black spacer in the middle of the header, which covers the real notch.
+/// Mirrors `DynamicIslandHeader`'s `min(closedNotchSize.width, 300)`.
+private func centerNotchGapEstimate() -> CGFloat {
+    min(getClosedNotchSize().width, 300)
+}
+
+/// Everything on the trailing side of the notch: the context widget, the
+/// popover-mode tool buttons, the gear, the status glyphs and the battery.
+private func headerTrailingWidthEstimate() -> CGFloat {
+    var width = headerContextWidgetWidthEstimate()
+
+    // 30pt each, and each one is a fixed frame that cannot shrink.
+    var buttonCount = 0
+    if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .popover { buttonCount += 1 }
+    if Defaults[.enableColorPicker] && Defaults[.colorPickerDisplayMode] == .popover { buttonCount += 1 }
+    if Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .popover { buttonCount += 1 }
+    if Defaults[.settingsIconInNotch] { buttonCount += 1 }
+    // The recording / Do Not Disturb glyphs come and go at runtime, so budget for
+    // them while they are switched on — but only when the header would actually
+    // draw them. Reserving space the header then suppresses is 60pt of notch
+    // width nobody asked for.
+    if !notchHeaderSuppressesStatusIndicators() {
+        if Defaults[.enableScreenRecordingDetection] && Defaults[.showRecordingIndicator] { buttonCount += 1 }
+        if Defaults[.enableDoNotDisturbDetection] && Defaults[.showDoNotDisturbIndicator] { buttonCount += 1 }
+    }
+    width += CGFloat(buttonCount) * 30 + CGFloat(max(0, buttonCount - 1)) * 4
+
+    if Defaults[.showBatteryIndicator] {
+        width += Defaults[.enableMinimalisticUI] ? 32 : 44
+    }
+
+    return width
+}
+
+/// Whether the open-notch header hides its optional status glyphs (screen
+/// recording, Do Not Disturb) because the row is already carrying the gear plus
+/// tool buttons.
+///
+/// Lives here, next to the width math, because the two have to agree: the width
+/// budget reserving space the header then suppresses (or vice versa) is exactly
+/// how the row ends up mis-sized. `DynamicIslandHeader` reads this same function.
+func notchHeaderSuppressesStatusIndicators() -> Bool {
+    guard Defaults[.settingsIconInNotch] else { return false }
+    if Defaults[.enableTimerFeature] { return true }
+    return Defaults[.enableColorPicker] && Defaults[.colorPickerDisplayMode] == .popover
+        || Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .popover
+}
+
+/// Width of the header's tab-dependent context widget, taken as the worst case
+/// across the tabs that are actually enabled — a tab switch must not change the
+/// window width.
+private func headerContextWidgetWidthEstimate() -> CGFloat {
+    guard Defaults[.showHeaderContextWidgets] else { return 0 }
+
+    // The Home stats row is sized exactly and is NOT subject to the cap below:
+    // its cells are `fixedSize`, so they cannot truncate — short-changing them
+    // pushes the row under the notch cutout instead. Per metric, because they are
+    // not interchangeable: a percentage cell is a short mono string, while the
+    // network cell is a dot + a fixed 28pt number slot + a "KB/s" unit.
+    var unboundedWidth: CGFloat = 0
+    let stats = HeaderStatKind.normalizedHeaderStats(Defaults[.homeHeaderStats])
+    if !stats.isEmpty {
+        let cells = stats.reduce(CGFloat(0)) { $0 + $1.headerCellWidthEstimate }
+        unboundedWidth = cells + CGFloat(stats.count - 1) * 14
+    }
+
+    // Widgets that truncate rather than overflow. A pessimistic estimate for one
+    // of these only costs a slightly earlier ellipsis, so they are capped.
+    var boundedCandidates: [CGFloat] = []
+    // Agents: a provider icon plus its quota badges, per provider shown in the
+    // header. Counted rather than assumed, so dropping a provider from the header
+    // actually narrows the notch.
+    if Defaults[.enableAgentMonitoring] {
+        let providers = AgentUsageProviderCatalog
+            .normalizedHeaderProviders(Defaults[.agentHeaderProviders])
+            .count
+        if providers > 0 {
+            boundedCandidates.append(CGFloat(providers) * 94 + CGFloat(providers - 1) * 12)
+        }
+    }
+    // Calendar: next-event title, bounded at 160 by `StatCell`'s own truncation.
+    if Defaults[.showCalendar] || Defaults[.showReminders] { boundedCandidates.append(160) }
+    // Shelf: device name, bounded the same way.
+    if Defaults[.dynamicShelf] { boundedCandidates.append(160) }
+    if Defaults[.enableWeather] { boundedCandidates.append(100) }
+    if Defaults[.enableSystemMonitor] { boundedCandidates.append(60) }
+
+    let boundedWidth = min(boundedCandidates.max() ?? 0, headerContextWidgetWidthCap)
+    let widest = max(unboundedWidth, boundedWidth)
+    guard widest > 0 else { return 0 }
+    // Plus the 8pt minimum gap the widget keeps from the buttons beside it.
+    return widest + 8
+}
+
+/// Cap for widgets that truncate: `StatCell`'s own 160pt value limit plus room
+/// for its eyebrow label.
+private let headerContextWidgetWidthCap: CGFloat = 168
 
 /// Returns the recommended minimum notch width for the current tab configuration.
 func currentRecommendedMinimumNotchWidth() -> CGFloat {
@@ -135,16 +257,10 @@ func currentRecommendedMinimumNotchWidth() -> CGFloat {
 /// grows when tabs are added and shrinks when they're removed. Floored at a
 /// width that still fits the home tab's media + side-panel content.
 func autoNotchWidth(forTabCount count: Int) -> CGFloat {
-    switch count {
-    case ...1: return 560
-    case 2: return 580
-    case 3: return 610
-    case 4: return 640
-    case 5: return 720
-    case 6: return 800
-    case 7: return 880
-    default: return 960
-    }
+    // Exactly what the header row needs, never less than the Home tab's content
+    // floor. Both sides of the header are accounted for, so this shrinks when
+    // tabs are removed *and* grows when the trailing side gets denser.
+    max(openNotchContentFloorWidth, headerRowMinimumWidth(forTabCount: count))
 }
 
 /// Keeps the stored notch width in sync with the current tab count and clamps it

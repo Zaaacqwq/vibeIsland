@@ -31,6 +31,31 @@ enum HeaderStatKind: String, CaseIterable, Codable, Defaults.Serializable, Ident
 
     var id: String { rawValue }
 
+    /// Hard cap on how many metrics the notch header renders.
+    ///
+    /// The header shares its row with the tab buttons and the trailing controls,
+    /// and — because the two sides of the header split the window evenly — every
+    /// extra cell costs *twice* its width in open-notch width (see
+    /// `headerRowMinimumWidth`). Three is what stays readable without widening
+    /// the notch past the point where the tab row is swimming in dead space.
+    static let headerLimit = 3
+
+    /// The metrics the header should actually draw, from the persisted list:
+    /// de-duplicated, in canonical order, clamped to ``headerLimit``.
+    ///
+    /// Applied at read time, not just in Settings, so a preference saved before
+    /// the cap existed (or edited by hand) cannot overflow the row.
+    static func normalizedHeaderStats(_ raw: [HeaderStatKind]) -> [HeaderStatKind] {
+        var seen = Set<HeaderStatKind>()
+        var result: [HeaderStatKind] = []
+        for kind in allCases where raw.contains(kind) && !seen.contains(kind) {
+            seen.insert(kind)
+            result.append(kind)
+            if result.count == headerLimit { break }
+        }
+        return result
+    }
+
     /// Short mono eyebrow shown above the value in the header cell.
     var eyebrow: String {
         switch self {
@@ -39,6 +64,20 @@ enum HeaderStatKind: String, CaseIterable, Codable, Defaults.Serializable, Ident
         case .ram: return "RAM"
         case .disk: return "DISK"
         case .network: return "NET"
+        }
+    }
+
+    /// Width this cell needs in the notch header, used to size the open notch
+    /// before the header lays out (see `headerRowMinimumWidth`).
+    ///
+    /// The percentage cells are a 3-character eyebrow over a value like `100%` in
+    /// 13pt mono. The network cell is structurally different — two rows of
+    /// dot + a fixed 28pt number slot + a unit string — so it needs roughly twice
+    /// the width, and averaging the two clipped its `KB/s` off.
+    var headerCellWidthEstimate: CGFloat {
+        switch self {
+        case .cpu, .gpu, .ram, .disk: return 40
+        case .network: return 76
         }
     }
 

@@ -18,10 +18,12 @@ enum AgentUsageProviderCatalog {
     ///
     /// The header strip shares its row with the tab buttons and the
     /// timer/settings controls, and each provider contributes an icon plus two
-    /// or more percentage cells. Past two groups the cells start truncating, so
-    /// the header selection is capped here. The Agents panel has no such cap —
-    /// it pages through cards instead.
-    static let headerProviderLimit = 2
+    /// or more percentage cells. Because the header's two sides split the window
+    /// evenly, a second provider costs roughly 200pt of open-notch width — which
+    /// then shows up as dead space beside the tab row (see
+    /// `headerRowMinimumWidth`). One provider keeps the header honest; the Agents
+    /// panel has no such cap and pages through every provider's card.
+    static let headerProviderLimit = 1
 
     /// Providers the header should render, from the persisted raw-value list.
     /// Applies the same drop-unknown/de-duplicate rules as `normalizedOrder`,

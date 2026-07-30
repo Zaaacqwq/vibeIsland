@@ -62,7 +62,9 @@ struct NotchHeaderContextWidget: View {
             weatherLocation
         case .monitor:
             monitorContext
-        case .timer, .notifications:
+        // The utility tools state their own status inside the tab (saved count,
+        // item count, paused), so the header stays quiet for them.
+        case .timer, .notifications, .colorPicker, .clipboard:
             EmptyView()
         }
     }
@@ -95,7 +97,9 @@ struct NotchHeaderContextWidget: View {
 
     @ViewBuilder
     private var homeStats: some View {
-        let kinds = homeHeaderStats
+        // Clamped here too, not just in Settings: a preference saved before the
+        // cap existed would otherwise overflow the row.
+        let kinds = HeaderStatKind.normalizedHeaderStats(homeHeaderStats)
         if !kinds.isEmpty {
             HStack(spacing: 14) {
                 ForEach(kinds) { kind in
