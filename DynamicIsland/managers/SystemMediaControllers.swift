@@ -118,6 +118,36 @@ final class SystemVolumeController {
         getMuteState()
     }
 
+    /// Some routes (for example HDMI and externally controlled interfaces)
+    /// expose no software volume to macOS. Their physical output level cannot
+    /// be inferred, so consumers should treat them as unity gain.
+    var hasSoftwareVolumeControl: Bool {
+        !volumeElements().isEmpty
+    }
+
+    /// Linear amplitude gain applied by the current default output device.
+    /// Prefer the device's decibel value because its UI scalar is not
+    /// guaranteed to map linearly to the signal amplitude.
+    var currentOutputGain: Float {
+        guard !isMuted else { return 0 }
+        guard hasSoftwareVolumeControl else { return 1 }
+
+        if let decibels = getVolumeDecibels() {
+            return Self.linearGain(decibels: decibels)
+        }
+
+        let scalar = currentVolume
+        guard scalar.isFinite else { return 1 }
+        return min(1, max(0, scalar))
+    }
+
+    static func linearGain(decibels: Float) -> Float {
+        guard decibels.isFinite else {
+            return decibels == -Float.infinity ? 0 : 1
+        }
+        return max(0, Float(pow(10, Double(decibels) / 20)))
+    }
+
     func setVolume(_ value: Float) {
         let clamped = max(0, min(1, value))
         let currentlyMuted = isMuted
@@ -334,6 +364,21 @@ final class SystemVolumeController {
             return false
         }
         return fallback != 0
+    }
+
+    private func getVolumeDecibels() -> Float? {
+        for element in volumeElements() {
+            var decibels = Float32(0)
+            let status = getData(
+                selector: kAudioDevicePropertyVolumeDecibels,
+                element: element,
+                data: &decibels
+            )
+            if status == noErr {
+                return decibels
+            }
+        }
+        return nil
     }
 
     private func refreshPropertyElements() {

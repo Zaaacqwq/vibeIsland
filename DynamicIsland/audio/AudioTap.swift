@@ -124,10 +124,11 @@ class AudioTap: NSObject {
         "com.netease.163music",
         "com.tencent.QQMusicMac",
     ]
-    
+
     let bridge = AudioBridge()
     var isPaused: Bool = false
     private var displayMagnitudes = simd_float4(0, 0, 0, 0)
+    private var outputGain: Float = 1
 
     // CoreAudio stuff
     private var tapID: AudioObjectID = kAudioObjectUnknown
@@ -143,12 +144,19 @@ class AudioTap: NSObject {
 
     private override init() {
         super.init()
+        refreshSystemOutputGain()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemVolumeDidChange(_:)),
+            name: .systemVolumeDidChange,
+            object: nil
+        )
     }
 
     // Helper function to smooth out the magnitudes for prettifying purposes
     func getSmoothedMagnitudes() -> simd_float4 {
         // Zero bridging overhead. Just passing 16 bytes of memory.
-        let targetLevels = bridge.getSmoothedMagnitudes()
+        let targetLevels = bridge.getSmoothedMagnitudes() * outputGain
 
         let smoothingFactor: Float = 0.4
 
@@ -157,6 +165,14 @@ class AudioTap: NSObject {
         displayMagnitudes += difference * smoothingFactor
 
         return displayMagnitudes
+    }
+
+    @objc private func systemVolumeDidChange(_ notification: Notification) {
+        refreshSystemOutputGain()
+    }
+
+    private func refreshSystemOutputGain() {
+        outputGain = SystemVolumeController.shared.currentOutputGain
     }
 
     func startCapture() async {
