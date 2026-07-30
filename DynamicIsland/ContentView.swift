@@ -1024,6 +1024,12 @@ struct ContentView: View {
                                 case .monitor:
                                     NotchMonitorView()
                                         .environmentObject(vm)
+                                case .colorPicker:
+                                    NotchColorPickerView()
+                                        .environmentObject(vm)
+                                case .clipboard:
+                                    NotchClipboardView()
+                                        .environmentObject(vm)
                               }
                           }
                           .id(coordinator.currentView)
@@ -2203,8 +2209,10 @@ struct ContentView: View {
     
     // Helper function to check if any popovers are active
     private func hasAnyActivePopovers() -> Bool {
-     return vm.isBatteryPopoverActive || 
+     return vm.isBatteryPopoverActive ||
          vm.isTimerPopoverActive ||
+         vm.isColorPickerPopoverActive ||
+         vm.isClipboardPopoverActive ||
          vm.isMediaOutputPopoverActive ||
          vm.isCalendarCreatePopoverActive ||
          vm.isReminderPopoverActive

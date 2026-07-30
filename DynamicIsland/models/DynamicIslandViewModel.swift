@@ -48,6 +48,8 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     @Published var isCalendarCreatePopoverActive: Bool = false
     @Published var isMediaOutputPopoverActive: Bool = false
     @Published var isTimerPopoverActive: Bool = false
+    @Published var isColorPickerPopoverActive: Bool = false
+    @Published var isClipboardPopoverActive: Bool = false
     @Published var shouldRecheckHover: Bool = false
     @Published var isScrollGestureActive: Bool = false
     private var scrollGestureSuppressionTokens: Set<UUID> = []

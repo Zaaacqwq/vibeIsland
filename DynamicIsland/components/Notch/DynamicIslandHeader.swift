@@ -27,8 +27,14 @@ struct DynamicIslandHeader: View {
     @ObservedObject var timerManager = TimerManager.shared
     @ObservedObject var doNotDisturbManager = DoNotDisturbManager.shared
     @State private var showTimerPopover = false
+    @State private var showColorPickerPopover = false
+    @State private var showClipboardPopover = false
     @Default(.enableTimerFeature) var enableTimerFeature
     @Default(.timerDisplayMode) var timerDisplayMode
+    @Default(.enableColorPicker) var enableColorPicker
+    @Default(.colorPickerDisplayMode) var colorPickerDisplayMode
+    @Default(.enableClipboardManager) var enableClipboardManager
+    @Default(.clipboardDisplayMode) var clipboardDisplayMode
     @Default(.showBatteryIndicator) var showBatteryIndicator
     @Default(.showBatteryPercentInside) var showBatteryPercentInside
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
@@ -57,7 +63,24 @@ struct DynamicIslandHeader: View {
                     }
                 }
             }
+            // MUST stay greedy. This group and the trailing one split the window
+            // evenly, which is the only thing centering the black spacer between
+            // them on the physical notch cutout. Sizing this group to its content
+            // instead moves that spacer left by (half − tab row) and parks the
+            // trailing widgets *behind* the notch, where they are invisible on
+            // device — a screenshot still shows them, because `screencapture`
+            // reads the framebuffer under the cutout.
+            //
+            // The consequence is that dead space between the last tab and the
+            // cutout is unavoidable whenever the trailing side is the wider of
+            // the two; `headerRowMinimumWidth` sizes the window so it is no wider
+            // than it has to be.
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Wins space over the trailing group, whose context widget is built
+            // to truncate. Tab icons are fixed-size and would otherwise be
+            // clipped when the notch cannot satisfy both sides (a display too
+            // small for `headerRowMinimumWidth`).
+            .layoutPriority(1)
             .opacity(vm.notchState == .closed ? 0 : 1)
             .blur(radius: vm.notchState == .closed ? 20 : 0)
             .animation(.smooth.delay(0.1), value: vm.notchState)
@@ -124,6 +147,31 @@ struct DynamicIslandHeader: View {
                         }
                     }
                     
+                    if enableColorPicker && colorPickerDisplayMode == .popover {
+                        HeaderToolPopoverButton(
+                            systemImage: "eyedropper",
+                            help: String(localized: "Color Picker"),
+                            isPresented: $showColorPickerPopover,
+                            isActive: $vm.isColorPickerPopoverActive,
+                            onDismissed: { vm.shouldRecheckHover.toggle() }
+                        ) {
+                            ColorPickerPopover()
+                        }
+                    }
+
+                    if enableClipboardManager && clipboardDisplayMode == .popover {
+                        HeaderToolPopoverButton(
+                            systemImage: "doc.on.clipboard",
+                            help: String(localized: "Clipboard"),
+                            isPresented: $showClipboardPopover,
+                            isActive: $vm.isClipboardPopoverActive,
+                            onDismissed: { vm.shouldRecheckHover.toggle() }
+                        ) {
+                            ClipboardPopover()
+                                .environmentObject(vm)
+                        }
+                    }
+
                     if Defaults[.settingsIconInNotch] {
                         Button(action: {
                             SettingsWindowController.shared.showWindow()
@@ -200,13 +248,130 @@ struct DynamicIslandHeader: View {
                 vm.isTimerPopoverActive = false
             }
         }
+        // A tool switched to tab mode (or switched off) must not leave its
+        // popover on screen — the button it was anchored to is gone.
+        .onChange(of: enableColorPicker) { _, isOn in
+            if !isOn { dismissColorPickerPopover() }
+        }
+        .onChange(of: colorPickerDisplayMode) { _, mode in
+            if mode == .tab { dismissColorPickerPopover() }
+        }
+        .onChange(of: enableClipboardManager) { _, isOn in
+            if !isOn { dismissClipboardPopover() }
+        }
+        .onChange(of: clipboardDisplayMode) { _, mode in
+            if mode == .tab { dismissClipboardPopover() }
+        }
+        // Three entry points, because the request can land before this view even
+        // exists: the header is mounted as part of opening the notch, so a
+        // request parked by the hotkey just before `open()` is already stale by
+        // the time `onChange` could observe it. `onAppear` covers that case,
+        // `onChange` covers a hotkey pressed while the notch is already open.
+        .onAppear {
+            applyRequestedToolPopover(coordinator.requestedToolPopover)
+        }
+        .onChange(of: coordinator.requestedToolPopover) { _, request in
+            applyRequestedToolPopover(request)
+        }
+        .onChange(of: vm.notchState) { _, _ in
+            applyRequestedToolPopover(coordinator.requestedToolPopover)
+        }
+    }
+
+    /// Presents the popover a hotkey asked for, once this header actually has the
+    /// button to anchor it to. Only the screen whose notch opened responds, so on
+    /// a multi-display setup the popover does not appear on every notch.
+    private func applyRequestedToolPopover(_ request: NotchViews?) {
+        guard let request, vm.notchState == .open, !enableMinimalisticUI else { return }
+        coordinator.requestedToolPopover = nil
+
+        // One run-loop hop so the button exists in the layout before SwiftUI is
+        // asked to anchor a popover to it.
+        DispatchQueue.main.async {
+            // A popover needs a key window, and a global hotkey does not
+            // activate us — without this the notch opens and nothing else
+            // happens. Activating is also what lets the clipboard's search
+            // field accept typing; pasting still targets the app the user came
+            // from, which `ClipboardPaster` tracks separately.
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first { $0 is DynamicIslandWindow }?.makeKeyAndOrderFront(nil)
+
+            switch request {
+            case .clipboard:
+                guard enableClipboardManager, clipboardDisplayMode == .popover else { return }
+                showClipboardPopover = true
+            case .colorPicker:
+                guard enableColorPicker, colorPickerDisplayMode == .popover else { return }
+                showColorPickerPopover = true
+            default:
+                break
+            }
+        }
+    }
+
+    private func dismissColorPickerPopover() {
+        showColorPickerPopover = false
+        vm.isColorPickerPopoverActive = false
+    }
+
+    private func dismissClipboardPopover() {
+        showClipboardPopover = false
+        vm.isClipboardPopoverActive = false
+    }
+}
+
+/// The notch header's popover-mode tool button: a 30×30 glyph that toggles a
+/// popover and mirrors its presentation into the view model, so the notch does
+/// not auto-close while the popover is up.
+///
+/// Extracted because each utility tool in popover mode needs exactly this, and
+/// the hover-recheck-after-dismiss detail is easy to omit when copy-pasting.
+struct HeaderToolPopoverButton<Content: View>: View {
+    let systemImage: String
+    let help: String
+    @Binding var isPresented: Bool
+    @Binding var isActive: Bool
+    let onDismissed: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Button {
+            withAnimation(.smooth) {
+                isPresented.toggle()
+            }
+        } label: {
+            Image(systemName: systemImage)
+                .foregroundColor(NotchDesign.Colors.textTertiary)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .help(help)
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            content()
+        }
+        .onChange(of: isPresented) { presented in
+            isActive = presented
+            if !presented {
+                // The hover state is stale for a moment after the popover's
+                // window goes away; re-check just after it does.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    onDismissed()
+                }
+            }
+        }
     }
 }
 
 private extension DynamicIslandHeader {
+    /// The trailing header row runs out of room once the gear shares it with the
+    /// tool buttons, so the optional status glyphs step aside.
+    ///
+    /// Defined in `matters.swift` so the notch-width budget applies the identical
+    /// rule — reserving width for a glyph this hides would pad the notch for
+    /// nothing.
     var shouldSuppressStatusIndicators: Bool {
-        Defaults[.settingsIconInNotch]
-            && Defaults[.enableTimerFeature]
+        notchHeaderSuppressesStatusIndicators()
     }
 }
 

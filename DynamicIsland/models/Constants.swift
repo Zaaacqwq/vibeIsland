@@ -573,14 +573,17 @@ extension Defaults.Keys {
     static let showHeaderContextWidgets = Key<Bool>("showHeaderContextWidgets", default: true)
     /// Which system metrics the Home tab's notch-header widget shows, in
     /// `HeaderStatKind.allCases` order. Empty hides the Home stats entirely.
+    /// Read through `HeaderStatKind.normalizedHeaderStats`, which clamps to
+    /// `HeaderStatKind.headerLimit` (3).
     static let homeHeaderStats = Key<[HeaderStatKind]>("homeHeaderStats", default: [.cpu, .ram])
-    /// Which agent providers the Agents tab's notch-header widget shows, as
-    /// `AgentUsageProviderID` raw values in display order. Capped at
-    /// `AgentUsageProviderCatalog.headerProviderLimit` (2) — this is the header
-    /// strip, not the pageable Agents panel.
+    /// Which agent provider the Agents tab's notch-header widget shows, as an
+    /// `AgentUsageProviderID` raw value. Read through
+    /// `AgentUsageProviderCatalog.normalizedHeaderProviders`, which clamps to
+    /// `headerProviderLimit` (1) — this is the header strip, not the pageable
+    /// Agents panel.
     static let agentHeaderProviders = Key<[String]>(
         "agentHeaderProviders",
-        default: ["claude", "codex"]
+        default: ["claude"]
     )
     static let lightingEffect = Key<Bool>("lightingEffect", default: true)
     static let accentColor = Key<Color>("accentColor", default: Color.blue)
@@ -742,7 +745,63 @@ extension Defaults.Keys {
     static let reminderLeadTime = Key<Int>("reminderLeadTime", default: 5)
     static let reminderSneakPeekDuration = Key<Double>("reminderSneakPeekDuration", default: 5)
     static let timerControlWindowEnabled = Key<Bool>("timerControlWindowEnabled", default: true)
-    
+
+    // MARK: Notch Tabs
+    /// User-defined tab order. Repaired on read by `NotchTabOrder.normalized`,
+    /// which drops unknowns and appends tabs added by later versions.
+    static let notchTabOrder = Key<[NotchViews]>("notchTabOrder", default: NotchTabOrder.defaultOrder)
+    /// Whether the selected tab shows its label next to the icon. Off keeps the
+    /// row icon-only, which is ~120pt narrower — and because the header's two
+    /// sides split the notch evenly, that is ~120pt off the notch width.
+    static let showNotchTabTitles = Key<Bool>("showNotchTabTitles", default: false)
+    /// Whether ⌘-dragging a tab rearranges the row.
+    static let enableTabReordering = Key<Bool>("enableTabReordering", default: true)
+
+    // MARK: Color Picker
+    /// Off by default: both utility tools are opt-in so they don't consume a
+    /// notch tab slot (or a header button) for users who never asked for them.
+    static let enableColorPicker = Key<Bool>("enableColorPicker", default: false)
+    /// Popover by default — unlike the timer, which defaults to `.tab`. The tab
+    /// row is already close to its width budget with the older features on.
+    static let colorPickerDisplayMode = Key<ToolDisplayMode>("colorPickerDisplayMode", default: .popover)
+    static let colorPickerHistory = Key<[PickedColor]>("colorPickerHistory", default: [])
+    static let colorPickerHistoryLimit = Key<Int>("colorPickerHistoryLimit", default: 50)
+    static let colorPickerDefaultFormat = Key<ColorFormat>("colorPickerDefaultFormat", default: .hex)
+    /// Write the sampled color to the system clipboard as soon as it is picked,
+    /// so the eyedropper hotkey is a one-shot "grab this color" gesture.
+    static let colorPickerCopyOnPick = Key<Bool>("colorPickerCopyOnPick", default: true)
+    static let colorPickerUppercaseHex = Key<Bool>("colorPickerUppercaseHex", default: false)
+
+    // MARK: Clipboard Manager
+    static let enableClipboardManager = Key<Bool>("enableClipboardManager", default: false)
+    static let clipboardDisplayMode = Key<ToolDisplayMode>("clipboardDisplayMode", default: .popover)
+    /// Maximum number of unpinned entries kept. Pinned entries are exempt.
+    static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 200)
+    /// Pasteboard `changeCount` poll interval, in seconds. There is no change
+    /// notification on macOS, so polling is the only option (same as Maccy).
+    static let clipboardCheckInterval = Key<Double>("clipboardCheckInterval", default: 0.5)
+    /// Pasteboard types the monitor records, as raw type strings. Dropping a
+    /// type here stops capture of that whole content class.
+    static let clipboardEnabledTypes = Key<Set<String>>(
+        "clipboardEnabledTypes",
+        default: ClipboardPasteboard.defaultEnabledTypes
+    )
+    /// Bundle identifiers whose copies are never recorded.
+    static let clipboardIgnoredApps = Key<Set<String>>("clipboardIgnoredApps", default: [])
+    /// When enabled, selecting an entry also synthesizes ⌘V into the previously
+    /// frontmost app. Requires Accessibility permission.
+    static let clipboardPasteAutomatically = Key<Bool>("clipboardPasteAutomatically", default: false)
+    /// Entries larger than this are skipped outright (bytes).
+    static let clipboardMaxItemBytes = Key<Int>("clipboardMaxItemBytes", default: 20 * 1024 * 1024)
+    /// Total on-disk budget for stored blobs (bytes). Oldest unpinned entries
+    /// are evicted once exceeded.
+    static let clipboardMaxTotalBytes = Key<Int>("clipboardMaxTotalBytes", default: 512 * 1024 * 1024)
+    static let clipboardSortMode = Key<ClipboardSortMode>("clipboardSortMode", default: .lastCopied)
+    static let clipboardShowSourceApp = Key<Bool>("clipboardShowSourceApp", default: true)
+    /// Also wipe the system pasteboard when the history is cleared.
+    static let clipboardClearSystemClipboardOnClear = Key<Bool>("clipboardClearSystemClipboardOnClear", default: false)
+
+
     
     // MARK: Agents Usage Panel
     /// Display order of the provider cards in the Agents usage pager, as

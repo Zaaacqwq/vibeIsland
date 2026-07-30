@@ -835,6 +835,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }.store(in: &cancellables)
 
+        // The utility tools' hotkeys follow their feature toggles, so a disabled
+        // tool does not hold a system-wide chord.
+        Publishers.MergeMany(
+            Defaults.publisher(.enableColorPicker, options: []).map { _ in () }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableClipboardManager, options: []).map { _ in () }.eraseToAnyPublisher()
+        ).sink { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateFeatureShortcutAvailability()
+            }
+        }.store(in: &cancellables)
+
         // Observe minimalistic UI setting changes - trigger window resize
         Defaults.publisher(.enableMinimalisticUI, options: []).sink { [weak self] _ in
             // Update window size IMMEDIATELY (no debouncing) to prevent position shift
@@ -959,6 +970,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.isEnabled = Defaults[.enableShortcuts]
         registerOptionalShortcutHandlers()
         updateFeatureShortcutAvailability()
+
+        // Loads the stored history and binds polling to the feature toggle;
+        // a no-op beyond that when the clipboard manager is off.
+        ClipboardMonitor.shared.bootstrap()
 
         if !Defaults[.showOnAllDisplays] {
             let viewModel = self.vm
@@ -1143,11 +1158,82 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TimerManager.shared.startDemoTimer(duration: 300)
         }
 
+        // Straight to the system loupe — no notch involved, so the eyedropper
+        // works the same whichever display mode the picker is in.
+        KeyboardShortcuts.onKeyDown(for: .pickColor) {
+            guard Defaults[.enableShortcuts], Defaults[.enableColorPicker] else { return }
+            ColorPickerManager.shared.pick()
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .showClipboardHistory) { [weak self] in
+            guard Defaults[.enableShortcuts], Defaults[.enableClipboardManager] else { return }
+            self?.revealClipboardHistory()
+        }
+    }
+
+    /// Opens the clipboard history: the Clipboard tab in tab mode, or the header
+    /// button's popover in popover mode.
+    @MainActor
+    private func revealClipboardHistory() {
+        let viewModel = viewModelForScreenUnderCursor()
+        let usesPopover = Defaults[.clipboardDisplayMode] == .popover
+
+        if usesPopover {
+            // The header owns the popover's presentation state; it consumes this
+            // once its buttons exist (i.e. once the notch is open).
+            coordinator.requestedToolPopover = .clipboard
+        } else {
+            coordinator.currentView = .clipboard
+        }
+
+        closeNotchWorkItem?.cancel()
+        closeNotchWorkItem = nil
+
+        if viewModel.notchState == .closed {
+            viewModel.open()
+        }
+
+        if usesPopover {
+            // The pointer is nowhere near the notch, so without this the
+            // hover-driven auto-close can shut it again before the popover
+            // presents. Once presented, `isClipboardPopoverActive` holds it open.
+            holdNotchOpenForPopover(viewModel)
+        }
+    }
+
+    /// Briefly suppresses auto-close while a hotkey-triggered popover appears.
+    @MainActor
+    private func holdNotchOpenForPopover(_ viewModel: DynamicIslandViewModel) {
+        let token = UUID()
+        viewModel.setAutoCloseSuppression(true, token: token)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.2))
+            viewModel.setAutoCloseSuppression(false, token: token)
+        }
+    }
+
+    /// The view model driving the notch on whichever screen the pointer is on,
+    /// falling back to the primary one when showing on a single display.
+    @MainActor
+    private func viewModelForScreenUnderCursor() -> DynamicIslandViewModel {
+        guard Defaults[.showOnAllDisplays] else { return vm }
+        let mouseLocation = NSEvent.mouseLocation
+        for screen in NSScreen.screens where screen.frame.contains(mouseLocation) {
+            if let screenViewModel = viewModels[screen] {
+                return screenViewModel
+            }
+        }
+        return vm
     }
 
     @MainActor
     private func updateFeatureShortcutAvailability() {
         updateShortcut(.startDemoTimer, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableTimerFeature])
+        updateShortcut(.pickColor, isEnabled: Defaults[.enableShortcuts] && Defaults[.enableColorPicker])
+        updateShortcut(
+            .showClipboardHistory,
+            isEnabled: Defaults[.enableShortcuts] && Defaults[.enableClipboardManager]
+        )
     }
 
     @MainActor

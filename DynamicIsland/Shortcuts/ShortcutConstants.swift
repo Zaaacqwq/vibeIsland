@@ -29,4 +29,8 @@ extension KeyboardShortcuts.Name {
     static let toggleSneakPeek = Self("toggleSneakPeek", default: .init(.h, modifiers: [.command, .shift]))
     static let toggleNotchOpen = Self("toggleNotchOpen", default: .init(.i, modifiers: [.command, .shift]))
     static let startDemoTimer = Self("startDemoTimer", default: .init(.t, modifiers: [.command, .shift]))
+    /// Utility tools. Both are opt-in features, so neither ships a default
+    /// binding — an unused feature must not squat on a system-wide chord.
+    static let pickColor = Self("pickColor")
+    static let showClipboardHistory = Self("showClipboardHistory")
 }

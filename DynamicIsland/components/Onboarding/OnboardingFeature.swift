@@ -33,6 +33,8 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
     case notification
     case shelf
     case music
+    case colorPicker
+    case clipboard
 
     var id: String { rawValue }
 
@@ -47,6 +49,8 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .notification: return String(localized: "Notifications")
         case .shelf: return String(localized: "Shelf")
         case .music: return String(localized: "Music")
+        case .colorPicker: return String(localized: "Color Picker")
+        case .clipboard: return String(localized: "Clipboard")
         }
     }
 
@@ -61,6 +65,8 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .notification: return String(localized: "Mirror macOS notifications into the notch.")
         case .shelf: return String(localized: "Drag-and-drop file stash.")
         case .music: return String(localized: "Now-playing controls and visualizer.")
+        case .colorPicker: return String(localized: "Eyedropper with a history of picked colors.")
+        case .clipboard: return String(localized: "Searchable history of what you copy.")
         }
     }
 
@@ -76,6 +82,8 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .notification: return "bell.fill"
         case .shelf: return "tray.full.fill"
         case .music: return "music.note"
+        case .colorPicker: return "eyedropper"
+        case .clipboard: return "doc.on.clipboard"
         }
     }
 
@@ -91,15 +99,17 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .notification: return [.pink, .red]
         case .shelf: return [.indigo, .blue]
         case .music: return [.purple, .pink]
+        case .colorPicker: return [.pink, .orange]
+        case .clipboard: return [.mint, .teal]
         }
     }
 
     /// Whether selecting this feature leads to a dedicated setup page.
-    /// Weather, Monitor and Shelf need no configuration — selecting them is
-    /// enough.
+    /// Weather, Monitor, Shelf and the utility tools need no configuration —
+    /// selecting them is enough.
     var hasConfigPage: Bool {
         switch self {
-        case .weather, .monitor, .shelf: return false
+        case .weather, .monitor, .shelf, .colorPicker, .clipboard: return false
         default: return true
         }
     }
@@ -119,6 +129,8 @@ enum OnboardingFeature: String, CaseIterable, Identifiable {
         case .notification: Defaults[.enableNotificationMonitoring] = enabled
         case .shelf: Defaults[.dynamicShelf] = enabled
         case .music: break
+        case .colorPicker: Defaults[.enableColorPicker] = enabled
+        case .clipboard: Defaults[.enableClipboardManager] = enabled
         }
     }
 

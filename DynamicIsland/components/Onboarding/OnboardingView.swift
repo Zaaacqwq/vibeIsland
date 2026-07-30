@@ -112,7 +112,7 @@ struct OnboardingView: View {
             NotificationFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
         case .music:
             MusicFeatureView(onContinue: advance, onSkip: advance, onBack: goBack)
-        case .weather, .monitor, .shelf:
+        case .weather, .monitor, .shelf, .colorPicker, .clipboard:
             // Page-less features are never queued; render nothing defensively.
             Color.clear.onAppear(perform: advance)
         }

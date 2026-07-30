@@ -25,7 +25,9 @@ struct StatsFeatureView: View {
     let onSkip: () -> Void
     let onBack: () -> Void
 
-    @State private var selected: Set<HeaderStatKind> = Set(Defaults[.homeHeaderStats])
+    @State private var selected: Set<HeaderStatKind> = Set(
+        HeaderStatKind.normalizedHeaderStats(Defaults[.homeHeaderStats])
+    )
 
     private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
@@ -44,7 +46,7 @@ struct StatsFeatureView: View {
             symbol: OnboardingFeature.stats.symbol,
             gradient: OnboardingFeature.stats.gradient,
             title: String(localized: "Which monitors?"),
-            subtitle: String(localized: "Pick the system metrics for the notch header — up to 3 keeps it clean."),
+            subtitle: String(localized: "Pick the system metrics for the notch header — up to \(HeaderStatKind.headerLimit)."),
             onBack: onBack,
             onSkip: onSkip,
             onContinue: applyAndContinue
@@ -63,8 +65,8 @@ struct StatsFeatureView: View {
         }
     }
 
-    /// Recommended cap: at most three monitors for a readable header.
-    private static let recommendedMax = 3
+    /// Hard cap shared with Settings — see `HeaderStatKind.headerLimit`.
+    private static let recommendedMax = HeaderStatKind.headerLimit
 
     private func toggle(_ kind: HeaderStatKind) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {

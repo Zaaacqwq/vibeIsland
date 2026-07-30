@@ -61,6 +61,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case downloads
     case shelf
     case shortcuts
+    case colorPicker
+    case clipboard
     case agents
     case notifications
     case weather
@@ -78,7 +80,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .hudAndOSD, .devices, .battery, .notchHeader: return .hudsAndHardware
         case .timer, .calendar:                return .productivity
         case .weather, .notifications, .monitor: return .notchWidgets
-        case .shelf, .downloads, .shortcuts:   return .utilities
+        case .shelf, .downloads, .shortcuts, .colorPicker, .clipboard: return .utilities
         case .agents, .debug:                  return .developer
         case .about:                           return .info
         }
@@ -100,6 +102,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return String(localized: "Downloads")
         case .shelf: return String(localized: "Shelf")
         case .shortcuts: return String(localized: "Shortcuts")
+        case .colorPicker: return String(localized: "Color Picker")
+        case .clipboard: return String(localized: "Clipboard")
         case .agents: return String(localized: "Agents")
         case .notifications: return String(localized: "Notifications")
         case .weather: return String(localized: "Weather")
@@ -125,6 +129,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return "square.and.arrow.down"
         case .shelf: return "tray.full"
         case .shortcuts: return "keyboard"
+        case .colorPicker: return "eyedropper"
+        case .clipboard: return "doc.on.clipboard"
         case .agents: return "sparkles"
         case .notifications: return "bell"
         case .weather: return "cloud.sun"
@@ -150,6 +156,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .downloads: return .gray
         case .shelf: return .brown
         case .shortcuts: return .orange
+        case .colorPicker: return .pink
+        case .clipboard: return .mint
         case .agents: return Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 66.0 / 255.0)
         case .notifications: return .red
         case .weather: return .cyan
@@ -465,6 +473,8 @@ struct SettingsView: View {
             .shelf,
             .downloads,
             .shortcuts,
+            .colorPicker,
+            .clipboard,
             // Developer
             .agents,
             .debug,
@@ -879,6 +889,14 @@ struct SettingsView: View {
         case .weather:
             SettingsForm(tab: .weather) {
                 WeatherSettings()
+            }
+        case .colorPicker:
+            SettingsForm(tab: .colorPicker) {
+                ColorPickerSettings()
+            }
+        case .clipboard:
+            SettingsForm(tab: .clipboard) {
+                ClipboardSettings()
             }
         case .monitor:
             SettingsForm(tab: .monitor) {
@@ -1667,14 +1685,25 @@ struct NotchHeaderSettings: View {
         )
     }
 
+    private var selectedHomeStats: [HeaderStatKind] {
+        HeaderStatKind.normalizedHeaderStats(homeHeaderStats)
+    }
+
     /// Toggles a single metric in `homeHeaderStats`, always rewriting the array
-    /// in canonical `allCases` order so the header layout stays stable.
+    /// in canonical `allCases` order so the header layout stays stable. At the cap
+    /// the remaining rows are disabled rather than evicting an existing pick —
+    /// same rule as the agent providers below.
     private func homeStatBinding(_ kind: HeaderStatKind) -> Binding<Bool> {
         Binding(
-            get: { homeHeaderStats.contains(kind) },
+            get: { selectedHomeStats.contains(kind) },
             set: { isOn in
-                var selected = Set(homeHeaderStats)
-                if isOn { selected.insert(kind) } else { selected.remove(kind) }
+                var selected = Set(selectedHomeStats)
+                if isOn {
+                    guard selected.count < HeaderStatKind.headerLimit else { return }
+                    selected.insert(kind)
+                } else {
+                    selected.remove(kind)
+                }
                 homeHeaderStats = HeaderStatKind.allCases.filter { selected.contains($0) }
             }
         )
@@ -1689,15 +1718,19 @@ struct NotchHeaderSettings: View {
             if showHeaderContextWidgets {
                 GeistSection(
                     title: "Home header stats",
-                    footer: "Keep it to about 3 at a time — the notch header has limited room, and more may not fit."
+                    footer: homeStatsFooter
                 ) {
                     let kinds = HeaderStatKind.allCases
+                    let atLimit = selectedHomeStats.count >= HeaderStatKind.headerLimit
                     ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
+                        let isOn = selectedHomeStats.contains(kind)
                         GeistToggleRow(
                             title: kind.settingsTitle,
                             isOn: homeStatBinding(kind),
                             divider: index != kinds.count - 1
                         )
+                        .disabled(!isOn && atLimit)
+                        .opacity(!isOn && atLimit ? 0.45 : 1)
                     }
                 }
 
@@ -1725,12 +1758,21 @@ struct NotchHeaderSettings: View {
         }
     }
 
+    private var homeStatsFooter: String {
+        let limit = HeaderStatKind.headerLimit
+        let base = "Up to \(limit) metrics. The header's two sides split the open notch evenly, so each extra metric widens the notch by twice its own width."
+        guard selectedHomeStats.count >= limit else { return base }
+        return base + " Turn one off to choose another."
+    }
+
     private var agentProvidersFooter: String {
         let limit = AgentUsageProviderCatalog.headerProviderLimit
-        if selectedAgentProviders.count >= limit {
-            return "Pick up to \(limit) — turn one off to choose another. A provider only appears once it has quota data, and they show in the order you enable them."
-        }
-        return "Pick up to \(limit) providers to show in the Agents tab's header. A provider only appears once it has quota data, and they show in the order you enable them."
+        let base = limit == 1
+            ? "One provider. A second would widen the open notch by roughly 200pt, which shows up as dead space beside the tab row."
+            : "Pick up to \(limit) providers to show in the Agents tab's header."
+        let detail = " A provider only appears once it has quota data."
+        guard selectedAgentProviders.count >= limit else { return base + detail }
+        return base + detail + (limit == 1 ? " Turn it off to choose another." : " Turn one off to choose another.")
     }
 }
 
@@ -2925,6 +2967,10 @@ struct Appearance: View {
     @ObservedObject var coordinator = DynamicIslandViewCoordinator.shared
     @Default(.customAppIcons) private var customAppIcons
     @Default(.selectedAppIconID) private var selectedAppIconID
+    // Observed so the Reset row appears/disappears as the order changes.
+    @Default(.notchTabOrder) private var notchTabOrder
+    @Default(.showNotchTabTitles) private var showNotchTabTitles
+    @Default(.enableTabReordering) private var enableTabReordering
     @Default(.openNotchWidth) var openNotchWidth
     @Default(.autoNotchWidth) var autoNotchWidth
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
@@ -2935,6 +2981,29 @@ struct Appearance: View {
 
     var body: some View {
         GeistSettingsPage(title: "Appearance") {
+            GeistSection(title: "Tabs", footer: tabRowFooter) {
+                GeistToggleRow(
+                    title: "Show titles on the selected tab",
+                    isOn: geistBinding(.showNotchTabTitles),
+                    info: "Draws the active tab's name beside its icon. The tab row's width is mirrored on the other side of the notch, so a title widens the open notch by roughly 120pt on both sides."
+                )
+                GeistToggleRow(
+                    title: "Rearrange tabs with ⌘-drag",
+                    isOn: geistBinding(.enableTabReordering),
+                    divider: !NotchTabOrder.isDefaultOrder,
+                    info: "Hold ⌘ and drag a tab in the open notch to move it. A plain click still just switches tabs."
+                )
+                if !NotchTabOrder.isDefaultOrder {
+                    GeistLabeledRow(title: "Tab order", divider: false) {
+                        Button(String(localized: "Reset")) {
+                            NotchTabOrder.resetToDefault()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+            }
+
             GeistSection(title: "General") {
                 GeistToggleRow(title: "Always show tabs", isOn: $coordinator.alwaysShowTabs, info: "Keeps the tab bar visible in the open notch instead of only showing it on hover.")
                 GeistToggleRow(title: "Settings icon in notch", isOn: geistBinding(.settingsIconInNotch), info: "Shows a gear button in the open notch that opens this Settings window.")
@@ -3037,6 +3106,19 @@ struct Appearance: View {
                 iconImportError = "Icon import was canceled or failed."
             }
         }
+    }
+
+    private var tabRowFooter: String {
+        var parts: [String] = []
+        if enableTabReordering {
+            parts.append(String(localized: "Hold ⌘ and drag a tab in the open notch to reorder it. Tabs that are switched off keep their place, so turning one back on returns it where you left it."))
+        } else {
+            parts.append(String(localized: "Tabs stay in their current order."))
+        }
+        if showNotchTabTitles {
+            parts.append(String(localized: "Titles widen the open notch — turn them off for the most compact row."))
+        }
+        return parts.joined(separator: " ")
     }
 
     private func defaultAppIconImage() -> NSImage? {
@@ -3150,7 +3232,12 @@ struct Appearance: View {
     private func notchWidthControls() -> some View {
         let recommendedMin = currentRecommendedMinimumNotchWidth()
         let tabCount = enabledStandardTabCount()
-        let dynamicRange = Double(recommendedMin)...900
+        // The ceiling has to be derived, not a constant: the recommended minimum
+        // is computed from the header's content and can exceed any fixed number,
+        // and `ClosedRange` traps outright when its lower bound is the larger of
+        // the two — which crashed this whole page on open.
+        let widthCeiling = max(Double(recommendedMin), Double(maxAllowedNotchWidth()))
+        let dynamicRange = Double(recommendedMin)...widthCeiling
         let widthBinding = Binding<Double>(
             get: { Double(openNotchWidth) },
             set: { newValue in
