@@ -95,10 +95,18 @@ class DynamicIslandViewCoordinator: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var hoverOpenSuppressedUntil: Date = .distantPast
     
-    private static let tabOrder: [NotchViews] = [.home, .shelf, .timer, .agents, .calendar, .notifications, .weather, .monitor]
+    /// Slide direction is derived from the user's order, so dragging a tab to a
+    /// new position also changes which way switching to it animates.
+    private static var tabOrder: [NotchViews] { NotchTabOrder.current }
 
     /// Direction of the most recent tab switch (true = forward/right, false = backward/left)
     @Published var tabSwitchForward: Bool = true
+
+    /// A utility tool whose header popover something outside the header asked to
+    /// open — currently the global hotkeys. The popover is anchored to a button
+    /// that only exists while the notch is open, so the request is parked here
+    /// and `DynamicIslandHeader` consumes it once its buttons are on screen.
+    @Published var requestedToolPopover: NotchViews?
 
     @Published var currentView: NotchViews = .home {
         didSet {
@@ -113,22 +121,12 @@ class DynamicIslandViewCoordinator: ObservableObject {
         }
     }
 
-    /// The notch tabs currently visible, in display order — mirrors the tab list
-    /// built in `TabSelectionView`. Used by the horizontal swipe-to-switch gesture.
+    /// The notch tabs currently visible, in display order. Same source as the row
+    /// itself (`NotchTabOrder`) — this used to be a hand-mirrored copy of the tab
+    /// list, which is exactly the kind of duplication a user-defined order breaks.
+    /// Used by the horizontal swipe-to-switch gesture.
     private func orderedVisibleTabs() -> [NotchViews] {
-        if Defaults[.enableMinimalisticUI] { return [.home] }
-        var tabs: [NotchViews] = []
-        if Defaults[.showStandardMediaControls] || Defaults[.showCalendar] {
-            tabs.append(.home)
-        }
-        if Defaults[.dynamicShelf] { tabs.append(.shelf) }
-        if Defaults[.enableTimerFeature] && Defaults[.timerDisplayMode] == .tab { tabs.append(.timer) }
-        if Defaults[.enableAgentMonitoring] { tabs.append(.agents) }
-        if Defaults[.showCalendar] || Defaults[.showReminders] { tabs.append(.calendar) }
-        if Defaults[.enableNotificationMonitoring] { tabs.append(.notifications) }
-        if Defaults[.enableWeather] { tabs.append(.weather) }
-        if Defaults[.enableSystemMonitor] { tabs.append(.monitor) }
-        return tabs
+        NotchTabOrder.visibleTabs()
     }
 
     /// Move to the next (`forward`) or previous visible tab. Clamps at the ends.
@@ -207,26 +205,30 @@ class DynamicIslandViewCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Observe all tab-affecting settings to enforce minimum notch width
+        // A utility tool that loses its tab (switched off, or moved to popover
+        // mode) must not leave the notch showing a tab that no longer exists.
         Publishers.MergeMany(
-            Defaults.publisher(.showStandardMediaControls).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.showCalendar).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.showReminders).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.dynamicShelf).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableAgentMonitoring).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableNotificationMonitoring).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableWeather).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableSystemMonitor).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableTimerFeature).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.timerDisplayMode).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.autoNotchWidth).map { _ in () }.eraseToAnyPublisher(),
-            Defaults.publisher(.enableMinimalisticUI).map { _ in () }.eraseToAnyPublisher()
+            Defaults.publisher(.enableColorPicker).map { _ in NotchViews.colorPicker }.eraseToAnyPublisher(),
+            Defaults.publisher(.colorPickerDisplayMode).map { _ in NotchViews.colorPicker }.eraseToAnyPublisher(),
+            Defaults.publisher(.enableClipboardManager).map { _ in NotchViews.clipboard }.eraseToAnyPublisher(),
+            Defaults.publisher(.clipboardDisplayMode).map { _ in NotchViews.clipboard }.eraseToAnyPublisher()
         )
-        .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
-        .sink { _ in
-            enforceMinimumNotchWidth()
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] tab in
+            self?.leaveTabIfNoLongerVisible(tab)
         }
         .store(in: &cancellables)
+
+        // Observe every setting the open-notch width depends on — both the tab
+        // row and (via `headerRowMinimumWidth`) the header's trailing side.
+        // Collected into an array first: as one big `MergeMany` literal this
+        // exceeded what the type checker will solve.
+        Publishers.MergeMany(Self.notchWidthAffectingPublishers())
+            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
+            .sink { _ in
+                enforceMinimumNotchWidth()
+            }
+            .store(in: &cancellables)
 
         // Enforce minimum width on launch for existing configurations
         enforceMinimumNotchWidth()
@@ -249,6 +251,54 @@ class DynamicIslandViewCoordinator: ObservableObject {
 
     private func handleTimerFeatureToggle(_ isEnabled: Bool) {
         guard !isEnabled, currentView == .timer else { return }
+        withAnimation(.smooth) {
+            currentView = .home
+        }
+    }
+
+    /// Every `Defaults` key the open-notch width is computed from.
+    private static func notchWidthAffectingPublishers() -> [AnyPublisher<Void, Never>] {
+        var publishers: [AnyPublisher<Void, Never>] = []
+
+        func observe<Value: Defaults.Serializable & Equatable>(_ key: Defaults.Key<Value>) {
+            publishers.append(Defaults.publisher(key).map { _ in () }.eraseToAnyPublisher())
+        }
+
+        // Tab row
+        observe(.showStandardMediaControls)
+        observe(.showCalendar)
+        observe(.showReminders)
+        observe(.dynamicShelf)
+        observe(.enableAgentMonitoring)
+        observe(.enableNotificationMonitoring)
+        observe(.enableWeather)
+        observe(.enableSystemMonitor)
+        observe(.enableTimerFeature)
+        observe(.timerDisplayMode)
+        observe(.enableColorPicker)
+        observe(.colorPickerDisplayMode)
+        observe(.enableClipboardManager)
+        observe(.clipboardDisplayMode)
+        // Header trailing side
+        observe(.showHeaderContextWidgets)
+        observe(.homeHeaderStats)
+        observe(.settingsIconInNotch)
+        observe(.showBatteryIndicator)
+        observe(.showRecordingIndicator)
+        observe(.showDoNotDisturbIndicator)
+        // Tab row
+        observe(.showNotchTabTitles)
+        // Sizing mode
+        observe(.autoNotchWidth)
+        observe(.enableMinimalisticUI)
+
+        return publishers
+    }
+
+    /// Falls back to Home when `tab` is the current view but is no longer among
+    /// the visible tabs.
+    private func leaveTabIfNoLongerVisible(_ tab: NotchViews) {
+        guard currentView == tab, !orderedVisibleTabs().contains(tab) else { return }
         withAnimation(.smooth) {
             currentView = .home
         }

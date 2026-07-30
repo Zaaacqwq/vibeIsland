@@ -70,7 +70,9 @@ public enum NotchState {
     case open
 }
 
-public enum NotchViews {
+/// A surface the open notch can show. Raw values are persisted (the user-defined
+/// tab order), so they must stay stable.
+public enum NotchViews: String, CaseIterable, Codable, Defaults.Serializable {
     case home
     case shelf
     case timer
@@ -79,6 +81,39 @@ public enum NotchViews {
     case notifications
     case weather
     case monitor
+    case colorPicker
+    case clipboard
+
+    /// Label shown in the tab row (when titles are on) and as its tooltip.
+    var tabLabel: String {
+        switch self {
+        case .home: return String(localized: "Home")
+        case .shelf: return String(localized: "Shelf")
+        case .timer: return String(localized: "Timer")
+        case .agents: return String(localized: "Agents")
+        case .calendar: return String(localized: "Calendar")
+        case .notifications: return String(localized: "Notifications")
+        case .weather: return String(localized: "Weather")
+        case .monitor: return String(localized: "Monitor")
+        case .colorPicker: return String(localized: "Colors")
+        case .clipboard: return String(localized: "Clipboard")
+        }
+    }
+
+    var tabIcon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .shelf: return "tray.fill"
+        case .timer: return "timer"
+        case .agents: return "sparkles"
+        case .calendar: return "calendar"
+        case .notifications: return "bell.fill"
+        case .weather: return "cloud.sun.fill"
+        case .monitor: return "gauge.with.dots.needle.bottom.50percent"
+        case .colorPicker: return "eyedropper"
+        case .clipboard: return "doc.on.clipboard"
+        }
+    }
 }
 
 enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializable, Identifiable {
