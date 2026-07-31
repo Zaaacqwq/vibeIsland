@@ -127,24 +127,7 @@ struct DynamicNotchApp: App {
             CheckForUpdatesView(updater: updaterController.updater)
             Divider()
             Button("Restart VibeIsland") {
-                let workspace = NSWorkspace.shared
-
-                // Relaunch the exact bundle that is currently running. Do NOT resolve
-                // the bundle identifier through LaunchServices — that can return a
-                // stale/older registered copy (e.g. one still in /Applications),
-                // which is why a restart could come back on an outdated version.
-                let appURL = Bundle.main.bundleURL
-
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.createsNewApplicationInstance = true
-                // Tell the freshly-spawned instance to skip the single-instance
-                // guard: it is launched intentionally while this (old) instance
-                // is still alive, so the guard would otherwise terminate it.
-                configuration.arguments = [SingleInstanceGuard.restartArgument]
-
-                workspace.openApplication(at: appURL, configuration: configuration)
-
-                NSApplication.shared.terminate(self)
+                AppRelauncher.relaunch()
             }
             Button("Quit", role: .destructive) {
                 NSApplication.shared.terminate(self)
@@ -1009,19 +992,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let insertionIndex = preferredMenuInsertionIndex(in: mainMenu)
 
-        let focusMenuItem = NSMenuItem(title: "Focus", action: nil, keyEquivalent: "")
+        let focusMenuItem = NSMenuItem(title: String(localized: "Focus"), action: nil, keyEquivalent: "")
         focusMenuItem.identifier = NSUserInterfaceItemIdentifier("VibeIsland.Focus.Menu")
-        let focusSubmenu = NSMenu(title: "Focus")
+        let focusSubmenu = NSMenu(title: String(localized: "Focus"))
 
         let withoutDevTools = NSMenuItem(
-            title: "Use without DevTools",
+            title: String(localized: "Use without DevTools"),
             action: #selector(selectFocusWithoutDevTools),
             keyEquivalent: ""
         )
         withoutDevTools.target = self
 
         let useDevTools = NSMenuItem(
-            title: "Use DevTools",
+            title: String(localized: "Use DevTools"),
             action: #selector(selectFocusUseDevTools),
             keyEquivalent: ""
         )
@@ -1035,19 +1018,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         focusWithoutDevToolsMenuItem = withoutDevTools
         focusUseDevToolsMenuItem = useDevTools
 
-        let accessibilityMenuItem = NSMenuItem(title: "Accessibility", action: nil, keyEquivalent: "")
+        let accessibilityMenuItem = NSMenuItem(title: String(localized: "Accessibility"), action: nil, keyEquivalent: "")
         accessibilityMenuItem.identifier = NSUserInterfaceItemIdentifier("VibeIsland.Accessibility.Menu")
-        let accessibilitySubmenu = NSMenu(title: "Accessibility")
+        let accessibilitySubmenu = NSMenu(title: String(localized: "Accessibility"))
 
         let requestAccessibility = NSMenuItem(
-            title: "Request Accessibility Access",
+            title: String(localized: "Request Accessibility Access"),
             action: #selector(requestAccessibilityAccess),
             keyEquivalent: ""
         )
         requestAccessibility.target = self
 
         let openAccessibility = NSMenuItem(
-            title: "Open Accessibility Settings",
+            title: String(localized: "Open Accessibility Settings"),
             action: #selector(openAccessibilitySettings),
             keyEquivalent: ""
         )
@@ -1058,26 +1041,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         accessibilityMenuItem.submenu = accessibilitySubmenu
         mainMenu.insertItem(accessibilityMenuItem, at: insertionIndex + 1)
 
-        let permissionsMenuItem = NSMenuItem(title: "Permissions", action: nil, keyEquivalent: "")
+        let permissionsMenuItem = NSMenuItem(title: String(localized: "Permissions"), action: nil, keyEquivalent: "")
         permissionsMenuItem.identifier = NSUserInterfaceItemIdentifier("VibeIsland.Permissions.Menu")
-        let permissionsSubmenu = NSMenu(title: "Permissions")
+        let permissionsSubmenu = NSMenu(title: String(localized: "Permissions"))
 
         let requestFullDisk = NSMenuItem(
-            title: "Request Full Disk Access",
+            title: String(localized: "Request Full Disk Access"),
             action: #selector(requestFullDiskAccess),
             keyEquivalent: ""
         )
         requestFullDisk.target = self
 
         let openFullDisk = NSMenuItem(
-            title: "Open Full Disk Access Settings",
+            title: String(localized: "Open Full Disk Access Settings"),
             action: #selector(openFullDiskAccessSettings),
             keyEquivalent: ""
         )
         openFullDisk.target = self
 
         let openDevTools = NSMenuItem(
-            title: "Open Developer Tools Settings",
+            title: String(localized: "Open Developer Tools Settings"),
             action: #selector(openDeveloperToolsSettingsFromMenu),
             keyEquivalent: ""
         )
@@ -1374,7 +1357,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 defer: false
             )
             window.center()
-            window.title = "Onboarding"
+            window.title = String(localized: "Onboarding")
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.contentView = NSHostingView(rootView: OnboardingView(
