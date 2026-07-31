@@ -4,6 +4,48 @@ All notable changes to VibeIsland, newest first. Versions follow
 [semantic versioning](https://semver.org): a minor bump adds features, a patch
 bump fixes them.
 
+## 1.4.0
+
+VibeIsland speaks Simplified Chinese, and the music waveform finally reads the
+same whatever you play it through.
+
+### Added
+
+- A language preference under General: Follow System, English, or 简体中文.
+  Switching restarts the app. Every string in the interface is translated —
+  weekday names, month names and durations inside the notch follow the choice
+  too, which the system-level language override alone does not do.
+
+### Changed
+
+- Row subtitles across Settings moved into the info popover next to each row's
+  existing help text. Notes that describe an operation, prerequisite, privacy
+  implication or destructive effect stay visible instead.
+- The closed-notch priority list calls the agent activity "Agent" rather than
+  "Claude". It has always driven Codex, OpenCode, Gemini, Antigravity, Copilot
+  and Cursor sessions as well.
+
+### Fixed
+
+- The real-time waveform no longer looks completely different from one music app
+  to the next. It was driven by linear amplitude, which spent half the bar's
+  travel inside 6 dB and saturated at a level a loud master clears constantly —
+  so a loudness-normalising app and one that ships the raw master, a routine
+  8 dB apart, gave you one bar pinned at full height and one that barely moved.
+  Band energy is now normalised across a 39 dB window, which costs that same
+  8 dB about a fifth of the bar and leaves loud sources room before they pin.
+- Headphones and speakers no longer produce an identical waveform at obviously
+  different loudness. macOS keeps a separate volume per device and exposes no
+  reading of actual output level, so VibeIsland learns where you habitually
+  leave the slider on each device and corrects for it: at your usual level every
+  route animates alike, while turning it up or down from there still changes the
+  bars. A device you have not used before calibrates on first play.
+- The waveform amplitude slider shifts quiet and loud passages together instead
+  of only stretching the loud ones.
+- Lyrics search continues to NetEase and QQ Music when LRCLIB has no entry for a
+  track, rather than giving up. Previously it only fell through when LRCLIB
+  returned lyrics without a timeline.
+
 ## 1.3.1
 
 ### Fixed
