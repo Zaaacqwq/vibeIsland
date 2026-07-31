@@ -154,7 +154,7 @@ enum ClosedNotchActivityKind: String, CaseIterable, Codable, Defaults.Serializab
     var displayName: String {
         switch self {
         case .music: return String(localized: "Music")
-        case .agent: return String(localized: "Claude")
+        case .agent: return String(localized: "Agent")
         case .timer: return String(localized: "Timer")
         case .reminder: return String(localized: "Reminder")
         case .recording: return String(localized: "Recording")
