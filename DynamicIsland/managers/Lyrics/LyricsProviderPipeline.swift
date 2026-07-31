@@ -73,12 +73,9 @@ struct LyricsProviderPipeline {
             fallbackResult = lrclibResult
         }
 
-        // Plain text proves that lyrics exist but cannot drive the KTV UI. Only
-        // then pay the cost of cross-provider searches for a real timeline.
-        guard fallbackResult.isPlainOnly else {
-            return fallbackResult
-        }
-
+        // LRCLIB can be unavailable or have no match even when another
+        // catalogue has a usable timeline. Continue through the fallback
+        // providers for both plain-only and unavailable primary results.
         for kind in [LyricsProviderKind.netease, .qqMusic]
             where kind != sourceProvider {
             let result = try await safelyFetch(
@@ -89,6 +86,9 @@ struct LyricsProviderPipeline {
             if result.isSynced {
                 print("Lyrics: using cross-provider synced fallback from \(kind.rawValue)")
                 return result
+            }
+            if !fallbackResult.isAvailable, result.isAvailable {
+                fallbackResult = result
             }
         }
 

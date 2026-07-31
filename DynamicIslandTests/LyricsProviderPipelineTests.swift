@@ -51,6 +51,27 @@ final class LyricsProviderPipelineTests: XCTestCase {
         XCTAssertEqual(calls, [.lrclib, .netease])
     }
 
+    func testMissingLRCLIBFallsBackToNetEaseTimeline() async throws {
+        let recorder = ProviderCallRecorder()
+        let pipeline = makePipeline(
+            recorder: recorder,
+            results: [
+                .lrclib: .none,
+                .netease: .synced([LyricLine(timestamp: 2, text: "网易云同步歌词")]),
+                .qqMusic: .synced([LyricLine(timestamp: 2, text: "QQ同步歌词")]),
+            ]
+        )
+
+        let result = try await pipeline.fetchLyrics(
+            for: query,
+            sourceProvider: nil
+        )
+
+        XCTAssertEqual(syncedTexts(result), ["网易云同步歌词"])
+        let calls = await recorder.calls
+        XCTAssertEqual(calls, [.lrclib, .netease])
+    }
+
     func testFailedNetEaseSourceContinuesToQQFallback() async throws {
         let recorder = ProviderCallRecorder()
         let pipeline = LyricsProviderPipeline(providers: [
