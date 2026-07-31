@@ -99,7 +99,7 @@ struct NotchNotificationCenterView: View {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .light))
                 .foregroundStyle(.secondary)
-            Text(text)
+            Text(verbatim: notchLocalized(text))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }

@@ -146,7 +146,7 @@ struct TimerPopover: View {
         if timerManager.isOvertime { return String(localized: "Overtime") }
         if timerManager.isPaused { return String(localized: "Paused") }
         if timerManager.isTimerActive { return String(localized: "Running") }
-        return "Ready"
+        return String(localized: "Ready")
     }
 
     // MARK: - Setup state
@@ -158,9 +158,9 @@ struct TimerPopover: View {
                 .foregroundStyle(NotchDesign.Colors.textPrimary)
 
             HStack(spacing: 6) {
-                DurationField(title: String(localized: "Hours"), value: $customHours, range: 0...23)
-                DurationField(title: String(localized: "Minutes"), value: $customMinutes, range: 0...59)
-                DurationField(title: String(localized: "Seconds"), value: $customSeconds, range: 0...59)
+                DurationField(title: "h", value: $customHours, range: 0...23)
+                DurationField(title: "m", value: $customMinutes, range: 0...59)
+                DurationField(title: "s", value: $customSeconds, range: 0...59)
             }
 
             HStack(spacing: 5) {
@@ -219,7 +219,7 @@ struct TimerPopover: View {
         let h = total / 3600, m = (total % 3600) / 60, s = total % 60
         var parts: [String] = []
         if h > 0 { parts.append("\(h)h") }
-        if m > 0 { parts.append(h > 0 ? "\(m)m" : "\(m) min") }
+        if m > 0 { parts.append("\(m)m") }
         if s > 0 { parts.append("\(s)s") }
         return parts.joined(separator: " ")
     }
@@ -448,7 +448,7 @@ private struct QuickAddChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text("+\(minutes)m")
+            Text(verbatim: "+\(minutes)m")
                 .font(NotchDesign.Typography.voice(11, weight: .medium))
                 .foregroundStyle(PopoverStyle.bright)
                 .padding(.horizontal, 8)

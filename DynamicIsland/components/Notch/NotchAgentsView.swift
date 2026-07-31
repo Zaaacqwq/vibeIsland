@@ -308,7 +308,7 @@ private struct AgentSessionRow: View {
             HStack(spacing: rowGap) {
                 HaloRingView(state: halo, size: ringSize)
                 VStack(alignment: .leading, spacing: compact ? 1 : 4) {
-                    Text(session.title.isEmpty ? "Claude session" : session.title)
+                    Text(session.title.isEmpty ? String(localized: "Claude session") : session.title)
                         .font(titleFont)
                         .foregroundStyle(NotchDesign.Colors.textPrimary)
                         .lineLimit(1)
@@ -326,7 +326,7 @@ private struct AgentSessionRow: View {
                             .foregroundStyle(accent)
                     }
                     .buttonStyle(.plain)
-                    .help("Open the full prompt")
+                    .help(String(localized: "Open the full prompt"))
                 }
                 if session.jumpTarget != nil {
                     Button {
@@ -337,7 +337,7 @@ private struct AgentSessionRow: View {
                             .foregroundStyle(NotchDesign.Colors.textTertiary)
                     }
                     .buttonStyle(.plain)
-                    .help("Jump back to the external terminal")
+                    .help(String(localized: "Jump back to the external terminal"))
                 }
             }
 
@@ -389,7 +389,9 @@ private struct AgentSessionRow: View {
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: true)
                 } label: {
-                    Text(permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle)
+                    Text(verbatim: notchLocalized(
+                        permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle
+                    ))
                         .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, compact ? 6 : 8)
@@ -400,7 +402,9 @@ private struct AgentSessionRow: View {
                 Button {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: false)
                 } label: {
-                    Text(permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle)
+                    Text(verbatim: notchLocalized(
+                        permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle
+                    ))
                         .font(NotchDesign.Typography.voice(compact ? 11 : 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, compact ? 6 : 8)
@@ -455,7 +459,7 @@ private struct AgentSessionRow: View {
                     .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .frame(width: 16, height: 16)
                     .background(Circle().fill(Color.white.opacity(0.12)))
-                Text(label)
+                Text(verbatim: notchLocalized(label))
                     .font(NotchDesign.Typography.voice(12, weight: .medium))
                     .foregroundStyle(NotchDesign.Colors.textPrimary)
                     .lineLimit(1)

@@ -35,7 +35,7 @@ final class CursorLoginWindowController: NSWindowController, NSWindowDelegate, W
             backing: .buffered,
             defer: false
         )
-        window.title = "Sign in to Cursor — this window closes automatically once you're in"
+        window.title = String(localized: "Sign in to Cursor — this window closes automatically once you're in")
         window.minSize = NSSize(width: 700, height: 520)
         super.init(window: window)
         window.delegate = self

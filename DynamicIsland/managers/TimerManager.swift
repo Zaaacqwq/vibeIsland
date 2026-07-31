@@ -90,13 +90,13 @@ class TimerManager: ObservableObject {
     
     var statusText: String {
         if isOvertime {
-            return "Overtime"
+            return String(localized: "Overtime")
         } else if isPaused {
-            return "Paused"
+            return String(localized: "Paused")
         } else if isTimerActive {
-            return "Running"
+            return String(localized: "Running")
         } else {
-            return "Ready"
+            return String(localized: "Ready")
         }
     }
     

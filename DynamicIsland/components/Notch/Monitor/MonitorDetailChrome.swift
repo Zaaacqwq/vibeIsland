@@ -126,7 +126,7 @@ struct MonitorMetricRow: View {
                     .fill(swatch)
                     .frame(width: 6, height: 6)
             }
-            Text(label)
+            Text(verbatim: notchLocalized(label))
                 .font(NotchDesign.Typography.voice(10))
                 .foregroundStyle(NotchDesign.Colors.textSecondary)
                 .lineLimit(1)
@@ -150,7 +150,7 @@ struct MonitorStatBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label.uppercased())
+            Text(verbatim: notchLocalized(label).uppercased())
                 .font(NotchDesign.Typography.mono(8, weight: .medium))
                 .tracking(NotchDesign.eyebrowTracking * 0.6)
                 .foregroundStyle(NotchDesign.Colors.textTertiary)

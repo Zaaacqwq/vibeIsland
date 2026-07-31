@@ -19,6 +19,22 @@
 import Defaults
 import SwiftUI
 
+/// Settings components accept ordinary strings because some labels are runtime
+/// values (account names, bundle identifiers, measured values). Static strings
+/// are resolved through the app's string catalog at the final rendering edge;
+/// unknown keys naturally remain verbatim.
+private func geistLocalized(_ key: String) -> String {
+    Bundle.main.localizedString(forKey: key, value: key, table: nil)
+}
+
+private func geistCombinedHelp(_ values: String?...) -> String? {
+    let parts = values.compactMap { value -> String? in
+        guard let value, !value.isEmpty else { return nil }
+        return geistLocalized(value)
+    }
+    return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
+}
+
 /// Binding to a boolean `Defaults` key, for Geist toggle rows.
 func geistBinding(_ key: Defaults.Key<Bool>) -> Binding<Bool> {
     Binding(get: { Defaults[key] }, set: { Defaults[key] = $0 })
@@ -29,19 +45,18 @@ func geistBinding(_ key: Defaults.Key<Bool>) -> Binding<Bool> {
 struct GeistSettingsPage<Content: View>: View {
     let title: String
     var subtitle: String?
+    var info: String?
     @ViewBuilder var content: Content
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: Geist.Spacing.xxs) {
-                    Text(title)
+                HStack(alignment: .firstTextBaseline, spacing: Geist.Spacing.xs) {
+                    Text(verbatim: geistLocalized(title))
                         .font(Geist.Typography.displayMd)
                         .foregroundStyle(Geist.Colors.ink)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(Geist.Typography.body)
-                            .foregroundStyle(Geist.Colors.body)
+                    if let help = geistCombinedHelp(info, subtitle) {
+                        GeistInfoButton(text: help, isLocalized: true)
                     }
                 }
                 content
@@ -61,18 +76,20 @@ struct GeistSection<Content: View>: View {
     var badge: String?
     var footer: String?
     var info: String?
+    var note: String?
+    var noteBullets: [String] = []
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
             if let title {
                 HStack(spacing: Geist.Spacing.xs) {
-                    Text(title.uppercased())
+                    Text(verbatim: geistLocalized(title).uppercased())
                         .font(Geist.Typography.captionStrong)
                         .foregroundStyle(Geist.Colors.mute)
                         .tracking(0.6)
                     if let badge {
-                        Text(badge.uppercased())
+                        Text(verbatim: geistLocalized(badge).uppercased())
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Geist.Colors.accent)
                             .padding(.horizontal, 5)
@@ -81,21 +98,54 @@ struct GeistSection<Content: View>: View {
                                 Capsule().strokeBorder(Geist.Colors.accent.opacity(0.4), lineWidth: 1)
                             )
                     }
-                    if let info {
-                        GeistInfoButton(text: info)
+                    if let help = geistCombinedHelp(info, footer) {
+                        GeistInfoButton(text: help, isLocalized: true)
                     }
                 }
                 .padding(.leading, Geist.Spacing.xxs)
+            } else if let help = geistCombinedHelp(info, footer) {
+                GeistInfoButton(text: help, isLocalized: true)
+                    .padding(.leading, Geist.Spacing.xxs)
             }
             GeistCard { content }
-            if let footer {
-                Text(footer)
-                    .font(Geist.Typography.caption)
-                    .foregroundStyle(Geist.Colors.mute)
-                    .padding(.leading, Geist.Spacing.xxs)
-                    .fixedSize(horizontal: false, vertical: true)
+            if note != nil || !noteBullets.isEmpty {
+                GeistPersistentNote(text: note, bullets: noteBullets)
             }
         }
+    }
+}
+
+/// Concise help that must remain visible because it describes an operation,
+/// prerequisite, privacy implication, destructive effect, or blocking state.
+struct GeistPersistentNote: View {
+    var text: String?
+    var bullets: [String] = []
+    var isWarning = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Geist.Spacing.xs) {
+            if isWarning {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Geist.Colors.warning)
+                    .font(.system(size: 11))
+                    .padding(.top, 2)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                if let text {
+                    Text(verbatim: geistLocalized(text))
+                }
+                ForEach(Array(bullets.enumerated()), id: \.offset) { _, bullet in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("•")
+                        Text(verbatim: geistLocalized(bullet))
+                    }
+                }
+            }
+        }
+        .font(Geist.Typography.caption)
+        .foregroundStyle(isWarning ? Geist.Colors.ink : Geist.Colors.mute)
+        .padding(.leading, Geist.Spacing.xxs)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -139,7 +189,12 @@ struct GeistRow<Content: View>: View {
 /// Attach to any row whose purpose isn't self-evident.
 struct GeistInfoButton: View {
     let text: String
+    var isLocalized = false
     @State private var showPopover = false
+
+    private var resolvedText: String {
+        isLocalized ? text : geistLocalized(text)
+    }
 
     var body: some View {
         Button { showPopover.toggle() } label: {
@@ -149,12 +204,13 @@ struct GeistInfoButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(text)
+        .accessibilityLabel(Text("More information"))
+        .help(resolvedText)
         .popover(isPresented: $showPopover, arrowEdge: .bottom) {
-            Text(text)
+            Text(verbatim: resolvedText)
                 .font(Geist.Typography.caption)
                 .foregroundStyle(Geist.Colors.body)
-                .frame(maxWidth: 260, alignment: .leading)
+                .frame(maxWidth: 320, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(Geist.Spacing.md)
         }
@@ -168,7 +224,7 @@ struct GeistRowTitle: View {
 
     var body: some View {
         HStack(spacing: Geist.Spacing.xxs) {
-            Text(title)
+            Text(verbatim: geistLocalized(title))
                 .font(Geist.Typography.bodyStrong)
                 .foregroundStyle(Geist.Colors.ink)
             if let info {
@@ -192,7 +248,7 @@ struct GeistPreviewButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .help(geistLocalized(help))
     }
 }
 
@@ -209,15 +265,7 @@ struct GeistToggleRow: View {
     var body: some View {
         GeistRow(divider: divider) {
             HStack(alignment: .center, spacing: Geist.Spacing.md) {
-                VStack(alignment: .leading, spacing: 2) {
-                    GeistRowTitle(title: title, info: info)
-                    if let description {
-                        Text(description)
-                            .font(Geist.Typography.caption)
-                            .foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                GeistRowTitle(title: title, info: geistCombinedHelp(info, description))
                 Spacer(minLength: Geist.Spacing.sm)
                 if let onPreview {
                     GeistPreviewButton(action: onPreview)
@@ -319,15 +367,7 @@ struct GeistStepperRow: View {
     var body: some View {
         GeistRow(divider: divider) {
             HStack(alignment: .center, spacing: Geist.Spacing.md) {
-                VStack(alignment: .leading, spacing: 2) {
-                    GeistRowTitle(title: title, info: info)
-                    if let description {
-                        Text(description)
-                            .font(Geist.Typography.caption)
-                            .foregroundStyle(Geist.Colors.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                GeistRowTitle(title: title, info: geistCombinedHelp(info, description))
                 Spacer(minLength: Geist.Spacing.sm)
                 if let valueLabel {
                     Text(valueLabel)
@@ -398,19 +438,10 @@ struct GeistNavRow<V: Hashable>: View {
                                     .foregroundStyle(Color.white)
                             }
                     }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(title)
-                            .font(Geist.Typography.bodyStrong)
-                            .foregroundStyle(Geist.Colors.ink)
-                        if let subtitle {
-                            Text(subtitle)
-                                .font(Geist.Typography.caption)
-                                .foregroundStyle(Geist.Colors.body)
-                        }
-                    }
+                    GeistRowTitle(title: title, info: subtitle)
                     Spacer(minLength: Geist.Spacing.sm)
                     if let badge {
-                        Text(badge.uppercased())
+                        Text(verbatim: geistLocalized(badge).uppercased())
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Geist.Colors.accent)
                             .padding(.horizontal, 5)

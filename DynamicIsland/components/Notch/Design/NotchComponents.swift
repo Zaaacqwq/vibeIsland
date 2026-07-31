@@ -18,6 +18,13 @@
 
 import SwiftUI
 
+/// Resolves runtime strings used by reusable Notch components. Unlike a static
+/// `Text("Key")`, a `String` passed through a component is otherwise rendered
+/// verbatim and never reaches the string catalog.
+func notchLocalized(_ key: String) -> String {
+    Bundle.main.localizedString(forKey: key, value: key, table: nil)
+}
+
 /// The repeated card shell every notch surface uses: `#141114`/`#151515`
 /// fill, 1pt hairline border, radius per the handoff's size ladder.
 struct NotchCardBackground: ViewModifier {
@@ -47,7 +54,7 @@ struct NotchMonoEyebrow: View {
     var color: Color = NotchDesign.Colors.textTertiary
 
     var body: some View {
-        Text(text.uppercased())
+        Text(verbatim: notchLocalized(text).uppercased())
             .font(NotchDesign.Typography.eyebrow)
             .tracking(NotchDesign.eyebrowTracking)
             .foregroundStyle(color)

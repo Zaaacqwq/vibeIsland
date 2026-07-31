@@ -42,7 +42,7 @@ struct WeatherSettings: View {
             if enableWeather {
                 GeistSection(
                     title: "Display",
-                    footer: weatherProviderSource.supportsAirQuality ? nil : "Air quality requires the Open-Meteo data source."
+                    note: weatherProviderSource.supportsAirQuality ? nil : "Air quality requires the Open-Meteo data source."
                 ) {
                     GeistPickerRow(title: "Units", selection: Binding(
                         get: { Defaults[.weatherTemperatureUnit] }, set: { Defaults[.weatherTemperatureUnit] = $0 }
@@ -75,7 +75,7 @@ struct WeatherSettings: View {
 
                 GeistSection(
                     title: "Location",
-                    footer: "VibeIsland uses your approximate location to fetch local weather. Without it, a fallback location is used."
+                    note: "VibeIsland sends your approximate location to the selected weather provider. Without permission, it uses a fallback location."
                 ) {
                     GeistLabeledRow(title: "Location") {
                         if weather.locationDenied {

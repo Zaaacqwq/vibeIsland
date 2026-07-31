@@ -121,7 +121,7 @@ struct FileShareView: View {
                     Text("Quick Share")
                         .font(NotchDesign.Typography.voice(14, weight: .semibold))
                         .foregroundStyle(NotchDesign.Colors.textPrimary)
-                    Text(selectedProvider.id)
+                    Text(verbatim: selectedProvider.displayName)
                         .font(NotchDesign.Typography.mono(10, weight: .medium))
                         .foregroundStyle(NotchDesign.Colors.textTertiary)
                         .lineLimit(1)
@@ -171,7 +171,7 @@ struct FileShareView: View {
                                         }
                                         .foregroundColor(.accentColor)
 
-                                        Text(provider.id)
+                                        Text(verbatim: provider.displayName)
                                             .lineLimit(1)
                                             .truncationMode(.tail)
                                             .layoutPriority(1)
@@ -200,7 +200,12 @@ struct FileShareView: View {
                                     .foregroundColor(.accentColor)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("Currently: \(selected.id)")
+                                        Text(
+                                            String(
+                                                format: String(localized: "Currently: %@"),
+                                                selected.displayName
+                                            )
+                                        )
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)

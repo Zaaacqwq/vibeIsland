@@ -419,10 +419,12 @@ private struct AgentProviderUsageCard: View {
         HStack(spacing: 7) {
             providerIcon
             VStack(alignment: .leading, spacing: 1) {
-                Text(model.title)
+                Text(verbatim: notchLocalized(model.title))
                     .font(NotchDesign.Typography.voice(13, weight: .semibold))
                     .foregroundStyle(NotchDesign.Colors.textPrimary)
-                Text(model.id == .summary ? "All providers" : "Provider usage")
+                Text(model.id == .summary
+                    ? String(localized: "All providers")
+                    : String(localized: "Provider usage"))
                     .font(NotchDesign.Typography.mono(9))
                     .foregroundStyle(NotchDesign.Colors.textTertiary)
             }
@@ -486,7 +488,7 @@ private struct AgentProviderUsageCard: View {
         let fraction = min(max(effectivePercentage / 100, 0), 1)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(row.label)
+                Text(verbatim: notchLocalized(row.label))
                     .font(NotchDesign.Typography.mono(9, weight: .semibold))
                     .foregroundStyle(NotchDesign.Colors.textSecondary)
                 Text(Int(effectivePercentage.rounded()) >= 100 ? "MAX" : "\(Int(effectivePercentage.rounded()))%")
@@ -517,14 +519,14 @@ private struct AgentProviderUsageCard: View {
         return HStack(spacing: 6) {
             statTile("Token", TokenUsageFormat.compactCount(breakdown.nonCacheTokens), NotchDesign.Colors.textPrimary)
             statTile("Cost", TokenUsageFormat.cost(model.costUSD ?? 0), NotchDesign.Colors.success)
-            statTile("Active", TokenUsageFormat.activeDuration(model.activeSeconds ?? 0), NotchDesign.Colors.info)
+            statTile("Active", AppLanguageController.abbreviatedDuration(model.activeSeconds ?? 0), NotchDesign.Colors.info)
             statTile("Cache", TokenUsageFormat.compactCount(breakdown.cacheTokens), Palette.cache)
         }
     }
 
     private func statTile(_ label: String, _ value: String, _ valueColor: Color) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
-            Text(label)
+            Text(verbatim: notchLocalized(label))
                 .font(NotchDesign.Typography.mono(6.5))
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
                 .lineLimit(1)
@@ -573,7 +575,7 @@ private struct AgentProviderUsageCard: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 ForEach(segments) { segment in
-                    Text(segment.label)
+                    Text(verbatim: notchLocalized(segment.label))
                         .font(NotchDesign.Typography.mono(9, weight: .bold))
                         .foregroundStyle(segment.color)
                         .lineLimit(1)
@@ -614,7 +616,7 @@ private struct AgentProviderUsageCard: View {
 
     private func topModelRow(_ topModel: ModelTokenUsageSummary) -> some View {
         HStack(spacing: 5) {
-            Text("Top")
+            Text("Top model")
                 .font(NotchDesign.Typography.mono(8))
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
             Text(topModel.model)
@@ -634,7 +636,12 @@ private struct AgentProviderUsageCard: View {
             Text("No usage yet")
                 .font(NotchDesign.Typography.voice(12, weight: .semibold))
                 .foregroundStyle(NotchDesign.Colors.textSecondary)
-            Text(model.id == .summary ? "Run an agent to populate token usage." : "Run \(model.title) to populate this card.")
+            Text(model.id == .summary
+                ? String(localized: "Run an agent to populate token usage.")
+                : String(
+                    format: String(localized: "Run %@ to populate this card."),
+                    model.title
+                ))
                 .font(NotchDesign.Typography.voice(10))
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -646,16 +653,13 @@ private struct AgentProviderUsageCard: View {
         guard let date else { return nil }
         let seconds = Int(date.timeIntervalSinceNow)
         guard seconds > 0 else { return nil }
-        let days = seconds / 86_400
-        let hours = (seconds % 86_400) / 3_600
-        let minutes = (seconds % 3_600) / 60
-        if days > 0 {
-            return hours > 0 ? "in \(days)d \(hours)h" : "in \(days)d"
-        }
-        if hours > 0 {
-            return "in \(hours)h \(minutes)m"
-        }
-        return "in \(minutes)m"
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.day, .hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 2
+        formatter.calendar = AppLanguageController.calendar
+        guard let duration = formatter.string(from: TimeInterval(seconds)) else { return nil }
+        return String(format: String(localized: "in %@"), duration)
     }
 }
 

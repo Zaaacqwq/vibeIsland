@@ -49,15 +49,7 @@ enum MonitorCategory: String, CaseIterable, Codable, Defaults.Serializable, Iden
     /// Short mono eyebrow for the overview tile — kept to ~7 characters so a
     /// tile never has to truncate its own label.
     var eyebrow: String {
-        switch self {
-        case .cpu: return "CPU"
-        case .gpu: return "GPU"
-        case .memory: return "MEMORY"
-        case .storage: return "STORAGE"
-        case .network: return "NETWORK"
-        case .power: return "POWER"
-        case .display: return "DISPLAY"
-        }
+        title
     }
 
     var systemImage: String {

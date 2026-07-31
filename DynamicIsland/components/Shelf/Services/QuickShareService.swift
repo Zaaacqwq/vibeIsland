@@ -29,6 +29,12 @@ struct QuickShareProvider: Identifiable, Hashable, Sendable {
     var id: String
     var imageData: Data?
     var supportsRawText: Bool
+
+    var displayName: String {
+        id == "System Share Menu"
+            ? String(localized: "System Share Menu")
+            : id
+    }
 }
 
 class QuickShareService: ObservableObject {
@@ -190,8 +196,14 @@ class QuickShareService: ObservableObject {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.title = "Select Files for \(provider.id)"
-        panel.message = "Choose files to share via \(provider.id)"
+        panel.title = String(
+            format: String(localized: "Select Files for %@"),
+            provider.id
+        )
+        panel.message = String(
+            format: String(localized: "Choose files to share via %@"),
+            provider.id
+        )
 
         let completion: (NSApplication.ModalResponse) -> Void = { [weak self] response in
             defer {

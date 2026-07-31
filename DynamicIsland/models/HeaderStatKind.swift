@@ -59,11 +59,11 @@ enum HeaderStatKind: String, CaseIterable, Codable, Defaults.Serializable, Ident
     /// Short mono eyebrow shown above the value in the header cell.
     var eyebrow: String {
         switch self {
-        case .cpu: return "CPU"
-        case .gpu: return "GPU"
-        case .ram: return "RAM"
-        case .disk: return "DISK"
-        case .network: return "NET"
+        case .cpu: return String(localized: "CPU")
+        case .gpu: return String(localized: "GPU")
+        case .ram: return String(localized: "RAM")
+        case .disk: return String(localized: "DISK")
+        case .network: return String(localized: "NET")
         }
     }
 

@@ -131,7 +131,7 @@ struct DisplayDetailView: View {
                     }
             }
             Spacer(minLength: 4)
-            Text(display.isBuiltIn ? "BUILT-IN" : "EXTERNAL")
+            Text(display.isBuiltIn ? String(localized: "BUILT-IN") : String(localized: "EXTERNAL"))
                 .font(NotchDesign.Typography.mono(8, weight: .medium))
                 .tracking(NotchDesign.eyebrowTracking * 0.6)
                 .foregroundStyle(NotchDesign.Colors.textTertiary)

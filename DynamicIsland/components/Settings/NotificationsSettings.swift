@@ -64,7 +64,7 @@ struct NotificationsSettings: View {
             if enableNotificationMonitoring {
                 GeistSection(
                     title: "Permissions",
-                    footer: "VibeIsland reads ~/Library/Group Containers/group.com.apple.usernoted. Grant Full Disk Access, then quit and reopen VibeIsland."
+                    note: "VibeIsland reads the macOS notification database. Grant Full Disk Access, then quit and reopen VibeIsland."
                 ) {
                     GeistLabeledRow(title: "Full Disk Access", divider: !monitor.hasFullDiskAccess) {
                         if monitor.hasFullDiskAccess {

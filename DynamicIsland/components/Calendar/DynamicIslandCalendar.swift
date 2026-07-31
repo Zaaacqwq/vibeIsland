@@ -200,6 +200,7 @@ struct WheelPicker: View {
 
     private func dateToString(for date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = AppLanguageController.locale
         formatter.dateFormat = "E"
         return formatter.string(from: date)
     }
@@ -219,7 +220,7 @@ struct CalendarView: View {
     @Default(.hideCompletedReminders) private var hideCompletedReminders
     @Default(.showFullEventTitles) private var showFullEventTitles
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar { AppLanguageController.calendar }
 
     private var filteredEvents: [EventModel] {
         EventListView.filteredEvents(
@@ -315,7 +316,7 @@ struct WeekDateSlider: View {
     @State private var programmatic = false
     @State private var suppressionToken = UUID()
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar { AppLanguageController.calendar }
     private static let pastDays = 120
     private static let futureDays = 240
 
@@ -386,7 +387,11 @@ struct WeekDateSlider: View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
         let isWeekend = calendar.isDateInWeekend(day)
-        let dow = day.formatted(.dateTime.weekday(.abbreviated)).uppercased()
+        let dow = day.formatted(
+            .dateTime
+                .weekday(.abbreviated)
+                .locale(AppLanguageController.locale)
+        ).uppercased()
 
         return Button { select(day) } label: {
             VStack(spacing: 1) {
@@ -394,7 +399,7 @@ struct WeekDateSlider: View {
                     .font(NotchDesign.Typography.mono(7, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(isSelected ? CalendarStyle.onAccent.opacity(0.7)
                                      : (isWeekend ? CalendarStyle.dim : CalendarStyle.faint))
-                Text(day.formatted(.dateTime.day()))
+                Text(verbatim: "\(calendar.component(.day, from: day))")
                     .font(NotchDesign.Typography.voice(12, weight: isSelected || isToday ? .semibold : .medium))
                     .foregroundStyle(numeralColor(isSelected: isSelected, isToday: isToday, isWeekend: isWeekend))
             }
@@ -438,7 +443,7 @@ struct StandaloneCalendarView: View {
     @Default(.calendarContentMode) private var contentMode
     @State private var showCreatePopover = false
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar { AppLanguageController.calendar }
     private let weekColumns: [GridItem] = Array(repeating: GridItem(.flexible(minimum: 14), spacing: 4), count: 7)
 
     private var isWeek: Bool { layout == .week }
@@ -473,7 +478,12 @@ struct StandaloneCalendarView: View {
     }
 
     private var monthLabel: String {
-        displayedMonth.formatted(.dateTime.month(.wide).year())
+        displayedMonth.formatted(
+            .dateTime
+                .month(.wide)
+                .year()
+                .locale(AppLanguageController.locale)
+        )
     }
 
     private var monthDays: [Date] {
@@ -716,7 +726,7 @@ struct StandaloneCalendarView: View {
             }
             .buttonStyle(.plain)
             .disabled(!canCreateActiveContent)
-            .help(activeContentMode == .events ? "New Event" : "New Reminder")
+            .help(activeContentMode == .events ? String(localized: "New Event") : String(localized: "New Reminder"))
             .popover(isPresented: $showCreatePopover, arrowEdge: .bottom) {
                 CalendarCreatePopover(mode: activeContentMode, selectedDate: selectedDate) {
                     showCreatePopover = false
@@ -763,7 +773,7 @@ struct StandaloneCalendarView: View {
     private var monthWeekdayHeader: some View {
         HStack(spacing: 4) {
             ForEach(Array(orderedWeekdays.enumerated()), id: \.offset) { _, entry in
-                Text(entry.symbol.prefix(1).uppercased())
+                Text(verbatim: entry.symbol.uppercased())
                     .font(NotchDesign.Typography.mono(10, weight: .medium))
                     .foregroundStyle(entry.isWeekend ? CalendarStyle.dim : CalendarStyle.faint)
                     .frame(maxWidth: .infinity)
@@ -836,7 +846,7 @@ struct StandaloneCalendarView: View {
                     } else if isToday {
                         RoundedRectangle(cornerRadius: 8).stroke(CalendarStyle.accent, lineWidth: 1.5).frame(width: 30, height: 26)
                     }
-                    Text(day.formatted(.dateTime.day()))
+                    Text(verbatim: "\(calendar.component(.day, from: day))")
                         .font(NotchDesign.Typography.voice(13, weight: isSelected || isToday ? .semibold : .medium))
                         .foregroundStyle(monthNumeralColor(isCurrentMonth: isCurrentMonth, isSelected: isSelected, isToday: isToday))
                 }
@@ -897,7 +907,9 @@ struct EmptyEventsView: View {
             Image(systemName: "calendar.badge.checkmark")
                 .font(.title2)
                 .foregroundStyle(CalendarStyle.muted)
-            Text(Calendar.current.isDateInToday(selectedDate) ? "No events today" : "No events")
+            Text(Calendar.current.isDateInToday(selectedDate)
+                ? String(localized: "No events today")
+                : String(localized: "No events"))
                 .font(.subheadline)
                 .foregroundStyle(CalendarStyle.body)
             Text("Enjoy your free time!")
@@ -1386,7 +1398,7 @@ struct ReminderToggle: View {
         }
         .buttonStyle(PlainButtonStyle())
         .padding(0)
-        .accessibilityLabel(isOn ? "Mark as incomplete" : "Mark as complete")
+        .accessibilityLabel(isOn ? String(localized: "Mark as incomplete") : String(localized: "Mark as complete"))
     }
 }
 
@@ -1474,7 +1486,7 @@ struct ConferenceJoinButton: View {
     }
     
     private var buttonText: String {
-        event.eventStatus == .inProgress ? "Rejoin" : "Join"
+        event.eventStatus == .inProgress ? String(localized: "Rejoin") : String(localized: "Join")
     }
     
     var body: some View {
@@ -1504,7 +1516,12 @@ struct ConferenceJoinButton: View {
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(!isJoinable)
-        .help(isJoinable ? "Join the meeting" : "Meeting starts at \(event.start.formatted(date: .omitted, time: .shortened))")
+        .help(isJoinable
+            ? String(localized: "Join the meeting")
+            : String(
+                format: String(localized: "Meeting starts at %@"),
+                event.start.formatted(date: .omitted, time: .shortened)
+            ))
     }
 }
 

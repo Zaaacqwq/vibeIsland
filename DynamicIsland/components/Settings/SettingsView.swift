@@ -663,7 +663,7 @@ struct SettingsView: View {
     }
 
     private var settingsSearchIndex: [SettingsSearchEntry] {
-        [
+        let entries = [
             // General
             SettingsSearchEntry(tab: .general, title: "Enable Minimalistic UI", keywords: ["minimalistic", "ui mode", "general"], highlightID: SettingsTab.general.highlightID(for: "Enable Minimalistic UI")),
             SettingsSearchEntry(tab: .general, title: "Menubar icon", keywords: ["menu bar", "status bar", "icon"], highlightID: SettingsTab.general.highlightID(for: "Menubar icon")),
@@ -809,6 +809,28 @@ struct SettingsView: View {
             SettingsSearchEntry(tab: .timer, title: "Progress style", keywords: ["progress", "bar", "ring"], highlightID: SettingsTab.timer.highlightID(for: "Progress style")),
             SettingsSearchEntry(tab: .timer, title: "Accent colour", keywords: ["accent", "timer"], highlightID: SettingsTab.timer.highlightID(for: "Accent colour")),
         ]
+
+        return entries.map { entry in
+            let localizedTitle = Bundle.main.localizedString(
+                forKey: entry.title,
+                value: entry.title,
+                table: nil
+            )
+            let bilingualKeywords = entry.keywords.flatMap { keyword -> [String] in
+                let localized = Bundle.main.localizedString(
+                    forKey: keyword,
+                    value: keyword,
+                    table: nil
+                )
+                return localized == keyword ? [keyword] : [keyword, localized]
+            }
+            return SettingsSearchEntry(
+                tab: entry.tab,
+                title: localizedTitle,
+                keywords: bilingualKeywords,
+                highlightID: entry.highlightID
+            )
+        }
     }
 
     private func isTabVisible(_ tab: SettingsTab) -> Bool {
@@ -935,10 +957,16 @@ struct GeneralSettings: View {
     @Default(.openNotchOnHover) var openNotchOnHover
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
     @Default(.hideNonNotchUntilHover) var hideNonNotchUntilHover
+    @Default(.appLanguage) private var appLanguage
+
+    @State private var pendingLanguage = Defaults[.appLanguage]
+    @State private var showLanguageRestartConfirmation = false
 
     var body: some View {
         NavigationStack {
             GeistSettingsPage(title: "General") {
+                languageSection()
+
                 GeistSection(
                     title: "UI Mode",
                     footer: "Minimalistic mode focuses on media controls and system HUDs, hiding all extra features for a clean, focused experience. Automatically enables simpler animations."
@@ -969,6 +997,45 @@ struct GeneralSettings: View {
                     // Gestures live in the Accessibility tab now; keep the invariant.
                     Defaults[.enableGestures] = true
                 }
+            }
+            .confirmationDialog(
+                "Restart VibeIsland to change language?",
+                isPresented: $showLanguageRestartConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Restart Now") {
+                    appLanguage = pendingLanguage
+                    AppLanguageController.apply(pendingLanguage)
+                    AppRelauncher.relaunch()
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingLanguage = appLanguage
+                }
+            } message: {
+                Text("The new language is applied when VibeIsland restarts.")
+            }
+            .onChange(of: showLanguageRestartConfirmation) { _, isPresented in
+                if !isPresented, pendingLanguage != appLanguage {
+                    pendingLanguage = appLanguage
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func languageSection() -> some View {
+        GeistSection(title: "Language") {
+            GeistPickerRow(
+                title: "App language",
+                selection: $pendingLanguage,
+                divider: false
+            ) {
+                ForEach(AppLanguagePreference.allCases) { language in
+                    Text(language.displayName).tag(language)
+                }
+            }
+            .onChange(of: pendingLanguage) { _, newValue in
+                showLanguageRestartConfirmation = newValue != appLanguage
             }
         }
     }
@@ -1085,7 +1152,10 @@ struct AccessibilitySettings: View {
             GeistSection(
                 title: "Gesture control",
                 badge: "Beta",
-                footer: "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled."
+                noteBullets: [
+                    "Two-finger swipe up on the notch: close.",
+                    "Two-finger swipe down on the notch: open when Open notch on hover is off."
+                ]
             ) {
                 GeistToggleRow(title: "Enable gestures", isOn: $enableGestures, divider: enableGestures)
                     .disabled(!openNotchOnHover)
@@ -1430,7 +1500,7 @@ private struct HUDAndOSDSettingsView: View {
 
     var body: some View {
         GeistSettingsPage(title: "Controls") {
-            GeistSection(footer: "Only one HUD style can be active at a time.") {
+            GeistSection(note: "Only one HUD style can be active at a time.") {
                 GeistSegmentedRow(title: "HUD style", selection: styleBinding, divider: false) {
                     ForEach(Tab.allCases) { Text($0.shortTitle).tag($0) }
                 }
@@ -1605,7 +1675,10 @@ private struct HUDStepSizeSection: View {
     @Default(.brightnessFineStepPercent) var brightnessFineStepPercent
 
     var body: some View {
-        GeistSection(title: "Step size", footer: "Percent change per key press. Fine step applies when holding Shift+Option.") {
+        GeistSection(
+            title: "Step size",
+            note: "Fine step applies while holding ⇧⌥."
+        ) {
             GeistStepperRow(title: "Volume step", value: $volumeStepPercent, range: 1...25, valueLabel: "\(volumeStepPercent)%")
             GeistStepperRow(title: "Volume fine step", value: $volumeFineStepPercent, range: 1...25, valueLabel: "\(volumeFineStepPercent)%")
             GeistStepperRow(title: "Brightness step", value: $brightnessStepPercent, range: 1...25, valueLabel: "\(brightnessStepPercent)%")
@@ -1824,7 +1897,10 @@ struct HUD: View {
                 }
             }
 
-            GeistSection(title: "Audio feedback", footer: "Requires Accessibility permission so Dynamic Island can intercept the hardware volume keys.") {
+            GeistSection(
+                title: "Audio feedback",
+                note: "Requires Accessibility permission to intercept the hardware volume keys."
+            ) {
                 GeistToggleRow(title: "Play feedback when volume is changed", isOn: geistBinding(.playVolumeChangeFeedback), divider: false, onPreview: { SoundPreview.play(bundled: "audio-feedback", ext: "m4a") })
                     .help("Plays the supplied feedback clip whenever you press the hardware volume keys.")
             }
@@ -2089,10 +2165,15 @@ struct Media: View {
             GeistToggleRow(title: "Real-time audio waveform", isOn: $enableRealTimeWaveform, info: "Shows a live waveform driven by system audio in the music live activity.")
             GeistSliderRow(
                 title: "Waveform amplitude",
-                valueLabel: String(format: "%.0f%%", realTimeWaveformAmplitude * 100),
+                valueLabel: String(
+                    format: "%.0f%%",
+                    realTimeWaveformAmplitude
+                        / RealTimeAudioSpectrum.nominalAmplitude
+                        * 100
+                ),
                 value: $realTimeWaveformAmplitude,
                 range: RealTimeAudioSpectrum.amplitudeRange,
-                step: 0.05,
+                step: 0.1,
                 info: "Adjusts how strongly captured audio moves the real-time waveform."
             )
             .disabled(!enableRealTimeWaveform)
@@ -2476,7 +2557,7 @@ struct About: View {
                 GeistRow(divider: false) {
                     HStack(spacing: Geist.Spacing.xs) {
                         Button {
-                            relaunchApp()
+                            AppRelauncher.relaunch()
                         } label: {
                             Label("Restart", systemImage: "arrow.clockwise")
                         }
@@ -2501,21 +2582,6 @@ struct About: View {
         }
     }
 
-    /// Relaunches the exact bundle that is currently running, then terminates
-    /// this instance. We deliberately use `Bundle.main.bundleURL` (not the
-    /// LaunchServices-registered URL) so restarting keeps the running build —
-    /// otherwise it would relaunch whatever copy lives in /Applications.
-    private func relaunchApp() {
-        let workspace = NSWorkspace.shared
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-
-        workspace.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            Task { @MainActor in
-                NSApplication.shared.terminate(nil)
-            }
-        }
-    }
 }
 
 struct Shelf: View {
@@ -2585,7 +2651,7 @@ struct Shelf: View {
                     ForEach(quickShareService.availableProviders, id: \.id) { provider in
                         HStack {
                             QuickShareProviderIconImage(provider: provider, size: 16)
-                            Text(provider.id)
+                            Text(verbatim: provider.displayName)
                         }
                         .tag(provider.id)
                     }
@@ -2595,7 +2661,12 @@ struct Shelf: View {
                         HStack(spacing: Geist.Spacing.xs) {
                             QuickShareProviderIconImage(provider: selectedProvider, size: 16)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Currently selected: \(selectedProvider.id)")
+                                Text(
+                                    String(
+                                        format: String(localized: "Currently selected: %@"),
+                                        selectedProvider.displayName
+                                    )
+                                )
                                     .font(Geist.Typography.caption)
                                     .foregroundStyle(Geist.Colors.body)
                                 Text("Files dropped on the shelf will be shared via this service")
@@ -2661,7 +2732,13 @@ struct LiveActivitiesSettings: View {
             if let dot {
                 Circle().fill(dot).frame(width: 8, height: 8)
             }
-            Text(text).font(Geist.Typography.body).foregroundStyle(color)
+            Text(verbatim: Bundle.main.localizedString(
+                forKey: text,
+                value: text,
+                table: nil
+            ))
+            .font(Geist.Typography.body)
+            .foregroundStyle(color)
         }
     }
 
@@ -3312,7 +3389,7 @@ struct Shortcuts: View {
         GeistSettingsPage(title: "Shortcuts") {
             GeistSection(
                 title: "General",
-                footer: "When disabled, all keyboard shortcuts will be inactive. You can still use the UI controls."
+                note: "When disabled, every global shortcut is inactive. UI controls continue to work."
             ) {
                 GeistToggleRow(title: "Enable global keyboard shortcuts", isOn: $enableShortcuts, divider: false)
             }
@@ -3320,7 +3397,7 @@ struct Shortcuts: View {
             if enableShortcuts {
                 GeistSection(
                     title: "Media",
-                    footer: "Sneak Peek shows the media title and artist under the notch for a few seconds."
+                    note: "Shows the current media title and artist under the notch for a few seconds."
                 ) {
                     GeistLabeledRow(title: "Toggle Sneak Peek", divider: false) {
                         KeyboardShortcuts.Recorder("", name: .toggleSneakPeek)
@@ -3329,7 +3406,7 @@ struct Shortcuts: View {
 
                 GeistSection(
                     title: "Navigation",
-                    footer: "Toggle the Dynamic Island open or closed from anywhere."
+                    note: "Opens or closes the notch from anywhere."
                 ) {
                     GeistLabeledRow(title: "Toggle Notch Open", divider: false) {
                         KeyboardShortcuts.Recorder("", name: .toggleNotchOpen)
@@ -3371,7 +3448,7 @@ struct Shortcuts: View {
         disabledNote: String,
         footer: String
     ) -> some View {
-        GeistSection(title: title, footer: footer) {
+        GeistSection(title: title, note: footer) {
             GeistLabeledRow(title: label, divider: !enabled) {
                 KeyboardShortcuts.Recorder("", name: name)
                     .disabled(!enableShortcuts || !enabled)
@@ -3724,7 +3801,7 @@ struct TimerSettings: View {
 
     private func selectCustomTimerSound() {
         let panel = NSOpenPanel()
-        panel.title = "Select Timer Sound"
+        panel.title = String(localized: "Select Timer Sound")
         panel.allowedContentTypes = [.audio]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false

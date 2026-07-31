@@ -31,19 +31,20 @@ struct MonitorSettings: View {
             title: "System Monitor",
             subtitle: "A live CPU, GPU, memory, storage, network, power and display dashboard in the notch."
         ) {
-            GeistSection(footer: widthFooter) {
+            GeistSection {
                 GeistToggleRow(
                     title: "Enable system monitor",
                     description: "Adds a Monitor tab to the open notch. Tap any card to drill into its detail.",
                     isOn: $enableSystemMonitor,
-                    divider: false
+                    divider: false,
+                    info: widthFooter
                 )
             }
 
             if enableSystemMonitor {
                 GeistSection(
                     title: "Cards",
-                    footer: "Turning every card off shows them all — an empty Monitor tab has nowhere to go."
+                    note: "If every card is turned off, all cards are shown."
                 ) {
                     ForEach(Array(MonitorCategory.allCases.enumerated()), id: \.element.id) { index, category in
                         GeistToggleRow(

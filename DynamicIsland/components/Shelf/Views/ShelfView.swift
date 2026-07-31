@@ -171,7 +171,7 @@ struct ShelfView: View {
     }
 
     private var itemSummary: String {
-        tvm.items.isEmpty ? "0 items" : "\(tvm.items.count) items"
+        String(localized: "\(tvm.items.count) items")
     }
 
     private var clearAllButton: some View {

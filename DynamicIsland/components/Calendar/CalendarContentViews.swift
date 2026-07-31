@@ -55,7 +55,9 @@ struct CalendarPermissionStateView: View {
             Image(systemName: mode == .events ? "calendar.badge.exclamationmark" : "checklist")
                 .font(.title2)
                 .foregroundStyle(CalendarStyle.muted)
-            Text(mode == .events ? "Calendar access is required" : "Reminders access is required")
+            Text(mode == .events
+                ? String(localized: "Calendar access is required")
+                : String(localized: "Reminders access is required"))
                 .font(NotchDesign.Typography.voice(13, weight: .medium))
                 .foregroundStyle(CalendarStyle.body)
             HStack(spacing: 6) {
@@ -82,7 +84,7 @@ struct ReminderGroupsList: View {
     let hideCompleted: Bool
     let onToggle: (String, Bool) -> Void
 
-    private let calendar = Calendar.current
+    private var calendar: Calendar { AppLanguageController.calendar }
 
     private struct SectionModel: Identifiable {
         let id: String
@@ -274,7 +276,7 @@ struct CalendarCreatePopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(mode == .events ? "New Event" : "New Reminder")
+                Text(mode == .events ? String(localized: "New Event") : String(localized: "New Reminder"))
                     .font(.headline)
                     .foregroundStyle(CalendarCreatePopoverStyle.title)
                 Spacer()
@@ -285,10 +287,10 @@ struct CalendarCreatePopover: View {
                 .buttonStyle(.plain)
             }
 
-            TextField(mode == .events ? "Event title" : "Reminder title", text: $title)
+            TextField(mode == .events ? String(localized: "Event title") : String(localized: "Reminder title"), text: $title)
                 .calendarPopoverField()
 
-            Picker(mode == .events ? "Calendar" : "List", selection: $selectedCalendarID) {
+            Picker(mode == .events ? String(localized: "Calendar") : String(localized: "List"), selection: $selectedCalendarID) {
                 ForEach(availableCalendars) { calendar in
                     HStack {
                         Circle().fill(Color(nsColor: calendar.color)).frame(width: 7, height: 7)

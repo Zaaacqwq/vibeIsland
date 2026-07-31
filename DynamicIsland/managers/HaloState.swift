@@ -39,11 +39,11 @@ enum HaloState: Equatable {
 
     var label: String {
         switch self {
-        case .thinking:    return "Thinking"
-        case .executing:   return "Executing"
-        case .inputNeeded: return "Needs input"
-        case .completed:   return "Completed"
-        case .compacting:  return "Compacting"
+        case .thinking:    return String(localized: "Thinking")
+        case .executing:   return String(localized: "Executing")
+        case .inputNeeded: return String(localized: "Needs input")
+        case .completed:   return String(localized: "Completed")
+        case .compacting:  return String(localized: "Compacting")
         }
     }
 

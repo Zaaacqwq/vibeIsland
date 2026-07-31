@@ -206,7 +206,10 @@ struct NotchMonitorView: View {
             MonitorTile(
                 category: category,
                 value: free.value,
-                unit: "\(free.unit) free",
+                unit: String(
+                    format: String(localized: "%@ free"),
+                    free.unit
+                ),
                 trailing: .bar(fraction: snapshot.diskUsedFraction),
                 valueTint: MonitorTint.forCapacity(fraction: snapshot.diskUsedFraction),
                 action: { focus(category) }
@@ -264,7 +267,7 @@ struct NotchMonitorView: View {
             MonitorTile(
                 category: category,
                 value: "\(list.count)",
-                unit: list.count == 1 ? String(localized: "display") : String(localized: "displays"),
+                unit: String(localized: "display"),
                 trailing: .caption(displayCaption(list)),
                 action: { focus(category) }
             )

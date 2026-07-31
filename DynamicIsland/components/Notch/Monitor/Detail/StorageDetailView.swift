@@ -35,7 +35,10 @@ struct StorageDetailView: View {
     var body: some View {
         MonitorDetailScaffold(
             category: .storage,
-            headline: "\(MonitorFormat.size(snapshot.diskFreeBytes)) free",
+            headline: String(
+                format: String(localized: "%@ free"),
+                MonitorFormat.size(snapshot.diskFreeBytes)
+            ),
             subtitle: snapshot.volumeName.isEmpty ? nil : snapshot.volumeName,
             onBack: onBack
         ) {

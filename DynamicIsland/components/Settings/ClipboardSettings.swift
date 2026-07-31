@@ -46,7 +46,7 @@ struct ClipboardSettings: View {
             title: "Clipboard",
             subtitle: "A searchable history of what you copy — text, images and files."
         ) {
-            GeistSection(footer: modeFooter) {
+            GeistSection {
                 GeistToggleRow(
                     title: "Enable clipboard manager",
                     description: "Records copies so you can find and reuse them later.",
@@ -55,10 +55,14 @@ struct ClipboardSettings: View {
                 )
 
                 if enableClipboardManager {
-                    GeistSegmentedRow(title: "Clipboard appears as", selection: $displayMode, divider: false) {
+                    GeistSegmentedRow(
+                        title: "Clipboard appears as",
+                        selection: $displayMode,
+                        divider: false,
+                        info: modeFooter
+                    ) {
                         ForEach(ToolDisplayMode.allCases) { Text($0.displayName).tag($0) }
                     }
-                    .help(displayMode.description(toolName: String(localized: "the clipboard history")))
                 }
             }
 
@@ -78,7 +82,7 @@ struct ClipboardSettings: View {
     private var privacySection: some View {
         GeistSection(
             title: "Privacy",
-            footer: "Copies marked confidential by the source app are never recorded — that covers password managers using the org.nspasteboard.ConcealedType convention, plus 1Password and KeeWeb's own markers. Use “Ignore next copy” in the clipboard menu for anything else you would rather not store."
+            note: "Confidential copies from password managers are never recorded. For anything else, choose “Ignore next copy” from the clipboard menu."
         ) {
             GeistLabeledRow(title: "Stored on this Mac") {
                 Text(storageSummary)
@@ -114,7 +118,10 @@ struct ClipboardSettings: View {
     private var historySection: some View {
         GeistSection(
             title: "History",
-            footer: "Pinned entries are never evicted, whatever the limit says. Checking more often catches fast successive copies at the cost of a little more idle work — macOS has no clipboard-change notification, so this is a poll."
+            noteBullets: [
+                "Pinned entries never count toward the history limit.",
+                "A shorter check interval catches rapid copies but uses slightly more idle CPU."
+            ]
         ) {
             GeistStepperRow(
                 title: "Entries to keep",
@@ -148,7 +155,10 @@ struct ClipboardSettings: View {
     private var contentTypesSection: some View {
         GeistSection(
             title: "Content",
-            footer: "Turning a type off stops it from being recorded at all. Large payloads are written to Application Support rather than kept in the index."
+            noteBullets: [
+                "Disabled content types are not recorded.",
+                "Large items are stored in Application Support instead of the history index."
+            ]
         ) {
             ForEach(Array(ClipboardPasteboard.supportedTypes.enumerated()), id: \.element.rawValue) { index, type in
                 GeistToggleRow(
@@ -215,7 +225,14 @@ struct ClipboardSettings: View {
     // MARK: - Paste
 
     private var pasteSection: some View {
-        GeistSection(title: "Pasting", footer: pasteFooter) {
+        GeistSection(
+            title: "Pasting",
+            noteBullets: [
+                "⌥ while selecting: paste even when automatic pasting is off.",
+                "⌥⇧ while selecting: paste without formatting.",
+                "Automatic pasting sends ⌘V and requires Accessibility permission. It assumes a QWERTY V key position."
+            ]
+        ) {
             GeistToggleRow(
                 title: "Paste automatically",
                 description: "Selecting an entry pastes it into the app you came from, instead of only putting it on the clipboard.",
@@ -234,8 +251,15 @@ struct ClipboardSettings: View {
     }
 
     private var shortcutSection: some View {
-        GeistSection(title: "Shortcut", footer: shortcutFooter) {
-            GeistLabeledRow(title: "Open clipboard history", divider: false) {
+        GeistSection(
+            title: "Shortcut",
+            note: shortcutWarning
+        ) {
+            GeistLabeledRow(
+                title: "Open clipboard history",
+                divider: false,
+                info: shortcutExplanation
+            ) {
                 KeyboardShortcuts.Recorder("", name: .showClipboardHistory)
             }
         }
@@ -243,14 +267,13 @@ struct ClipboardSettings: View {
 
     /// The master switch on the Shortcuts page gates every hotkey in the app, so
     /// say so here rather than letting a recorded shortcut silently do nothing.
-    private var shortcutFooter: String {
-        let base = String(localized: "Opens the history wherever you are — the Clipboard tab in tab mode, the header popover in popover mode.")
-        guard !enableShortcuts else { return base }
-        return base + " " + String(localized: "Global keyboard shortcuts are turned off — this will not fire until you enable “Enable global keyboard shortcuts” in Settings › Shortcuts.")
+    private var shortcutExplanation: String {
+        String(localized: "Opens the history wherever you are — the Clipboard tab in tab mode, the header popover in popover mode.")
     }
 
-    private var pasteFooter: String {
-        "Hold ⌥ while selecting an entry to paste it even when automatic pasting is off, and ⌥⇧ to paste it without formatting. Automatic pasting synthesizes ⌘V, which needs Accessibility permission and assumes a QWERTY V key position."
+    private var shortcutWarning: String? {
+        guard !enableShortcuts else { return nil }
+        return String(localized: "Global keyboard shortcuts are off. Enable them in Settings › Shortcuts before using this shortcut.")
     }
 
     // MARK: - Ignored apps
@@ -258,7 +281,7 @@ struct ClipboardSettings: View {
     private var ignoredAppsSection: some View {
         GeistSection(
             title: "Ignored apps",
-            footer: "Copies made while one of these apps is frontmost are not recorded. Enter bundle identifiers, e.g. com.apple.Terminal."
+            note: "Copies are not recorded while an ignored app is active. Add apps by bundle identifier, for example com.apple.Terminal."
         ) {
             ForEach(Array(ignoredApps).sorted(), id: \.self) { bundleID in
                 GeistLabeledRow(title: bundleID) {

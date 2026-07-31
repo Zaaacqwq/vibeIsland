@@ -237,8 +237,8 @@ final class FilteredMediaRemoteController: ObservableObject, MediaControllerProt
 
     private static func makeIdlePlaybackState(bundleIdentifier: String) -> PlaybackState {
         var state = PlaybackState(bundleIdentifier: bundleIdentifier)
-        state.title = "Unknown"
-        state.artist = "Unknown"
+        state.title = String(localized: "Unknown")
+        state.artist = String(localized: "Unknown")
         state.album = ""
         state.isPlaying = false
         state.artwork = nil

@@ -94,7 +94,7 @@ actor WeatherProvider {
         return WeatherSnapshot(
             temperatureText: temperatureText,
             symbolName: symbol,
-            description: condition.localizedDescription,
+            description: WeatherSymbolMapper.description(for: code),
             locationName: payload.nearestArea.first?.preferredName ?? placeName,
             airQuality: airQualityInfo,
             temperatureInfo: temperatureInfo,
@@ -401,6 +401,33 @@ private enum WeatherSymbolMapper {
         case 227, 230, 281, 284, 323, 326, 329, 332, 335, 338, 368, 371, 374, 377: return "cloud.snow.fill"
         case 200, 386, 389, 392, 395: return "cloud.bolt.rain.fill"
         default: return "cloud.sun.fill"
+        }
+    }
+
+    static func description(for code: Int) -> String {
+        switch code {
+        case 113:
+            return String(localized: "Clear sky")
+        case 116:
+            return String(localized: "Partly cloudy")
+        case 119:
+            return String(localized: "Cloudy")
+        case 122:
+            return String(localized: "Overcast")
+        case 143, 248, 260:
+            return String(localized: "Fog")
+        case 176, 263, 266:
+            return String(localized: "Drizzle")
+        case 179, 182, 185, 281, 284, 311, 314, 317, 362, 365:
+            return String(localized: "Freezing rain")
+        case 227, 230, 323, 326, 329, 332, 335, 338, 368, 371, 374, 377:
+            return String(localized: "Snow")
+        case 293, 296, 299, 302, 353, 356, 359:
+            return String(localized: "Rain")
+        case 200, 386, 389, 392, 395:
+            return String(localized: "Thunderstorm")
+        default:
+            return String(localized: "Cloudy")
         }
     }
 }

@@ -85,7 +85,7 @@ struct MonitorTile: View {
             Image(systemName: category.systemImage)
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(category.tint)
-            Text(category.eyebrow)
+            Text(verbatim: category.eyebrow.uppercased())
                 .font(NotchDesign.Typography.mono(8, weight: .medium))
                 .tracking(NotchDesign.eyebrowTracking * 0.6)
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
@@ -133,7 +133,7 @@ struct MonitorTile: View {
         case .caption(let text):
             VStack(alignment: .leading) {
                 Spacer(minLength: 0)
-                Text(text)
+                Text(verbatim: notchLocalized(text))
                     .font(NotchDesign.Typography.mono(9, weight: .medium))
                     .foregroundStyle(NotchDesign.Colors.textSecondary)
                     .lineLimit(1)

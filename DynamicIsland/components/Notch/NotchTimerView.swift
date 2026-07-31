@@ -492,13 +492,13 @@ struct NotchTimerView: View {
     private var normalizedProgress: CGFloat { CGFloat(max(0, min(timerManager.progress, 1))) }
 
     private var timerDisplayName: String {
-        timerManager.timerName.isEmpty ? "Timer" : timerManager.timerName
+        timerManager.timerName.isEmpty ? String(localized: "Timer") : timerManager.timerName
     }
 
     private var timerStatusText: String? {
         if timerManager.isOvertime { return String(localized: "Overtime") }
         if timerManager.isPaused { return String(localized: "Paused") }
-        if timerManager.isFinished { return "Completed" }
+        if timerManager.isFinished { return String(localized: "Completed") }
         return nil
     }
 
@@ -598,11 +598,11 @@ private struct DurationInputRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 6) {
-            DurationField(label: String(localized: "Hours"), value: $hours, range: 0...23, width: fieldWidth)
+            DurationField(label: "h", value: $hours, range: 0...23, width: fieldWidth)
             colon
-            DurationField(label: String(localized: "Minutes"), value: $minutes, range: 0...59, width: fieldWidth)
+            DurationField(label: "m", value: $minutes, range: 0...59, width: fieldWidth)
             colon
-            DurationField(label: String(localized: "Seconds"), value: $seconds, range: 0...59, width: fieldWidth)
+            DurationField(label: "s", value: $seconds, range: 0...59, width: fieldWidth)
         }
     }
 

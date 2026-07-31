@@ -90,7 +90,7 @@ struct AgentsSettings: View {
             if enableAgentMonitoring {
                 GeistSection(
                     title: "Claude Code",
-                    info: "Installing writes VibeIsland-namespaced hooks into ~/.claude/settings.json. Hooks fail open — if VibeIsland isn't running, Claude is unaffected."
+                    note: "Installing writes VibeIsland-namespaced hooks into ~/.claude/settings.json. Hooks fail open when VibeIsland is not running."
                 ) {
                     GeistLabeledRow(title: "Bridge") {
                         Label(agentMonitor.isBridgeReady ? "Connected" : "Starting…",
@@ -198,7 +198,7 @@ struct AgentsSettings: View {
 
             GeistSection(
                 title: "Claude rate limits",
-                info: "Installs a managed Claude Code status line that reports your 5-hour and 7-day rate-limit usage. Modifies the statusLine entry in ~/.claude/settings.json."
+                note: "Installing the usage status line modifies the statusLine entry in ~/.claude/settings.json."
             ) {
                 GeistLabeledRow(title: "Usage status line") {
                     if agentMonitor.statusLineInstalled {
@@ -233,7 +233,7 @@ struct AgentsSettings: View {
 
             GeistSection(
                 title: "Codex rate limits",
-                footer: "Read directly from your latest Codex rollout under ~/.codex/sessions — no setup required. Updates after each Codex turn."
+                note: "Usage is read locally from your latest Codex rollout under ~/.codex/sessions."
             ) {
                 if let codexUsage = agentMonitor.codexUsage, !codexUsage.isEmpty {
                     ForEach(codexUsage.windows) { window in
@@ -265,7 +265,7 @@ struct AgentsSettings: View {
 
             GeistSection(
                 title: "Antigravity rate limits",
-                footer: "Uses Google OAuth and the Antigravity Code Assist quota endpoint. Tokens are stored in your macOS Keychain."
+                note: "Uses Google OAuth and the Antigravity Code Assist quota endpoint. Tokens are stored in your macOS Keychain."
             ) {
                 GeistToggleRow(
                     title: "Merge Antigravity quota groups",
@@ -337,7 +337,7 @@ struct AgentsSettings: View {
 
             GeistSection(
                 title: "OpenCode Go rate limits",
-                footer: "Uses a persistent in-app opencode.ai session to read the Rolling, Weekly, and Monthly windows from your Go dashboard."
+                note: "Uses a persistent in-app opencode.ai session to read quota windows from your Go dashboard."
             ) {
                 GeistToggleRow(
                     title: "Show compact OpenCode quota",
@@ -521,7 +521,7 @@ struct AgentsSettings: View {
     private var cursorUsageSection: some View {
         GeistSection(
             title: "Cursor usage",
-            footer: "Cursor keeps no local token data, so VibeIsland downloads your usage export from cursor.com to show a token/cost card. Sign in below to capture your session automatically (or paste the WorkosCursorSessionToken cookie manually); it is stored in your macOS Keychain."
+            note: "VibeIsland downloads your usage export from cursor.com. Your Cursor session token is stored in the macOS Keychain."
         ) {
             GeistLabeledRow(title: "Account") {
                 if cursorSync.isConnected {
@@ -609,7 +609,7 @@ struct AgentsSettings: View {
             if let usage = agentMonitor.tokenUsage, !usage.isEmpty {
                 let b = usage.breakdown
                 tokenStatRow("Cost", TokenUsageFormat.cost(usage.costUSD))
-                tokenStatRow("Active", TokenUsageFormat.activeDuration(usage.activeSeconds))
+                tokenStatRow("Active", AppLanguageController.abbreviatedDuration(usage.activeSeconds))
                 tokenStatRow("Input", TokenUsageFormat.compactCount(b.input))
                 tokenStatRow("Output", TokenUsageFormat.compactCount(b.output))
                 tokenStatRow("Reasoning", TokenUsageFormat.compactCount(b.reasoning))
@@ -640,7 +640,11 @@ struct AgentsSettings: View {
         GeistRow(divider: divider) {
             HStack(spacing: Geist.Spacing.md) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(verbatim: Bundle.main.localizedString(
+                        forKey: title,
+                        value: title,
+                        table: nil
+                    ))
                         .font(Geist.Typography.bodyStrong)
                         .foregroundStyle(Geist.Colors.ink)
                     Text(soundSourceLabel(path.wrappedValue))
@@ -671,7 +675,7 @@ struct AgentsSettings: View {
 
     private func chooseAgentSound(into path: Binding<String>) {
         let panel = NSOpenPanel()
-        panel.title = "Select Agent Sound"
+        panel.title = String(localized: "Select Agent Sound")
         panel.allowedContentTypes = [.audio]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -769,7 +773,7 @@ struct AgentsSettings: View {
         install: @escaping () -> Void,
         uninstall: @escaping () -> Void
     ) -> some View {
-        GeistSection(title: title, info: info) {
+        GeistSection(title: title, note: info) {
             GeistLabeledRow(title: "\(title) hooks") { hookStatusLabel(status) }
             GeistRow(divider: false) {
                 HStack(spacing: Geist.Spacing.xs) {

@@ -53,10 +53,20 @@ struct AgentUsageBadges: View {
                 .foregroundStyle(NotchDesign.Colors.textPrimary)
                 .help("Claude usage")
             if let five = usage.fiveHour {
-                badge(title: "5h", percent: five.roundedUsedPercentage, warn: five.usedPercentage >= 80, help: "Claude 5-hour limit used")
+                badge(
+                    title: "5h",
+                    percent: five.roundedUsedPercentage,
+                    warn: five.usedPercentage >= 80,
+                    help: String(localized: "Claude 5-hour limit used")
+                )
             }
             if let week = usage.sevenDay {
-                badge(title: "7d", percent: week.roundedUsedPercentage, warn: week.usedPercentage >= 80, help: "Claude 7-day limit used")
+                badge(
+                    title: "7d",
+                    percent: week.roundedUsedPercentage,
+                    warn: week.usedPercentage >= 80,
+                    help: String(localized: "Claude 7-day limit used")
+                )
             }
         }
     }
@@ -76,7 +86,10 @@ struct AgentUsageBadges: View {
                     title: window.label,
                     percent: window.roundedUsedPercentage,
                     warn: window.usedPercentage >= 80,
-                    help: "Codex \(window.label) limit used"
+                    help: String(
+                        format: String(localized: "Codex %@ limit used"),
+                        notchLocalized(window.label)
+                    )
                 )
             }
         }
@@ -88,7 +101,11 @@ struct AgentUsageBadges: View {
         let effectiveWarn = warn || Defaults[.debugForceUsageMax]
         // At the cap, show "MAX" instead of "100%" — three chars fit the pill
         // without the four-char "100%" getting compressed/truncated.
-        return Text(effectivePercent >= 100 ? "\(title) MAX" : "\(title) \(effectivePercent)%")
+        let localizedTitle = notchLocalized(title)
+        let value = effectivePercent >= 100
+            ? "\(localizedTitle) \(notchLocalized("MAX"))"
+            : "\(localizedTitle) \(effectivePercent)%"
+        return Text(verbatim: value)
             .font(NotchDesign.Typography.mono(10, weight: .medium))
             .foregroundStyle(effectiveWarn ? NotchDesign.Colors.warning : NotchDesign.Colors.textSecondary)
             // Keep the pill on one line — without this, a wider value (two digits
@@ -99,6 +116,6 @@ struct AgentUsageBadges: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 3)
             .background(Capsule().fill(warn ? NotchDesign.Colors.warning.opacity(0.1) : Color.white.opacity(0.06)))
-            .help(help)
+            .help(notchLocalized(help))
     }
 }

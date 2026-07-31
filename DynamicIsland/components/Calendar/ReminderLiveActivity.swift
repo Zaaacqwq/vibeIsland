@@ -152,7 +152,10 @@ struct ReminderLiveActivity: View {
     private func minutesCountdown(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> String {
         let remaining = max(reminder.event.start.timeIntervalSince(now), 0)
         let minutes = max(1, Int(ceil(remaining / 60)))
-        return minutes == 1 ? "in 1 min" : "in \(minutes) min"
+        return String(
+            format: String(localized: "in %@"),
+            AppLanguageController.abbreviatedDuration(TimeInterval(minutes * 60))
+        )
     }
 
     private func accentColor(for reminder: ReminderLiveActivityManager.ReminderEntry, now: Date) -> Color {

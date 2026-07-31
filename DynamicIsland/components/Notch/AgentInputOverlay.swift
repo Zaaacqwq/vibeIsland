@@ -105,7 +105,7 @@ struct AgentInputOverlay: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(NotchDesign.Colors.warning)
-                Text(permission.title.isEmpty ? "Tool use" : permission.title)
+                Text(permission.title.isEmpty ? String(localized: "Tool use") : permission.title)
                     .font(NotchDesign.Typography.voice(15, weight: .semibold))
                     .foregroundStyle(NotchDesign.Colors.textPrimary)
                 if !permission.affectedPath.isEmpty, permission.affectedPath != permission.title {
@@ -131,12 +131,16 @@ struct AgentInputOverlay: View {
             }
 
             HStack(spacing: 10) {
-                permissionButton(title: permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle,
+                permissionButton(title: notchLocalized(
+                    permission.secondaryActionTitle.isEmpty ? "Deny" : permission.secondaryActionTitle
+                ),
                                  shortcut: "⌘N",
                                  kind: .deny) {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: false)
                 }
-                permissionButton(title: permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle,
+                permissionButton(title: notchLocalized(
+                    permission.primaryActionTitle.isEmpty ? "Allow" : permission.primaryActionTitle
+                ),
                                  shortcut: "⌘Y",
                                  kind: .allow) {
                     agentMonitor.resolvePermission(sessionID: session.id, approved: true)
@@ -225,7 +229,7 @@ struct AgentInputOverlay: View {
                     .frame(width: 18, height: 18)
                     .background(Circle().fill(Color.white.opacity(0.12)))
 
-                Text(option.label)
+                Text(verbatim: notchLocalized(option.label))
                     .font(NotchDesign.Typography.voice(13, weight: .medium))
                     .foregroundStyle(NotchDesign.Colors.textPrimary)
                     .lineLimit(1)
@@ -252,7 +256,7 @@ struct AgentInputOverlay: View {
     @ViewBuilder
     private func freeformEntry(_ option: QuestionOption) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField(option.label.isEmpty ? "Type your answer…" : option.label, text: $freeformText)
+            TextField(option.label.isEmpty ? String(localized: "Type your answer…") : option.label, text: $freeformText)
                 .textFieldStyle(.plain)
                 .font(NotchDesign.Typography.voice(14))
                 .foregroundStyle(NotchDesign.Colors.textPrimary)

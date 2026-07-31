@@ -36,7 +36,7 @@ struct ColorPickerSettings: View {
             title: "Color Picker",
             subtitle: "Sample any color on screen and copy it in the format you need."
         ) {
-            GeistSection(footer: modeFooter) {
+            GeistSection {
                 GeistToggleRow(
                     title: "Enable color picker",
                     description: "Adds the eyedropper to the notch, with a history of what you have picked.",
@@ -45,17 +45,24 @@ struct ColorPickerSettings: View {
                 )
 
                 if enableColorPicker {
-                    GeistSegmentedRow(title: "Color picker appears as", selection: $displayMode, divider: false) {
+                    GeistSegmentedRow(
+                        title: "Color picker appears as",
+                        selection: $displayMode,
+                        divider: false,
+                        info: modeFooter
+                    ) {
                         ForEach(ToolDisplayMode.allCases) { Text($0.displayName).tag($0) }
                     }
-                    .help(displayMode.description(toolName: String(localized: "the color picker")))
                 }
             }
 
             if enableColorPicker {
                 GeistSection(
                     title: "Copying",
-                    footer: "The chosen format is what a click on a swatch copies. Every other format stays available from a swatch's right-click menu."
+                    noteBullets: [
+                        "Click a swatch: copy it in the default format.",
+                        "Right-click a swatch: choose any available format."
+                    ]
                 ) {
                     // Only the short name goes in the menu: `GeistPickerRow`
                     // fixed-sizes its picker, so a label carrying the whole
@@ -86,13 +93,17 @@ struct ColorPickerSettings: View {
                     )
                 }
 
-                GeistSection(title: "Shortcut", footer: shortcutFooter) {
-                    GeistLabeledRow(title: "Pick a color", divider: false) {
+                GeistSection(title: "Shortcut", note: shortcutWarning) {
+                    GeistLabeledRow(
+                        title: "Pick a color",
+                        divider: false,
+                        info: shortcutExplanation
+                    ) {
                         KeyboardShortcuts.Recorder("", name: .pickColor)
                     }
                 }
 
-                GeistSection(title: "History", footer: historyFooter) {
+                GeistSection(title: "History", note: historyNote) {
                     GeistStepperRow(
                         title: "Colors to keep",
                         value: $historyLimit,
@@ -125,14 +136,19 @@ struct ColorPickerSettings: View {
 
     /// The master switch on the Shortcuts page gates every hotkey in the app, so
     /// say so here rather than letting a recorded shortcut silently do nothing.
-    private var shortcutFooter: String {
-        let base = String(localized: "Opens the system loupe straight away, without opening the notch first.")
-        guard !enableShortcuts else { return base }
-        return base + " " + String(localized: "Global keyboard shortcuts are turned off — this will not fire until you enable “Enable global keyboard shortcuts” in Settings › Shortcuts.")
+    private var shortcutExplanation: String {
+        String(localized: "Opens the system loupe straight away, without opening the notch first.")
     }
 
-    private var historyFooter: String {
-        "Picked colors are stored in preferences — \(manager.history.count) saved right now. Nothing is captured from the screen except the single pixel you click."
+    private var shortcutWarning: String? {
+        guard !enableShortcuts else { return nil }
+        return String(localized: "Global keyboard shortcuts are off. Enable them in Settings › Shortcuts before using this shortcut.")
+    }
+
+    private var historyNote: String {
+        String(
+            localized: "Picked colors are stored in preferences (\(manager.history.count) saved). Only the pixel you click is captured."
+        )
     }
 
     private func sample(_ format: ColorFormat) -> String {

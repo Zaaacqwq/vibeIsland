@@ -508,19 +508,29 @@ class MusicManager: ObservableObject {
     }
 
     /// Placeholder shown while a lyrics fetch is in flight.
-    static let loadingLyricsPlaceholder = "Loading lyrics..."
+    static var loadingLyricsPlaceholder: String {
+        String(localized: "Loading lyrics...")
+    }
 
     /// Placeholder strings used while fetching / when nothing is found. These
     /// are not real lyric lines.
     /// Shown when the track has lyrics but no timestamps — the line-by-line
     /// modes cannot use those, so say so rather than faking a synced line.
-    static let unsyncedLyricsPlaceholder = "No synced lyrics"
+    static var unsyncedLyricsPlaceholder: String {
+        String(localized: "No synced lyrics")
+    }
 
-    static let lyricsPlaceholders: Set<String> = [
+    static var noLyricsPlaceholder: String {
+        String(localized: "No lyrics found")
+    }
+
+    static var lyricsPlaceholders: Set<String> {
+        [
         loadingLyricsPlaceholder,
-        "No lyrics found",
+        noLyricsPlaceholder,
         unsyncedLyricsPlaceholder,
-    ]
+        ]
+    }
 
     /// True when `currentLyrics` holds a real lyric line (not empty / placeholder).
     var hasDisplayableLyricLine: Bool {
@@ -1416,7 +1426,7 @@ class MusicManager: ObservableObject {
         if trackChanged {
             syncedLyrics = []
             currentLyricIndex = -1
-            currentLyrics = shouldShowLoading ? "Loading lyrics..." : ""
+            currentLyrics = shouldShowLoading ? Self.loadingLyricsPlaceholder : ""
             stopLyricSync()
         }
 
@@ -1427,7 +1437,7 @@ class MusicManager: ObservableObject {
 
         if lyricsFetchKey == key {
             if shouldShowLoading && syncedLyrics.isEmpty {
-                currentLyrics = "Loading lyrics..."
+                currentLyrics = Self.loadingLyricsPlaceholder
             }
             return
         }
@@ -1436,7 +1446,7 @@ class MusicManager: ObservableObject {
         lyricsFetchKey = key
 
         if shouldShowLoading || (lyricsEnabled && syncedLyrics.isEmpty) {
-            currentLyrics = "Loading lyrics..."
+            currentLyrics = Self.loadingLyricsPlaceholder
         }
 
         let requestArtist = lookup.requestArtist
@@ -1473,7 +1483,7 @@ class MusicManager: ObservableObject {
                     self.lyricsFetchTask = nil
                     self.syncedLyrics = []
                     self.currentLyricIndex = -1
-                    self.currentLyrics = Defaults[.enableLyrics] ? "No lyrics found" : ""
+                    self.currentLyrics = Defaults[.enableLyrics] ? Self.noLyricsPlaceholder : ""
                     self.stopLyricSync()
                 }
             }
@@ -1553,7 +1563,7 @@ class MusicManager: ObservableObject {
             if case .plainOnly = result {
                 message = Self.unsyncedLyricsPlaceholder
             } else {
-                message = "No lyrics found"
+                message = Self.noLyricsPlaceholder
             }
             currentLyrics = Defaults[.enableLyrics] ? message : ""
             stopLyricSync()
@@ -1651,7 +1661,7 @@ class MusicManager: ObservableObject {
         // show a loading placeholder and start fetching asynchronously.
         if showLyrics && syncedLyrics.isEmpty {
             // Provide immediate feedback so the UI can show a loading state.
-            currentLyrics = "Loading lyrics..."
+            currentLyrics = Self.loadingLyricsPlaceholder
 
             Task {
                 await fetchLyrics()
@@ -1659,7 +1669,7 @@ class MusicManager: ObservableObject {
                 // If fetch completed but no lyrics were found, show a friendly message.
                 await MainActor.run {
                     if self.syncedLyrics.isEmpty && self.currentLyrics.isEmpty {
-                        self.currentLyrics = "No lyrics found"
+                        self.currentLyrics = Self.noLyricsPlaceholder
                     }
                 }
             }

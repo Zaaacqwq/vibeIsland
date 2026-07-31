@@ -475,7 +475,7 @@ final class OpenCodeLoginWindowController: NSWindowController, NSWindowDelegate,
             backing: .buffered,
             defer: false
         )
-        window.title = "Sign in to OpenCode — close this window when finished"
+        window.title = String(localized: "Sign in to OpenCode — close this window when finished")
         window.minSize = NSSize(width: 700, height: 500)
         super.init(window: window)
         window.delegate = self

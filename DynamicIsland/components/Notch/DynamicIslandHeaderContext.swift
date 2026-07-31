@@ -83,12 +83,12 @@ struct NotchHeaderContextWidget: View {
     /// notch once a second for a number nobody reads that precisely.
     private static func uptimeText() -> String {
         let seconds = Int(ProcessInfo.processInfo.systemUptime)
-        let days = seconds / 86_400
-        let hours = (seconds % 86_400) / 3600
-        let minutes = (seconds % 3600) / 60
-        if days > 0 { return "\(days)d \(hours)h" }
-        if hours > 0 { return "\(hours)h \(minutes)m" }
-        return "\(minutes)m"
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.day, .hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.maximumUnitCount = 2
+        formatter.calendar = AppLanguageController.calendar
+        return formatter.string(from: TimeInterval(seconds)) ?? "—"
     }
 
     // MARK: - Home (configurable: CPU / GPU / RAM / Disk / Network)
@@ -267,7 +267,7 @@ struct NotchHeaderContextWidget: View {
                     .frame(width: 3, height: 22)
                 StatCell(
                     label: event.start.formatted(date: .omitted, time: .shortened),
-                    value: event.title.isEmpty ? "Event" : event.title,
+                    value: event.title.isEmpty ? String(localized: "Event") : event.title,
                     alignment: .leading,
                     maxValueWidth: 150
                 )
@@ -318,7 +318,7 @@ private struct StatCell: View {
 
     var body: some View {
         VStack(alignment: alignment, spacing: 1) {
-            Text(label.uppercased())
+            Text(verbatim: notchLocalized(label).uppercased())
                 .font(NotchDesign.Typography.mono(8, weight: .medium))
                 .foregroundStyle(NotchDesign.Colors.textTertiary)
                 .lineLimit(1)

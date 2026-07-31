@@ -238,7 +238,7 @@ struct MinimalisticMusicPlayerView: View {
 
     private var timerDisplayName: String {
         let trimmed = timerManager.timerName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Timer" : trimmed
+        return trimmed.isEmpty ? String(localized: "Timer") : trimmed
     }
 
     private var dynamicHeightSignature: Int {
@@ -614,7 +614,7 @@ private struct MinimalisticReminderDetailsView: View {
 
     private func detailRow(icon: String, label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label(label, systemImage: icon)
+            Label(notchLocalized(label), systemImage: icon)
                 .font(smallLabelFont)
                 .foregroundStyle(Color.white.opacity(0.8))
             Text(value)

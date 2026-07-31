@@ -110,7 +110,8 @@ struct DebugSettings: View {
 
             GeistSection(
                 title: "HUD tests",
-                footer: "Runs the real notch animation on the current target display. Battery tests require the matching HUD to be enabled in Battery settings."
+                info: "Runs the real notch animation on the current target display.",
+                note: "Battery tests require the matching HUD to be enabled in Battery settings."
             ) {
                 GeistRow {
                     Button { BatteryStatusViewModel.shared.triggerTestHUD(kind: .charging) } label: {

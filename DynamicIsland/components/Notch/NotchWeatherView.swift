@@ -242,6 +242,7 @@ struct NotchWeatherView: View {
     private func weekdayLabel(_ date: Date, isFirst: Bool) -> String {
         if isFirst { return String(localized: "Today").uppercased() }
         let formatter = DateFormatter()
+        formatter.locale = AppLanguageController.locale
         formatter.setLocalizedDateFormatFromTemplate("EEE")
         return formatter.string(from: date).uppercased()
     }
@@ -253,6 +254,7 @@ struct NotchWeatherView: View {
 
     private func sunTime(_ date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = AppLanguageController.locale
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }

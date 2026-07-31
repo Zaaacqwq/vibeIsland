@@ -195,8 +195,8 @@ final class AmazonMusicController: ObservableObject, MediaControllerProtocol {
 
     private static func makeIdlePlaybackState() -> PlaybackState {
         var state = PlaybackState(bundleIdentifier: Self.bundleIdentifier)
-        state.title = "Unknown"
-        state.artist = "Unknown"
+        state.title = String(localized: "Unknown")
+        state.artist = String(localized: "Unknown")
         state.album = ""
         state.isPlaying = false
         state.artwork = nil

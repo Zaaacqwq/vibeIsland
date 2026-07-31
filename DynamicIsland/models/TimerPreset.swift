@@ -81,6 +81,7 @@ struct TimerPreset: Identifiable, Codable, Hashable, Defaults.Serializable {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = duration >= 3600 ? [.hour, .minute, .second] : [.minute, .second]
         formatter.zeroFormattingBehavior = [.pad]
+        formatter.calendar = AppLanguageController.calendar
         return formatter.string(from: duration) ?? "0:00"
     }
 
