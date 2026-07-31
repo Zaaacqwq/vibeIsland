@@ -125,30 +125,58 @@ final class SystemVolumeController {
         !volumeElements().isEmpty
     }
 
-    /// Gain the audio visualiser multiplies its magnitudes by, so the bars track
-    /// what you can actually hear.
-    ///
-    /// `AudioTap` uses a *process* tap, which sees each app's output before device
-    /// volume is applied — hence the scaling. But the device's decibel value is
-    /// the wrong number to scale by, even though it is the electrically correct
-    /// one: macOS maps its volume slider logarithmically, so 18% on the slider is
-    /// −36.6 dB, i.e. 1.5% amplitude. Multiplying the magnitudes by 0.015 pinned
-    /// every bar to the visualiser's idle floor and the waveform looked frozen
-    /// while music played.
-    ///
-    /// The slider's own scalar is the perceptual number, and softening it keeps
-    /// quiet playback visibly quieter without flattening it.
-    var currentOutputGain: Float {
-        guard !isMuted else { return 0 }
-        guard hasSoftwareVolumeControl else { return 1 }
-
-        let scalar = currentVolume
-        guard scalar.isFinite else { return 1 }
-        return Self.visualizerGain(volumeScalar: scalar)
+    /// UID of the current output device, or `nil` when CoreAudio has none.
+    /// Stable across reboots and reconnects, so it keys per-device calibration.
+    var currentOutputDeviceUID: String? {
+        var uid: CFString? = nil
+        var size = UInt32(MemoryLayout<CFString?>.size)
+        // Device UID lives in the global scope, not the output scope the
+        // volume/mute helpers use.
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = withUnsafeMutablePointer(to: &uid) { pointer in
+            AudioObjectGetPropertyData(currentDeviceID, &address, 0, nil, &size, pointer)
+        }
+        guard status == noErr, let uid else { return nil }
+        return uid as String
     }
 
-    static func visualizerGain(volumeScalar: Float) -> Float {
-        sqrt(min(1, max(0, volumeScalar)))
+    /// How far the visualiser shifts its bands, in dB, so the bars track what
+    /// you can actually hear.
+    ///
+    /// `AudioTap` uses a *process* tap, which sees each app's output before
+    /// device volume is applied — hence the correction. The electrically
+    /// correct value is the full slider decibel, but macOS maps its slider
+    /// logarithmically: 18% is −36.6 dB, which drops the bands below the
+    /// visualiser's floor and freezes the waveform while music plays.
+    ///
+    /// Weighting the decibel value keeps the slider visibly influential without
+    /// letting it dominate — turning the volume down shortens the bars, but a
+    /// comfortable listening level anywhere on the slider still animates.
+    static let volumeOffsetWeight: Float = 0.5
+
+    /// Applied when the route is muted: far enough below the normalisation
+    /// floor that every band clamps to silence.
+    static let silencedOffsetDb: Float = -200
+
+    var currentOutputOffsetDb: Float {
+        guard !isMuted else { return Self.silencedOffsetDb }
+        // Routes such as HDMI expose no software volume, so their physical
+        // level cannot be inferred. Treat them as unity.
+        guard hasSoftwareVolumeControl else { return 0 }
+
+        let scalar = currentVolume
+        guard scalar.isFinite else { return 0 }
+        return Self.visualizerOffsetDb(volumeScalar: scalar)
+    }
+
+    static func visualizerOffsetDb(volumeScalar: Float) -> Float {
+        let clamped = min(1, max(0, volumeScalar))
+        guard clamped > 0 else { return silencedOffsetDb }
+        return volumeOffsetWeight * 20 * log10f(clamped)
     }
 
     func setVolume(_ value: Float) {

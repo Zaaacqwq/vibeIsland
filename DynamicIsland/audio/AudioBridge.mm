@@ -34,8 +34,16 @@
     return self;
 }
 
++ (float)normalizationRangeDb {
+    return AudioProcessor::kCeilingDb - AudioProcessor::kFloorDb;
+}
+
 - (void)processBuffer:(const float *)buffer count:(int)count {
     processor->process(buffer, count);
+}
+
+- (void)setLevelOffsetDb:(float)db {
+    processor->setLevelOffsetDb(db);
 }
 
 - (simd_float4)getSmoothedMagnitudes {

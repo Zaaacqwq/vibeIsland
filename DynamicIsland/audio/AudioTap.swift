@@ -128,7 +128,10 @@ class AudioTap: NSObject {
     let bridge = AudioBridge()
     var isPaused: Bool = false
     private var displayMagnitudes = simd_float4(0, 0, 0, 0)
-    private var outputGain: Float = 1
+
+    /// Bands below this are treated as silence rather than playback, so the
+    /// calibrator never learns from a paused or muted route.
+    private static let activityThreshold: Float = 0.02
 
     // CoreAudio stuff
     private var tapID: AudioObjectID = kAudioObjectUnknown
@@ -144,11 +147,17 @@ class AudioTap: NSObject {
 
     private override init() {
         super.init()
-        refreshSystemOutputGain()
+        refreshLevelOffset()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(systemVolumeDidChange(_:)),
             name: .systemVolumeDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemAudioRouteDidChange(_:)),
+            name: .systemAudioRouteDidChange,
             object: nil
         )
     }
@@ -156,7 +165,9 @@ class AudioTap: NSObject {
     // Helper function to smooth out the magnitudes for prettifying purposes
     func getSmoothedMagnitudes() -> simd_float4 {
         // Zero bridging overhead. Just passing 16 bytes of memory.
-        let targetLevels = bridge.getSmoothedMagnitudes() * outputGain
+        // Volume and device calibration are already folded in by the processor,
+        // which applies them before clamping so silence stays silent.
+        let targetLevels = bridge.getSmoothedMagnitudes()
 
         let smoothingFactor: Float = 0.4
 
@@ -164,15 +175,26 @@ class AudioTap: NSObject {
         let difference = targetLevels - displayMagnitudes
         displayMagnitudes += difference * smoothingFactor
 
+        if simd_reduce_max(displayMagnitudes) > Self.activityThreshold,
+           AudioOutputLevelCalibrator.shared.noteAudioActive() {
+            refreshLevelOffset()
+        }
+
         return displayMagnitudes
     }
 
     @objc private func systemVolumeDidChange(_ notification: Notification) {
-        refreshSystemOutputGain()
+        refreshLevelOffset()
     }
 
-    private func refreshSystemOutputGain() {
-        outputGain = SystemVolumeController.shared.currentOutputGain
+    @objc private func systemAudioRouteDidChange(_ notification: Notification) {
+        // The new route has its own learned trim and its own volume.
+        AudioOutputLevelCalibrator.shared.invalidate()
+        refreshLevelOffset()
+    }
+
+    private func refreshLevelOffset() {
+        bridge.setLevelOffsetDb(AudioOutputLevelCalibrator.shared.currentOffsetDb())
     }
 
     func startCapture() async {

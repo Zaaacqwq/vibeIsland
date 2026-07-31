@@ -26,11 +26,18 @@ import simd
 
 /// NSView-based real-time audio spectrum visualizer
 class RealTimeAudioSpectrum: NSView {
-    static let amplitudeRange = 0.25...2.0
+    /// The former 200% raw gain is the visual baseline users expect, so expose
+    /// it as the newly calibrated 100% while preserving existing saved values.
+    static let nominalAmplitude = 2.0
+    static let amplitudeRange = 0.5...4.0
+
+    /// Bar height for a silent band. Bars never collapse fully — the idle
+    /// stripe is part of the visualiser's resting look.
+    static let idleScale = 0.2
 
     private var barLayers: [CAShapeLayer] = []
     private var isPlaying: Bool = true
-    private var amplitude: Double = 1
+    private var amplitude: Double = nominalAmplitude
     private var animationTimer: Timer?
     
     override init(frame frameRect: NSRect) {
@@ -116,9 +123,8 @@ class RealTimeAudioSpectrum: NSView {
         // Get real-time magnitudes from AudioTap
         let magnitudes = AudioTap.shared.getSmoothedMagnitudes()
 
-        // Map magnitude (0-1) to scale (0.2 - 1.0) for visual appeal.
-        // The user amplitude scales only the live portion; 100% preserves the
-        // original multiplier and the 0.2 idle floor remains unchanged.
+        // Magnitudes are normalised across the processor's decibel window;
+        // map them onto the bar's travel above the idle floor.
         var scales = SIMD4<Double>()
         for index in 0 ..< 4 {
             scales[index] = Self.barScale(
@@ -147,7 +153,7 @@ class RealTimeAudioSpectrum: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for barLayer in barLayers {
-            barLayer.transform = CATransform3DMakeScale(1, 0.2, 1)
+            barLayer.transform = CATransform3DMakeScale(1, CGFloat(Self.idleScale), 1)
         }
         CATransaction.commit()
     }
@@ -172,14 +178,25 @@ class RealTimeAudioSpectrum: NSView {
         lastScales = SIMD4<Double>(repeating: -1)
     }
 
+    /// `magnitude` arrives already normalised across the processor's decibel
+    /// window, so the user amplitude is a decibel shift rather than a
+    /// multiplier — nudging it moves quiet and loud passages together instead
+    /// of only stretching the loud ones.
     static func barScale(magnitude: Float, amplitude: Double) -> Double {
+        // Exactly zero means the processor clamped the band to silence. A
+        // positive amplitude must not lift it off the idle floor.
+        guard magnitude > 0 else { return idleScale }
+
         let clampedAmplitude = min(
             amplitudeRange.upperBound,
             max(amplitudeRange.lowerBound, amplitude)
         )
+        let offsetDb = 20 * log10(clampedAmplitude / nominalAmplitude)
+        let level = Double(magnitude) + offsetDb / Double(AudioBridge.normalizationRangeDb)
+
         return max(
-            0.2,
-            min(1, Double(magnitude) * 4 * clampedAmplitude + 0.2)
+            idleScale,
+            min(1, idleScale + max(0, min(1, level)) * (1 - idleScale))
         )
     }
 }
@@ -209,7 +226,7 @@ struct RealTimeAudioSpectrumView: NSViewRepresentable {
 #Preview {
     RealTimeAudioSpectrumView(
         isPlaying: .constant(true),
-        amplitude: 1
+        amplitude: RealTimeAudioSpectrum.nominalAmplitude
     )
         .frame(width: 16, height: 20)
         .padding()

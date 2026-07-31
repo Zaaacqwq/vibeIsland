@@ -77,8 +77,16 @@ float AudioProcessor::getBand( int i ) const
     return bandParams[i].load( std::memory_order_relaxed );
 }
 
+void AudioProcessor::setLevelOffsetDb( float db )
+{
+    levelOffsetDb.store( std::isfinite( db ) ? db : 0.0f,
+                         std::memory_order_relaxed );
+}
+
 void AudioProcessor::processBlock()
 {
+    const float offsetDb = levelOffsetDb.load( std::memory_order_relaxed );
+
     for ( int i = 0; i < kBands; ++i )
     {
         vDSP_biquad( setups[i], delays[i], mono, 1, filtered, 1, kBlockSize );
@@ -92,16 +100,26 @@ void AudioProcessor::processBlock()
             rms = 0.0f;
         }
 
-        float boostedRms = rms * kGains[i];
-        boostedRms = std::min( boostedRms, 1.0f );
+        // Normalise in the decibel domain. Digital silence lands far below the
+        // floor even with the largest positive offset, so it clamps to zero.
+        const float db = 20.0f * std::log10( std::max( rms, 1e-7f ) )
+                         + kBandGainDb[i] + offsetDb;
+        float level = ( db - kFloorDb ) / ( kCeilingDb - kFloorDb );
+        level = std::clamp( level, 0.0f, 1.0f );
 
         // Asymmetric envelope: attack fast, release slow
         float prev = envelopes[i];
-        envelopes[i] = ( boostedRms > prev )
-                           ? prev * ( 1.0f - kAttack ) + boostedRms * kAttack
-                           : prev * ( 1.0f - kRelease ) + boostedRms * kRelease;
+        float next = ( level > prev )
+                         ? prev * ( 1.0f - kAttack ) + level * kAttack
+                         : prev * ( 1.0f - kRelease ) + level * kRelease;
 
-        bandParams[i].store( envelopes[i], std::memory_order_relaxed );
+        if ( next < kSilenceEpsilon )
+        {
+            next = 0.0f;
+        }
+        envelopes[i] = next;
+
+        bandParams[i].store( next, std::memory_order_relaxed );
     }
 }
 

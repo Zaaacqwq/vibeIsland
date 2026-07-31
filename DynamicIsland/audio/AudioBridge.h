@@ -26,8 +26,15 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface AudioBridge : NSObject
 
+/// Width in dB of the window band energy is normalised across. Swift reuses
+/// this to convert its own gain controls into the same normalised units.
+@property (class, readonly) float normalizationRangeDb;
+
 - (void)processBuffer:(const float *)buffer count:(int)count;
 - (simd_float4)getSmoothedMagnitudes;
+
+/// Shifts every band by `db` before normalisation.
+- (void)setLevelOffsetDb:(float)db;
 
 @end
 

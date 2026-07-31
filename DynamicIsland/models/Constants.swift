@@ -637,7 +637,13 @@ extension Defaults.Keys {
     static let enableRealTimeWaveform = Key<Bool>("enableRealTimeWaveform", default: false)
     static let realTimeWaveformAmplitude = Key<Double>(
         "realTimeWaveformAmplitude",
-        default: 1
+        default: 2
+    )
+    /// Output device UID → mean listening offset in dB, learned by
+    /// ``AudioOutputLevelCalibrator`` so headphones and speakers animate alike.
+    static let audioOutputLevelCalibration = Key<[String: Double]>(
+        "audioOutputLevelCalibration",
+        default: [:]
     )
     static let enableSneakPeek = Key<Bool>("enableSneakPeek", default: false)
     static let sneakPeekStyles = Key<SneakPeekStyle>("sneakPeekStyles", default: .standard)
