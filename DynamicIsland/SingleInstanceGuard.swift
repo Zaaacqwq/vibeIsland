@@ -39,6 +39,14 @@ enum SingleInstanceGuard {
     /// activates the surviving instance and calls `NSApp.terminate` before
     /// returning `true`, so the caller can simply `return`.
     static func shouldTerminateForExistingInstance() -> Bool {
+        // App-hosted unit tests launch a second copy of VibeIsland as their test
+        // runner. Treat that process like an intentional restart; otherwise a
+        // normal installed copy can make the runner exit before XCTest connects.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              NSClassFromString("XCTestCase") == nil else {
+            return false
+        }
+
         // An intentional restart is allowed to coexist briefly with the
         // outgoing instance; never terminate it.
         guard !ProcessInfo.processInfo.arguments.contains(restartArgument) else {
