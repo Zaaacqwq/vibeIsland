@@ -10,6 +10,8 @@ without taking over your desktop.
 
 `macOS 14.6+` · `SwiftUI` · `GPL-3.0`
 
+**English** · [简体中文](ReadMe.zh-CN.md)
+
 </div>
 
 ![VibeIsland home view with media controls and an AI agent permission prompt](docs/images/vibeisland-home.png)
