@@ -355,24 +355,36 @@ public final class CodexRolloutDiscovery: @unchecked Sendable {
         var sessionMeta: SessionMeta?
         var buffer = Data()
 
-        while let chunk = try? fileHandle.read(upToCount: Self.streamingChunkSize),
-              !chunk.isEmpty {
-            buffer.append(chunk)
-            for line in extractCompleteLines(from: &buffer) {
-                CodexRolloutReducer.apply(line: line, to: &snapshot)
-                if sessionMeta == nil {
-                    sessionMeta = parseSessionMeta(fromLine: line)
+        // The `read` belongs inside the pool: it hands back an autoreleased
+        // buffer, so chunking alone still accumulates the entire file when the
+        // loop has no pool of its own to drain into.
+        var reachedEnd = false
+        while !reachedEnd {
+            autoreleasepool {
+                guard let chunk = try? fileHandle.read(upToCount: Self.streamingChunkSize),
+                      !chunk.isEmpty else {
+                    reachedEnd = true
+                    return
+                }
+                buffer.append(chunk)
+                for line in extractCompleteLines(from: &buffer) {
+                    CodexRolloutReducer.apply(line: line, to: &snapshot)
+                    if sessionMeta == nil {
+                        sessionMeta = parseSessionMeta(fromLine: line)
+                    }
                 }
             }
         }
 
         // A trailing line without a final newline should still count.
         if !buffer.isEmpty {
-            let trailing = String(decoding: buffer, as: UTF8.self)
-            if !trailing.isEmpty {
-                CodexRolloutReducer.apply(line: trailing, to: &snapshot)
-                if sessionMeta == nil {
-                    sessionMeta = parseSessionMeta(fromLine: trailing)
+            autoreleasepool {
+                let trailing = String(decoding: buffer, as: UTF8.self)
+                if !trailing.isEmpty {
+                    CodexRolloutReducer.apply(line: trailing, to: &snapshot)
+                    if sessionMeta == nil {
+                        sessionMeta = parseSessionMeta(fromLine: trailing)
+                    }
                 }
             }
         }
@@ -1477,21 +1489,26 @@ public final class CodexRolloutWatcher: @unchecked Sendable {
             var snapshot = CodexRolloutSnapshot()
             var bytesRemaining = readLimit
 
-            while bytesRemaining > 0, snapshot.initialUserPrompt == nil {
-                let chunkSize = Int(min(bytesRemaining, 64 * 1_024))
-                guard let data = try fileHandle.read(upToCount: chunkSize), !data.isEmpty else {
-                    break
+            // Pool the read as well as the parse — see `parseRollout`.
+            var reachedEnd = false
+            while bytesRemaining > 0, snapshot.initialUserPrompt == nil, !reachedEnd {
+                try autoreleasepool {
+                    let chunkSize = Int(min(bytesRemaining, 64 * 1_024))
+                    guard let data = try fileHandle.read(upToCount: chunkSize), !data.isEmpty else {
+                        reachedEnd = true
+                        return
+                    }
+
+                    buffer.append(data)
+                    bytesRemaining -= UInt64(data.count)
+
+                    let lines = completeLines(from: &buffer)
+                    guard !lines.isEmpty else {
+                        return
+                    }
+
+                    lines.forEach { CodexRolloutReducer.apply(line: $0, to: &snapshot) }
                 }
-
-                buffer.append(data)
-                bytesRemaining -= UInt64(data.count)
-
-                let lines = completeLines(from: &buffer)
-                guard !lines.isEmpty else {
-                    continue
-                }
-
-                lines.forEach { CodexRolloutReducer.apply(line: $0, to: &snapshot) }
             }
 
             return snapshot.initialUserPrompt
