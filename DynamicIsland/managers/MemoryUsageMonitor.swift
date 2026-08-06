@@ -32,9 +32,23 @@ final class MemoryUsageMonitor {
     private let pollInterval: TimeInterval = 8 // Clamp within 5-10 seconds to limit battery impact
     private let restartCooldown: TimeInterval = 300
     private let logSampleInterval: TimeInterval = 300
+
+    /// How long "Later" holds the prompt off. Dismissing is a decision to keep
+    /// working, and memory over the threshold rarely falls back on its own — at
+    /// the 300 s cooldown that turned into a dialog every five minutes for the
+    /// rest of the session.
+    private let postponeCooldown: TimeInterval = 3_600
+
+    /// Growth past the postponed reading that re-opens the prompt early, so a
+    /// genuine runaway is still surfaced inside the snooze window.
+    private let postponeGrowthFactor: Double = 1.5
+
     private var monitorTask: Task<Void, Never>?
     private var lastRestartAttempt: Date = .distantPast
     private var lastLogSample: Date = .distantPast
+    private var postponedUntil: Date = .distantPast
+    private var postponedAtUsage: UInt64 = .max
+    private var isPresentingAlert = false
 
     func startMonitoring() {
         guard monitorTask == nil else { return }
@@ -67,11 +81,26 @@ final class MemoryUsageMonitor {
     }
 
     private func restartIfNeeded(currentUsage: UInt64) {
+        // The alert is modal and runs on the main actor; without this the poll
+        // that fires while it is open would stack a second one behind it.
+        guard !isPresentingAlert else { return }
+
         let now = Date()
-        guard now.timeIntervalSince(lastRestartAttempt) >= restartCooldown else {
-            Logger.log("[MemoryMonitor] Usage \(formatMegabytes(currentUsage)) MB exceeds threshold but cooldown active", category: .warning)
-            return
+
+        if now < postponedUntil {
+            let escalated = Double(currentUsage) >= Double(postponedAtUsage) * postponeGrowthFactor
+            guard escalated else { return }
+            Logger.log(
+                "[MemoryMonitor] Usage \(formatMegabytes(currentUsage)) MB grew past the postponed reading of \(formatMegabytes(postponedAtUsage)) MB. Re-prompting early.",
+                category: .warning
+            )
+        } else {
+            guard now.timeIntervalSince(lastRestartAttempt) >= restartCooldown else {
+                Logger.log("[MemoryMonitor] Usage \(formatMegabytes(currentUsage)) MB exceeds threshold but cooldown active", category: .warning)
+                return
+            }
         }
+
         lastRestartAttempt = now
         Logger.log("[MemoryMonitor] Usage \(formatMegabytes(currentUsage)) MB >= \(formatMegabytes(thresholdBytes)) MB. Prompting for restart.", category: .warning)
         presentRestartAlert(currentUsage: currentUsage)
@@ -89,11 +118,19 @@ final class MemoryUsageMonitor {
         alert.addButton(withTitle: String(localized: "Restart Now"))
         alert.addButton(withTitle: String(localized: "Later"))
 
+        isPresentingAlert = true
         let response = alert.runModal()
+        isPresentingAlert = false
+
         if response == .alertFirstButtonReturn {
             relaunchApplication()
         } else {
-            Logger.log("[MemoryMonitor] Restart postponed by user", category: .warning)
+            postponedUntil = Date().addingTimeInterval(postponeCooldown)
+            postponedAtUsage = currentUsage
+            Logger.log(
+                "[MemoryMonitor] Restart postponed by user at \(formatMegabytes(currentUsage)) MB; muted for \(Int(postponeCooldown / 60)) min",
+                category: .warning
+            )
         }
     }
 

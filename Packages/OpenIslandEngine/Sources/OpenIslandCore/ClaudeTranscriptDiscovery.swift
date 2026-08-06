@@ -159,20 +159,32 @@ public final class ClaudeTranscriptDiscovery: @unchecked Sendable {
             }
         }
 
+        // `read` returns an autoreleased buffer and must be called inside the
+        // pool: chunking alone still retains the whole file if the chunks have
+        // nowhere to drain before the enclosing pool does.
         var buffer = Data()
-        while let chunk = try? fileHandle.read(upToCount: Self.streamingChunkSize),
-              !chunk.isEmpty {
-            buffer.append(chunk)
-            for line in extractCompleteLines(from: &buffer) {
-                processLine(line)
+        var reachedEnd = false
+        while !reachedEnd {
+            autoreleasepool {
+                guard let chunk = try? fileHandle.read(upToCount: Self.streamingChunkSize),
+                      !chunk.isEmpty else {
+                    reachedEnd = true
+                    return
+                }
+                buffer.append(chunk)
+                for line in extractCompleteLines(from: &buffer) {
+                    processLine(line)
+                }
             }
         }
 
         // Honor a final line written without a trailing newline.
         if !buffer.isEmpty {
-            let trailing = String(decoding: buffer, as: UTF8.self)
-            if !trailing.isEmpty {
-                processLine(trailing)
+            autoreleasepool {
+                let trailing = String(decoding: buffer, as: UTF8.self)
+                if !trailing.isEmpty {
+                    processLine(trailing)
+                }
             }
         }
 

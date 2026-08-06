@@ -128,13 +128,69 @@ public final class AgentTokenUsageProvider: @unchecked Sendable {
 
 /// Shared helpers for line-oriented transcript parsing.
 enum TranscriptParsing {
+    /// 256 KB measured fastest over a 197 MB corpus: 2.5 s per sweep against
+    /// 4.0 s at 64 KB (syscall and pool churn) and 2.8 s at 1 MB. Peak memory is
+    /// one chunk either way.
+    private static let streamingChunkSize = 256 * 1_024
+
     /// Reads a `.jsonl` file and yields each non-empty line. Returns silently on
     /// unreadable files so one bad transcript never aborts the whole aggregate.
+    ///
+    /// Streamed in chunks rather than slurped: `String(contentsOf:)` plus a
+    /// whole-file `split` held an entire transcript — 40 MB+ for a heavy
+    /// session — in memory at once, and the callers run over every transcript
+    /// in a 14-day window on a 60-second refresh. That was the same failure
+    /// `ClaudeTranscriptDiscovery` already had to fix.
+    ///
+    /// The `read` itself must happen *inside* the autorelease pool. It returns an
+    /// autoreleased buffer, so a `while let chunk = try? handle.read(...)` loop
+    /// with the pool only around the loop *body* leaves every chunk to pile up
+    /// until the enclosing pool drains — retaining the whole file, which is the
+    /// leak this streaming was supposed to avoid. The aggregation is one
+    /// synchronous run on a detached task with no suspension points, so nothing
+    /// drains it implicitly; measured against a 197 MB transcript corpus this
+    /// was +198 MB of live heap per refresh, on a 60-second timer.
     static func forEachLine(in url: URL, _ body: (String) -> Void) {
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-        for line in content.split(whereSeparator: \.isNewline) where !line.isEmpty {
-            body(String(line))
+        guard let fileHandle = try? FileHandle(forReadingFrom: url) else { return }
+        defer { try? fileHandle.close() }
+
+        var buffer = Data()
+        var reachedEnd = false
+        while !reachedEnd {
+            autoreleasepool {
+                guard let chunk = try? fileHandle.read(upToCount: streamingChunkSize),
+                      !chunk.isEmpty else {
+                    reachedEnd = true
+                    return
+                }
+                buffer.append(chunk)
+                for line in extractCompleteLines(from: &buffer) {
+                    body(line)
+                }
+            }
         }
+
+        // Honor a final line written without a trailing newline.
+        if !buffer.isEmpty {
+            autoreleasepool {
+                let trailing = String(decoding: buffer, as: UTF8.self)
+                if !trailing.isEmpty {
+                    body(trailing)
+                }
+            }
+        }
+    }
+
+    private static func extractCompleteLines(from buffer: inout Data) -> [String] {
+        let newline = UInt8(ascii: "\n")
+        var lines: [String] = []
+        while let newlineIndex = buffer.firstIndex(of: newline) {
+            let lineData = buffer.prefix(upTo: newlineIndex)
+            buffer.removeSubrange(...newlineIndex)
+            guard !lineData.isEmpty else { continue }
+            lines.append(String(decoding: lineData, as: UTF8.self))
+        }
+        return lines
     }
 
     /// Parses an ISO-8601 timestamp, tolerating the presence or absence of

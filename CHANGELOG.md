@@ -4,6 +4,25 @@ All notable changes to VibeIsland, newest first. Versions follow
 [semantic versioning](https://semver.org): a minor bump adds features, a patch
 bump fixes them.
 
+## 1.4.1
+
+Memory no longer climbs until VibeIsland asks to restart itself.
+
+### Fixed
+
+- The agent token-usage panel leaked roughly 200 MB every time it refreshed,
+  which is once a minute, until the app crossed its own 1 GB safety limit and
+  began asking to restart. It re-reads your recent agent transcripts to total up
+  tokens, and each chunk it read was held until the whole sweep finished rather
+  than released as it went — so a session's worth of refreshes retained the
+  transcripts many times over. How fast it climbed depended on how much you had
+  used your coding agents recently. Reported by @wf1314 (#4).
+- The same refresh now finishes in about half the time.
+- Dismissing the high-memory prompt with "Later" holds it off for an hour
+  instead of five minutes, so it no longer reappears through a working session.
+  A genuine runaway — usage growing half again past what you dismissed — still
+  reopens the prompt early.
+
 ## 1.4.0
 
 VibeIsland speaks Simplified Chinese, and the music waveform finally reads the
