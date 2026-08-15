@@ -154,6 +154,8 @@ final class AgentMonitorManager: ObservableObject {
     private static let tokenUsageTTL: TimeInterval = 60
     private var hasStarted = false
     private var livenessTimer: Timer?
+    /// Guards against overlapping liveness sweeps; see `reconcileProcessLiveness`.
+    private var isReconcilingLiveness = false
     /// Lightweight in-memory watchdog (no `ps`) that completes idle Antigravity
     /// turns promptly, since agy never delivers its `Stop` hook.
     private var antigravityWatchdogTimer: Timer?
@@ -648,11 +650,20 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     private func reconcileProcessLiveness() {
+        // One sweep at a time. This does `ps` plus two transcript scans, which
+        // can outlast the 4-second poll interval on a large session history;
+        // without the guard the timer stacked sweeps that then ran the same
+        // scans concurrently, doubling both the CPU and the peak memory.
+        // Skipping is safe — the next tick is 4 seconds away.
+        guard !isReconcilingLiveness else { return }
+        isReconcilingLiveness = true
+
         Task.detached(priority: .utility) {
             let aliveTTYs = Self.ttysHostingAgents()
             let usage = try? ClaudeUsageLoader.load()
             let codexUsage = try? CodexUsageLoader.load()
             await MainActor.run {
+                self.isReconcilingLiveness = false
                 self.applyLiveness(aliveTTYs: aliveTTYs)
                 if let usage { self.usage = usage }
                 if let codexUsage { self.codexUsage = codexUsage }
