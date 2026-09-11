@@ -142,6 +142,10 @@ Or skip the dialog entirely from a terminal:
 xattr -cr /Applications/VibeIsland.app
 ```
 
+If macOS instead says VibeIsland "contains malware" and offers no Open Anyway,
+you have 1.4.1 or earlier: the certificate those releases were signed with was
+revoked. Download 1.4.2 or later.
+
 ## Build from source
 
 No Apple Developer account or signing setup is needed — the project signs with

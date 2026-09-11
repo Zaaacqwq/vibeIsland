@@ -4,6 +4,13 @@ name: Release DMG
 # GitHub release. The app is not notarized (no Developer ID certificate), so
 # first launch requires System Settings > Privacy & Security > Open Anyway —
 # documented in the ReadMe install section.
+#
+# Releases are signed with a long-lived self-signed certificate
+# ("VibeIsland Self-Signed"). Apple cannot revoke it, unlike the Apple
+# Development certificate used up to v1.4.1: once that was revoked, macOS
+# refused to open the DMG's app as "contains malware", with no Open Anyway.
+# Its designated requirement pins the certificate, so privacy permissions
+# survive Sparkle updates.
 
 on:
   push:
@@ -23,6 +30,8 @@ jobs:
     # macos-15's newest Xcode is 26.3, which links against the macOS 26.2 SDK.
     # macos-26 carries Xcode 26.5/26.6 and the 26.5 SDK.
     runs-on: macos-26
+    env:
+      SIGNING_IDENTITY: VibeIsland Self-Signed
 
     steps:
       - name: Checkout
@@ -77,6 +86,19 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           rm -f "$CERTIFICATE_PATH"
 
+          # codesign only accepts a self-signed identity once it is trusted for
+          # code signing. Changing trust settings needs an interactive
+          # authorization unless the admin right is opened up first.
+          CERTIFICATE_PEM="$RUNNER_TEMP/vibeisland-signing.pem"
+          security find-certificate -c "$SIGNING_IDENTITY" -p "$KEYCHAIN_PATH" > "$CERTIFICATE_PEM"
+          sudo security authorizationdb write com.apple.trust-settings.admin allow
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+            -k "$KEYCHAIN_PATH" "$CERTIFICATE_PEM"
+          rm -f "$CERTIFICATE_PEM"
+
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep -F "\"$SIGNING_IDENTITY\""
+
       - name: Build (Release, consistently signed)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -88,12 +110,21 @@ jobs:
             -derivedDataPath build \
             -resultBundlePath BuildResults.xcresult \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Development: zacchenzy@gmail.com (2BM54B4CS9)" \
-            DEVELOPMENT_TEAM=66M8FY87U6 \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
+            DEVELOPMENT_TEAM= \
             PRODUCT_BUNDLE_IDENTIFIER=com.zaaacqwq.VibeIsland.dev \
             CODE_SIGNING_REQUIRED=YES \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+
+      - name: Verify signature
+        run: |
+          APP="build/Build/Products/Release/VibeIsland.app"
+          codesign --verify --deep --strict "$APP"
+          codesign -dvv "$APP" 2>&1 | grep -Fx "Authority=$SIGNING_IDENTITY"
+          # Permissions are keyed to this requirement; it must pin the
+          # certificate, never a per-build cdhash.
+          codesign -d -r- "$APP" 2>&1 | grep -F "certificate root = H\""
 
       - name: Package DMG
         run: |

@@ -137,6 +137,9 @@ VibeIsland 可以把指定的 macOS 浮层替换为适配刘海的指示器，�
 xattr -cr /Applications/VibeIsland.app
 ```
 
+如果 macOS 提示 VibeIsland“含有恶意软件”且没有“仍要打开”按钮，说明你下载的是
+1.4.1 或更早的版本：这些版本使用的签名证书已被吊销。请下载 1.4.2 或更新的版本。
+
 ## 从源码构建
 
 不需要 Apple Developer 账号，也不需要配置签名 —— 项目默认使用临时（ad-hoc）签名，
