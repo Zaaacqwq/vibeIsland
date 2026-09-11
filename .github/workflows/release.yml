@@ -87,11 +87,11 @@ jobs:
           rm -f "$CERTIFICATE_PATH"
 
           # codesign only accepts a self-signed identity once it is trusted for
-          # code signing. Changing trust settings needs an interactive
-          # authorization unless the admin right is opened up first.
+          # code signing. Only the admin domain (-d, via sudo) works here: the
+          # user domain waits forever for an interactive authorization, and
+          # macOS 26 runners deny `authorizationdb write` with -60005.
           CERTIFICATE_PEM="$RUNNER_TEMP/vibeisland-signing.pem"
           security find-certificate -c "$SIGNING_IDENTITY" -p "$KEYCHAIN_PATH" > "$CERTIFICATE_PEM"
-          sudo security authorizationdb write com.apple.trust-settings.admin allow
           sudo security add-trusted-cert -d -r trustRoot -p codeSign \
             -k "$KEYCHAIN_PATH" "$CERTIFICATE_PEM"
           rm -f "$CERTIFICATE_PEM"
