@@ -4,6 +4,23 @@ All notable changes to VibeIsland, newest first. Versions follow
 [semantic versioning](https://semver.org): a minor bump adds features, a patch
 bump fixes them.
 
+## 1.4.2
+
+macOS opens VibeIsland again.
+
+### Fixed
+
+- Downloading 1.4.1 or earlier now ends in macOS refusing to open the app
+  because it "contains malware", with no Open Anyway button. Nothing in the app
+  changed: the Apple Development certificate those releases were signed with
+  was revoked, and macOS treats anything signed by a revoked certificate as
+  malware. Releases are now signed with VibeIsland's own long-lived
+  certificate, which Apple cannot revoke. The first launch still needs
+  **Open Anyway** once, as described in the ReadMe.
+- Because the signing certificate changed, macOS asks once more for the
+  permissions you had granted — Accessibility, Calendar, and control of Music
+  or Spotify. Later updates keep them.
+
 ## 1.4.1
 
 Memory no longer climbs until VibeIsland asks to restart itself.
