@@ -224,8 +224,17 @@ public extension GeminiHookPayload {
             payload.terminalTTY = currentTTYProvider()
         }
 
+        // iTerm names the pane in the environment, so there is no need to ask
+        // iTerm for its focused session — which is whatever tab the user is
+        // looking at, not necessarily this agent's.
+        if payload.terminalSessionID == nil, isITermTerminalApp(payload.terminalApp) {
+            payload.terminalSessionID = TerminalPaneIdentity.iTermSessionID(from: environment)
+        }
+
         let useLocator: Bool
         if isCmuxTerminalApp(payload.terminalApp) || isZellijTerminalApp(payload.terminalApp) {
+            useLocator = false
+        } else if isITermTerminalApp(payload.terminalApp), payload.terminalSessionID != nil {
             useLocator = false
         } else if let terminalApp = payload.terminalApp, isGhosttyTerminalApp(terminalApp) {
             switch payload.hookEventName {
@@ -242,6 +251,13 @@ public extension GeminiHookPayload {
 
         if useLocator, let terminalApp = payload.terminalApp {
             let locator = terminalLocatorProvider(terminalApp)
+            guard TerminalPaneIdentity.locatorDescribesOwnPane(
+                locatorTTY: locator.tty,
+                ownTTY: payload.terminalTTY,
+                environment: environment
+            ) else {
+                return payload
+            }
             if payload.terminalSessionID == nil {
                 payload.terminalSessionID = locator.sessionID
             }
@@ -319,6 +335,10 @@ public extension GeminiHookPayload {
     private func isGhosttyTerminalApp(_ terminalApp: String?) -> Bool {
         guard let app = terminalApp?.lowercased() else { return false }
         return app.contains("ghostty")
+    }
+
+    private func isITermTerminalApp(_ terminalApp: String?) -> Bool {
+        terminalApp?.lowercased().contains("iterm") ?? false
     }
 
     private func isCmuxTerminalApp(_ terminalApp: String?) -> Bool {
