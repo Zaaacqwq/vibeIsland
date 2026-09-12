@@ -430,48 +430,84 @@ struct TerminalJumpService {
     }
 
     private func jumpToITermSession(_ target: JumpTarget) throws -> Bool {
-        let wantSession = escapeAppleScript(target.terminalSessionID)
-        let wantTTY = escapeAppleScript(target.terminalTTY)
-        let script = """
-        tell application "iTerm"
-            if not (it is running) then return ""
-            activate
-            set sessionDump to ""
-            repeat with aWindow in windows
-                repeat with aTab in tabs of aWindow
-                    repeat with aSession in sessions of aTab
-                        set sid to (id of aSession as text)
-                        set stty to (tty of aSession as text)
-                        set sessionDump to sessionDump & sid & "=" & stty & ";"
-                        set matched to false
-                        if "\(wantSession)" is not "" and sid is "\(wantSession)" then
-                            set matched to true
-                        end if
-                        if not matched and "\(wantTTY)" is not "" and stty is "\(wantTTY)" then
-                            set matched to true
-                        end if
-                        if not matched and "\(wantSession)" is not "" and sid contains "\(wantSession)" then
-                            set matched to true
-                        end if
-                        if matched then
-                            select aWindow
-                            tell aWindow to select aTab
-                            select aSession
-                            return "matched"
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            return "nomatch:" & sessionDump
-        end tell
-        """
-
-        let result = try runAppleScript(script)
+        let result = try runAppleScript(iTermJumpScript(for: target))
         if result != "matched" {
             NSLog("[VibeIsland jump] iTerm no match — want sessionID=%@ tty=%@ | live: %@",
                   target.terminalSessionID ?? "nil", target.terminalTTY ?? "nil", result)
         }
         return result == "matched"
+    }
+
+    /// Ranks candidate sessions instead of taking the first one that matches
+    /// any locator. The TTY comes from the agent's own process, so it always
+    /// names the right pane; the session ID can be stale — older hook builds
+    /// recorded iTerm's *focused* session, i.e. whichever tab the user was on
+    /// when the hook fired. Checking both in a single pass let such a stale ID
+    /// win whenever its tab came earlier in window order.
+    ///
+    /// Candidates are recorded as {window id, tab index, session id} rather
+    /// than loop references: those are index-based ("item 3 of every window")
+    /// and `select` reorders windows, so they would resolve to the wrong one.
+    func iTermJumpScript(for target: JumpTarget) -> String {
+        let wantSession = escapeAppleScript(target.terminalSessionID)
+        let wantTTY = escapeAppleScript(Self.deviceTTYPath(target.terminalTTY))
+        return """
+        tell application "iTerm"
+            if not (it is running) then return ""
+            activate
+            set sessionDump to ""
+            set ttyMatch to missing value
+            set idMatch to missing value
+            set partialMatch to missing value
+            repeat with w from 1 to count of windows
+                set aWindow to window w
+                set windowID to id of aWindow
+                repeat with t from 1 to count of tabs of aWindow
+                    repeat with aSession in sessions of tab t of aWindow
+                        set sid to (id of aSession as text)
+                        set stty to (tty of aSession as text)
+                        set sessionDump to sessionDump & sid & "=" & stty & ";"
+                        if ttyMatch is missing value and "\(wantTTY)" is not "" and stty is "\(wantTTY)" then
+                            set ttyMatch to {windowID, t, sid}
+                        end if
+                        if idMatch is missing value and "\(wantSession)" is not "" and sid is "\(wantSession)" then
+                            set idMatch to {windowID, t, sid}
+                        end if
+                        if partialMatch is missing value and "\(wantSession)" is not "" and sid contains "\(wantSession)" then
+                            set partialMatch to {windowID, t, sid}
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+
+            set chosen to ttyMatch
+            if chosen is missing value then set chosen to idMatch
+            if chosen is missing value then set chosen to partialMatch
+            if chosen is missing value then return "nomatch:" & sessionDump
+
+            set targetWindow to window id (item 1 of chosen)
+            select targetWindow
+            set targetTab to tab (item 2 of chosen) of targetWindow
+            tell targetWindow to select targetTab
+            repeat with aSession in sessions of targetTab
+                if (id of aSession as text) is (item 3 of chosen) then
+                    select aSession
+                    exit repeat
+                end if
+            end repeat
+            return "matched"
+        end tell
+        """
+    }
+
+    /// iTerm reports `/dev/ttys003`; `ps -o tty=` yields a bare `ttys003`.
+    private static func deviceTTYPath(_ tty: String?) -> String? {
+        guard let trimmed = tty?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else {
+            return nil
+        }
+        return trimmed.hasPrefix("/dev/") ? trimmed : "/dev/\(trimmed)"
     }
 
     // MARK: - VS Code family (VS Code, Insiders, Cursor, Windsurf, Trae)
