@@ -129,22 +129,13 @@ Download the latest `VibeIsland-x.y.z.dmg` from
 [Releases](https://github.com/Zaaacqwq/vibeIsland/releases), open it, and drag
 **VibeIsland** into **Applications**.
 
-The app is not notarized (it ships without a paid Apple Developer
-certificate), so the first launch needs one extra step:
+Starting with the first notarized release, builds are Developer ID signed and
+should open normally. macOS may still ask you to confirm the first launch. After the
+first update from an older release to the new signing identity, you may need
+to grant privacy permissions such as Accessibility and Calendar again.
 
-1. Double-click the app once — macOS will say it can't verify the developer.
-2. Open **System Settings → Privacy & Security**, scroll down, and click
-   **Open Anyway**.
-
-Or skip the dialog entirely from a terminal:
-
-```bash
-xattr -cr /Applications/VibeIsland.app
-```
-
-If macOS instead says VibeIsland "contains malware" and offers no Open Anyway,
-you have 1.4.1 or earlier: the certificate those releases were signed with was
-revoked. Download 1.4.2 or later.
+Older release archives were not notarized. Check the release notes when
+downloading an older installer.
 
 ## Build from source
 

@@ -1,18 +1,11 @@
 name: Release DMG
 
-# Push a tag like v1.2.0 to build a consistently signed DMG and attach it to a
-# GitHub release. The app is not notarized (no Developer ID certificate), so
-# first launch requires System Settings > Privacy & Security > Open Anyway —
-# documented in the ReadMe install section.
-#
-# Releases are signed with a long-lived self-signed certificate
-# ("VibeIsland Self-Signed"). Apple cannot revoke it, unlike the Apple
-# Development certificate used up to v1.4.1: once that was revoked, macOS
-# refused to open the DMG's app as "contains malware", with no Open Anyway.
-# Its designated requirement pins the certificate, so privacy permissions
-# survive Sparkle updates.
+# Push a tag like v1.2.0 to build, Developer ID sign, notarize, staple, and
+# publish a DMG. Keep the bundle ID and Sparkle EdDSA key stable across the
+# migration from the historical self-signed release identity.
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -31,7 +24,8 @@ jobs:
     # macos-26 carries Xcode 26.5/26.6 and the 26.5 SDK.
     runs-on: macos-26
     env:
-      SIGNING_IDENTITY: VibeIsland Self-Signed
+      SIGNING_IDENTITY: "Developer ID Application: ZIYUE CHEN (66M8FY87U6)"
+      TEAM_ID: 66M8FY87U6
 
     steps:
       - name: Checkout
@@ -58,22 +52,22 @@ jobs:
 
       - name: Import signing certificate
         env:
-          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
         run: |
-          test -n "$MACOS_CERTIFICATE_BASE64"
-          test -n "$MACOS_CERTIFICATE_PASSWORD"
+          test -n "$DEVELOPER_ID_CERTIFICATE_BASE64"
+          test -n "$DEVELOPER_ID_CERTIFICATE_PASSWORD"
 
           CERTIFICATE_PATH="$RUNNER_TEMP/vibeisland-signing.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/vibeisland-signing.keychain-db"
           KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
 
-          printf '%s' "$MACOS_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          printf '%s' "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERTIFICATE_PATH" \
-            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -P "$DEVELOPER_ID_CERTIFICATE_PASSWORD" \
             -A \
             -t cert \
             -f pkcs12 \
@@ -86,22 +80,16 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           rm -f "$CERTIFICATE_PATH"
 
-          # codesign only accepts a self-signed identity once it is trusted for
-          # code signing. Only the admin domain (-d, via sudo) works here: the
-          # user domain waits forever for an interactive authorization, and
-          # macOS 26 runners deny `authorizationdb write` with -60005.
-          CERTIFICATE_PEM="$RUNNER_TEMP/vibeisland-signing.pem"
-          security find-certificate -c "$SIGNING_IDENTITY" -p "$KEYCHAIN_PATH" > "$CERTIFICATE_PEM"
-          sudo security add-trusted-cert -d -r trustRoot -p codeSign \
-            -k "$KEYCHAIN_PATH" "$CERTIFICATE_PEM"
-          rm -f "$CERTIFICATE_PEM"
-
           security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
             | grep -F "\"$SIGNING_IDENTITY\""
 
       - name: Build (Release, consistently signed)
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=0.0.0
+          fi
           xcodebuild build \
             -project DynamicIsland.xcodeproj \
             -scheme DynamicIsland \
@@ -111,9 +99,11 @@ jobs:
             -resultBundlePath BuildResults.xcresult \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
-            DEVELOPMENT_TEAM= \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
             PRODUCT_BUNDLE_IDENTIFIER=com.zaaacqwq.VibeIsland.dev \
             CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+            OTHER_CODE_SIGN_FLAGS=--timestamp \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
 
@@ -122,13 +112,22 @@ jobs:
           APP="build/Build/Products/Release/VibeIsland.app"
           codesign --verify --deep --strict "$APP"
           codesign -dvv "$APP" 2>&1 | grep -Fx "Authority=$SIGNING_IDENTITY"
-          # Permissions are keyed to this requirement; it must pin the
-          # certificate, never a per-build cdhash.
-          codesign -d -r- "$APP" 2>&1 | grep -F "certificate root = H\""
+          codesign -dvv "$APP" 2>&1 | grep -Fx "TeamIdentifier=$TEAM_ID"
+          codesign -dvv "$APP" 2>&1 | grep -F 'flags=0x10000(runtime)'
+          codesign -dvv "$APP" 2>&1 | grep -F 'Timestamp='
+          if codesign -d --entitlements :- "$APP" 2>/dev/null \
+            | grep -q '<key>com.apple.security.get-task-allow</key>'; then
+            echo 'Release app must not contain get-task-allow.' >&2
+            exit 1
+          fi
 
       - name: Package DMG
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=0.0.0
+          fi
           APP="build/Build/Products/Release/VibeIsland.app"
           test -d "$APP"
 
@@ -143,7 +142,53 @@ jobs:
             -ov -format UDZO \
             "VibeIsland-$VERSION.dmg"
 
+          codesign --sign "$SIGNING_IDENTITY" --timestamp \
+            --identifier com.zaaacqwq.VibeIsland.dev.dmg \
+            "VibeIsland-$VERSION.dmg"
+          codesign --verify --strict "VibeIsland-$VERSION.dmg"
+
+      - name: Notarize and staple DMG
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_APP_PASSWORD: ${{ secrets.NOTARY_APP_PASSWORD }}
+        run: |
+          test -n "$NOTARY_APPLE_ID"
+          test -n "$NOTARY_APP_PASSWORD"
+
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=0.0.0
+          fi
+          DMG="VibeIsland-$VERSION.dmg"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$NOTARY_APPLE_ID" \
+            --password "$NOTARY_APP_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait --timeout 2h --output-format json \
+            > "$RUNNER_TEMP/notarization.json"
+
+          if ! jq -e '.status == "Accepted"' "$RUNNER_TEMP/notarization.json"; then
+            SUBMISSION_ID="$(jq -r '.id // empty' "$RUNNER_TEMP/notarization.json")"
+            if [ -n "$SUBMISSION_ID" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$NOTARY_APPLE_ID" \
+                --password "$NOTARY_APP_PASSWORD" \
+                --team-id "$TEAM_ID" \
+                "$RUNNER_TEMP/notarization-log.json" || true
+              cat "$RUNNER_TEMP/notarization-log.json" || true
+            fi
+            exit 1
+          fi
+
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          codesign --verify --strict "$DMG"
+          spctl --assess --type open \
+            --context context:primary-signature --verbose "$DMG"
+
       - name: Create GitHub release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -159,6 +204,7 @@ jobs:
             "VibeIsland-$VERSION.dmg"
 
       - name: Generate signed Sparkle appcast
+        if: github.ref_type == 'tag'
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
@@ -195,6 +241,7 @@ jobs:
           mv "$UPDATES_DIR/appcast.xml" "$RUNNER_TEMP/appcast.xml"
 
       - name: Publish Sparkle appcast
+        if: github.ref_type == 'tag'
         run: |
           git fetch origin main
           git checkout -B release-appcast origin/main

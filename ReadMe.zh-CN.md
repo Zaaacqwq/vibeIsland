@@ -126,19 +126,11 @@ VibeIsland 可以把指定的 macOS 浮层替换为适配刘海的指示器，�
 从 [Releases](https://github.com/Zaaacqwq/vibeIsland/releases) 下载最新的
 `VibeIsland-x.y.z.dmg`，打开后把 **VibeIsland** 拖入**应用程序**。
 
-本应用未经过公证（没有付费的 Apple Developer 证书），因此首次启动需要额外一步：
+从首个经过公证的版本开始，发布包使用 Developer ID 签名，正常情况下可以直接打开。
+首次运行时 macOS 仍可能显示确认打开的提示。首次从旧版升级到新签名版本后，
+辅助功能、日历等系统权限可能需要重新授予。
 
-1. 先双击一次应用 —— macOS 会提示无法验证开发者。
-2. 打开**系统设置 → 隐私与安全性**，向下滚动，点击**仍要打开**。
-
-或者直接在终端中跳过该提示：
-
-```bash
-xattr -cr /Applications/VibeIsland.app
-```
-
-如果 macOS 提示 VibeIsland“含有恶意软件”且没有“仍要打开”按钮，说明你下载的是
-1.4.1 或更早的版本：这些版本使用的签名证书已被吊销。请下载 1.4.2 或更新的版本。
+旧版本的安装包没有经过公证；请在 Releases 页面确认下载版本的发布说明。
 
 ## 从源码构建
 
