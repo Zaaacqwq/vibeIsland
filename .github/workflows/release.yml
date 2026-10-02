@@ -107,6 +107,31 @@ jobs:
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
 
+      - name: Sign embedded code for notarization
+        run: |
+          APP="build/Build/Products/Release/VibeIsland.app"
+          SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+          SPARKLE_CURRENT="$SPARKLE/Versions/Current"
+          MEDIA_REMOTE="$APP/Contents/Resources/MediaRemoteAdapter.framework"
+
+          # Xcode's build action signs the app and framework wrappers but does
+          # not re-sign Sparkle's nested helper executables. Sign inside out;
+          # re-sign the app last because these changes alter its resource seal.
+          for component in \
+            "$SPARKLE_CURRENT/XPCServices/Installer.xpc" \
+            "$SPARKLE_CURRENT/XPCServices/Downloader.xpc" \
+            "$SPARKLE_CURRENT/Autoupdate" \
+            "$SPARKLE_CURRENT/Updater.app" \
+            "$SPARKLE" \
+            "$MEDIA_REMOTE" \
+            "$APP"; do
+            test -e "$component"
+            codesign --force --sign "$SIGNING_IDENTITY" \
+              --timestamp --options runtime \
+              --preserve-metadata=identifier,entitlements \
+              "$component"
+          done
+
       - name: Verify signature
         run: |
           APP="build/Build/Products/Release/VibeIsland.app"
