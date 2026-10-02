@@ -4,6 +4,19 @@ All notable changes to VibeIsland, newest first. Versions follow
 [semantic versioning](https://semver.org): a minor bump adds features, a patch
 bump fixes them.
 
+## 1.4.3
+
+This release is signed with Apple Developer ID and notarized. macOS can verify
+the downloaded DMG without the previous Open Anyway workaround. Because the
+signing identity changed, macOS may ask once more for Accessibility, Calendar,
+and other privacy permissions after updating from an older release.
+
+### Fixed
+
+- Agent jump-back now opens the agent's own iTerm pane.
+- Agent status monitoring no longer repeatedly rereads complete Codex rollouts
+  during liveness checks.
+
 ## 1.4.2
 
 macOS opens VibeIsland again.
