@@ -3,6 +3,15 @@
     <channel>
         <title>VibeIsland</title>
         <item>
+            <title>1.4.3</title>
+            <pubDate>Fri, 02 Oct 2026 20:51:51 +0000</pubDate>
+            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.3</link>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.3/VibeIsland-1.4.3.dmg" length="21874202" type="application/octet-stream" sparkle:edSignature="XZ6b/w2vlz1Ixh57KANbL9IvANZLL79xffEru0i2UoLSNADv83/iJoIwbgVW/scTEAWhEkLzgJsoPskpEFl+Aw=="/>
+        </item>
+        <item>
             <title>1.4.2</title>
             <pubDate>Fri, 11 Sep 2026 05:11:08 +0000</pubDate>
             <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.2</link>
@@ -19,15 +28,6 @@
             <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.1/VibeIsland-1.4.1.dmg" length="21778917" type="application/octet-stream" sparkle:edSignature="umZTq60pOj3+GGLC49M/cfqXx6rE4ESikO84OgDvcnE4hieorispHNRxgOa7xNlCPQzu2fBXnhGkfHZovN+CBA=="/>
-        </item>
-        <item>
-            <title>1.4.0</title>
-            <pubDate>Fri, 31 Jul 2026 04:34:50 +0000</pubDate>
-            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.0</link>
-            <sparkle:version>13</sparkle:version>
-            <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.0/VibeIsland-1.4.0.dmg" length="21782590" type="application/octet-stream" sparkle:edSignature="E9sxzQ/7VTriEnDs5QeNb9siDoRu15rb77gYBRnRDBrU7+S77jRZICkScT9bLQFk+XnPBc7COHxMB+pCMEAjAA=="/>
         </item>
     </channel>
 </rss>
