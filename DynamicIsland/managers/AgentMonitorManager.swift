@@ -83,6 +83,7 @@ final class AgentMonitorManager: ObservableObject {
     @Published private(set) var openCodeHookStatus: HookStatus = .unknown
     @Published private(set) var cursorHookStatus: HookStatus = .unknown
     @Published private(set) var geminiHookStatus: HookStatus = .unknown
+    @Published private(set) var piExtensionStatus: HookStatus = .unknown
     @Published private(set) var lastErrorMessage: String?
 
     /// Claude rate-limit usage (5-hour / 7-day windows), populated once the
@@ -189,6 +190,7 @@ final class AgentMonitorManager: ObservableObject {
 
         connectObserver()
         refreshHookStatus()
+        refreshPiExtensionStatus()
         startLivenessMonitor()
         refreshTokenUsage()
         AgentInputHotkeyMonitor.shared.start()
@@ -260,7 +262,10 @@ final class AgentMonitorManager: ObservableObject {
     func refreshProviderQuotas(force: Bool = false) {
         let store = providerQuotaStore
         Task {
-            let snapshots = await store.snapshots(forceRefresh: force)
+            var snapshots = await store.snapshots(forceRefresh: force)
+            if !Defaults[.enableAgentMonitoring] || !Defaults[.agentAntigravityQuotaEnabled] {
+                snapshots.removeValue(forKey: .antigravity)
+            }
             self.providerQuotas = snapshots
         }
     }
@@ -269,6 +274,11 @@ final class AgentMonitorManager: ObservableObject {
     /// background loop, turn-completion trigger, and manual Refresh button)
     /// without re-hitting every other provider.
     func refreshProviderQuota(_ providerID: AgentUsageProviderID, force: Bool = false) {
+        if providerID == .antigravity &&
+            (!Defaults[.enableAgentMonitoring] || !Defaults[.agentAntigravityQuotaEnabled]) {
+            providerQuotas.removeValue(forKey: .antigravity)
+            return
+        }
         let store = providerQuotaStore
         Task {
             if let snapshot = await store.refreshSnapshot(for: providerID, force: force) {
@@ -707,6 +717,9 @@ final class AgentMonitorManager: ObservableObject {
         // A session is "alive" if its TTY still runs Claude. Sessions with no
         // known TTY are kept alive to avoid false removal.
         let aliveIDs = Set(state.sessions.compactMap { session -> String? in
+            if session.tool == .pi {
+                return Date().timeIntervalSince(session.updatedAt) < 45 ? session.id : nil
+            }
             guard let tty = session.jumpTarget?.terminalTTY, !tty.isEmpty else {
                 return session.id
             }
@@ -921,13 +934,15 @@ final class AgentMonitorManager: ObservableObject {
         let installer = VibeIslandClaudeHookInstaller(configuration: configuration)
         Task.detached {
             var message: String?
+            var status: HookStatus = .unknown
             do {
-                _ = try installer.uninstall()
+                let result = try installer.uninstall()
+                status = result.managedHooksPresent ? .installed : .notInstalled
             } catch {
                 message = "Failed to remove Claude hooks: \(error.localizedDescription)"
             }
             await MainActor.run {
-                self.hookStatus = .notInstalled
+                self.hookStatus = status
                 if let message { self.lastErrorMessage = message }
             }
         }
@@ -959,44 +974,50 @@ final class AgentMonitorManager: ObservableObject {
     }
 
     func refreshCodexHookStatus() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "check Codex hooks", assign: { self.codexHookStatus = $0 }) {
             // Present but untrusted hooks never run (Codex 0.130+ trust gate),
             // so only report "installed" when the trust entries are in place.
-            try CodexHookInstallationManager().status().managedHooksActive
+            try CodexHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).status().managedHooksActive
         }
     }
 
     func installCodexHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         let binary = bundledHooksBinaryURL
         applyHookChange(label: "install Codex hooks", assign: { self.codexHookStatus = $0 }) {
-            try CodexHookInstallationManager().install(hooksBinaryURL: binary).managedHooksActive
+            try CodexHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).install(hooksBinaryURL: binary).managedHooksActive
         }
     }
 
     func uninstallCodexHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "remove Codex hooks", assign: { self.codexHookStatus = $0 }) {
-            _ = try CodexHookInstallationManager().uninstall()
-            return false
+            try CodexHookInstallationManager(managedHooksBinaryURL: managedBinaryURL)
+                .uninstall().managedHooksActive
         }
     }
 
     func refreshAntigravityHookStatus() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "check Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
-            try AntigravityHookInstallationManager().status().managedHooksPresent
+            try AntigravityHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).status().managedHooksPresent
         }
     }
 
     func installAntigravityHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         let binary = bundledHooksBinaryURL
         applyHookChange(label: "install Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
-            try AntigravityHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+            try AntigravityHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).install(hooksBinaryURL: binary).managedHooksPresent
         }
     }
 
     func uninstallAntigravityHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "remove Antigravity hooks", assign: { self.antigravityHookStatus = $0 }) {
-            _ = try AntigravityHookInstallationManager().uninstall()
-            return false
+            try AntigravityHookInstallationManager(managedHooksBinaryURL: managedBinaryURL)
+                .uninstall().managedHooksPresent
         }
     }
 
@@ -1039,52 +1060,83 @@ final class AgentMonitorManager: ObservableObject {
 
     func uninstallOpenCodeHooks() {
         applyHookChange(label: "remove OpenCode plugin", assign: { self.openCodeHookStatus = $0 }) {
-            _ = try OpenCodePluginInstallationManager().uninstall()
-            return false
+            try OpenCodePluginInstallationManager().uninstall().isInstalled
         }
     }
 
     // MARK: - Cursor hooks (reuse the bundled OpenIslandHooks binary)
 
     func refreshCursorHookStatus() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "check Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
-            try CursorHookInstallationManager().status().managedHooksPresent
+            try CursorHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).status().managedHooksPresent
         }
     }
 
     func installCursorHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         let binary = bundledHooksBinaryURL
         applyHookChange(label: "install Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
-            try CursorHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+            try CursorHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).install(hooksBinaryURL: binary).managedHooksPresent
         }
     }
 
     func uninstallCursorHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "remove Cursor hooks", assign: { self.cursorHookStatus = $0 }) {
-            _ = try CursorHookInstallationManager().uninstall()
-            return false
+            try CursorHookInstallationManager(managedHooksBinaryURL: managedBinaryURL)
+                .uninstall().managedHooksPresent
         }
     }
 
     // MARK: - Gemini hooks (reuse the bundled OpenIslandHooks binary)
 
     func refreshGeminiHookStatus() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "check Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().status().managedHooksPresent
+            try GeminiHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).status().managedHooksPresent
         }
     }
 
     func installGeminiHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         let binary = bundledHooksBinaryURL
         applyHookChange(label: "install Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            try GeminiHookInstallationManager().install(hooksBinaryURL: binary).managedHooksPresent
+            try GeminiHookInstallationManager(managedHooksBinaryURL: managedBinaryURL).install(hooksBinaryURL: binary).managedHooksPresent
         }
     }
 
     func uninstallGeminiHooks() {
+        let managedBinaryURL = configuration.managedBinaryURL
         applyHookChange(label: "remove Gemini hooks", assign: { self.geminiHookStatus = $0 }) {
-            _ = try GeminiHookInstallationManager().uninstall()
-            return false
+            try GeminiHookInstallationManager(managedHooksBinaryURL: managedBinaryURL)
+                .uninstall().managedHooksPresent
+        }
+    }
+
+    // MARK: - Pi extension
+
+    func refreshPiExtensionStatus() {
+        applyHookChange(label: "check Pi extension", assign: { self.piExtensionStatus = $0 }) {
+            try PiExtensionInstallationManager(agent: .pi).status().isCurrent
+        }
+    }
+
+    func installPiExtension() {
+        guard let url = Bundle.main.url(forResource: "vibe-island-pi", withExtension: "ts"),
+              let source = try? Data(contentsOf: url) else {
+            lastErrorMessage = "Bundled Pi extension (vibe-island-pi.ts) is missing."
+            return
+        }
+        applyHookChange(label: "install Pi extension", assign: { self.piExtensionStatus = $0 }) {
+            try PiExtensionInstallationManager(agent: .pi)
+                .install(extensionSourceData: source).isCurrent
+        }
+    }
+
+    func uninstallPiExtension() {
+        applyHookChange(label: "remove Pi extension", assign: { self.piExtensionStatus = $0 }) {
+            try PiExtensionInstallationManager(agent: .pi).uninstall().isCurrent
         }
     }
 

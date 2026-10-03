@@ -478,7 +478,101 @@ public final class BridgeServer: @unchecked Sendable {
 
         case let .processAntigravityHook(payload):
             handleAntigravityHook(payload, from: clientID)
+
+        case let .processPiHook(payload):
+            handlePiHook(payload, from: clientID)
         }
+    }
+
+    private func handlePiHook(_ payload: PiHookPayload, from clientID: UUID) {
+        if payload.hookEventName == .heartbeat,
+           localState.session(id: payload.sessionID)?.isSessionEnded == true {
+            send(.response(.acknowledged), to: clientID)
+            return
+        }
+
+        let initialPhase: SessionPhase = payload.hookEventName == .sessionStart
+            || payload.hookEventName == .heartbeat ? .completed : .running
+        if !hasSession(id: payload.sessionID) {
+            emit(.sessionStarted(SessionStarted(
+                sessionID: payload.sessionID,
+                title: payload.sessionTitle,
+                tool: .pi,
+                origin: .live,
+                initialPhase: initialPhase,
+                summary: payload.implicitStartSummary,
+                timestamp: .now,
+                jumpTarget: payload.defaultJumpTarget
+            )))
+        }
+
+        if let existing = localState.session(id: payload.sessionID),
+           existing.jumpTarget != payload.defaultJumpTarget,
+           payload.hookEventName != .heartbeat {
+            let target = Self.mergeJumpTargetPreservingExistingResolvedFields(
+                incoming: payload.defaultJumpTarget,
+                existing: existing.jumpTarget
+            )
+            if existing.jumpTarget != target {
+                emit(.jumpTargetUpdated(JumpTargetUpdated(
+                    sessionID: payload.sessionID,
+                    jumpTarget: target,
+                    timestamp: .now
+                )))
+            }
+        }
+
+        let name = payload.agent.tool.displayName
+        switch payload.hookEventName {
+        case .sessionStart:
+            break
+        case .heartbeat:
+            if let session = localState.session(id: payload.sessionID) {
+                emit(.activityUpdated(SessionActivityUpdated(
+                    sessionID: payload.sessionID,
+                    summary: session.summary,
+                    phase: session.phase,
+                    timestamp: .now
+                )))
+            }
+        case .userPromptSubmit:
+            emit(.activityUpdated(SessionActivityUpdated(
+                sessionID: payload.sessionID,
+                summary: payload.promptPreview.map { "Prompt: \($0)" } ?? payload.implicitStartSummary,
+                phase: .running,
+                timestamp: .now
+            )))
+        case .preToolUse:
+            let title = payload.toolName.map { "Running \($0)" } ?? "Running \(name) tool"
+            emit(.activityUpdated(SessionActivityUpdated(
+                sessionID: payload.sessionID,
+                summary: payload.toolInputPreview.map { "\(title): \($0)" } ?? title,
+                phase: .running,
+                timestamp: .now
+            )))
+        case .postToolUse:
+            emit(.activityUpdated(SessionActivityUpdated(
+                sessionID: payload.sessionID,
+                summary: payload.toolName.map { "\($0) finished." } ?? "\(name) tool finished.",
+                phase: .running,
+                timestamp: .now
+            )))
+        case .stop:
+            emit(.sessionCompleted(SessionCompleted(
+                sessionID: payload.sessionID,
+                summary: payload.assistantMessagePreview ?? "\(name) completed the turn.",
+                timestamp: .now
+            )))
+        case .sessionEnd:
+            emit(.sessionCompleted(SessionCompleted(
+                sessionID: payload.sessionID,
+                summary: "\(name) session ended.",
+                timestamp: .now,
+                isInterrupt: true,
+                isSessionEnd: true
+            )))
+        }
+        send(.response(.acknowledged), to: clientID)
     }
 
     private func handleCodexHook(_ payload: CodexHookPayload, from clientID: UUID) {

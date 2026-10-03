@@ -24,6 +24,7 @@
 		7EE1D73F2E6B1E1200997219 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EE1D73E2E6B1E1200997219 /* IOKit.framework */; };
 		7EF10C122F817ECF004229A0 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EF10C112F817ECF004229A0 /* Accelerate.framework */; };
 		C8EAB2459CA668EE125B0BAB /* VibeIslandAgentKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5A3ACE8DF5DFC55301948002 /* VibeIslandAgentKit */; };
+		A10000000000000000000021 /* vibe-island-pi.ts in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* vibe-island-pi.ts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +63,7 @@
 		7EC0F16B2F80000200C0F160 /* Local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig.example; sourceTree = "<group>"; };
 		F4C1DD09EC134302938E84F6 /* MediaRemoteAdapter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaRemoteAdapter.framework; path = Frameworks/MediaRemoteAdapter.framework; sourceTree = SOURCE_ROOT; };
 		F54406E72CD4987A00C7AFD9 /* VibeIsland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000022 /* vibe-island-pi.ts */ = {isa = PBXFileReference; lastKnownFileType = text; path = DynamicIsland/vibe-island-pi.ts; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -77,6 +79,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				vibe-island-pi.ts,
 			);
 			target = F54406E62CD4987A00C7AFD9 /* DynamicIsland */;
 		};
@@ -193,6 +196,7 @@
 				7EC0F16C2F80000300C0F160 /* Configs */,
 				7EA69B1C2F5AE15C00EB2D16 /* Contents */,
 				7E81304F2E3FB42700E08F3F /* Frameworks */,
+				A10000000000000000000022 /* vibe-island-pi.ts */,
 				7E81303F2E3FB40500E08F3F /* mediaremote-adapter */,
 				F54406E92CD4987A00C7AFD9 /* DynamicIsland */,
 				A10000000000000000000002 /* DynamicIslandTests */,
@@ -341,6 +345,7 @@
 			files = (
 				7E9918722EFDAE5B002EDFD5 /* MediaRemoteAdapter.framework in Resources */,
 				7E8130402E3FB40500E08F3F /* mediaremote-adapter.pl in Resources */,
+				A10000000000000000000021 /* vibe-island-pi.ts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,7 +561,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DynamicIsland/DynamicIsland.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -596,7 +601,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.4.3;
+				MARKETING_VERSION = 1.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zaaacqwq.VibeIsland.dev;
 				PRODUCT_NAME = VibeIsland;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -625,7 +630,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DynamicIsland/DynamicIsland.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_ASSET_PATHS = "\"DynamicIsland/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -665,7 +670,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.4.3;
+				MARKETING_VERSION = 1.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zaaacqwq.VibeIsland.dev;
 				PRODUCT_NAME = VibeIsland;
 				PROVISIONING_PROFILE_SPECIFIER = "";

@@ -18,6 +18,7 @@ struct AgentProviderUsagePager: View {
     let claudeUsage: ClaudeUsageSnapshot?
     let codexUsage: CodexUsageSnapshot?
     let providerQuotas: [AgentUsageProviderID: ProviderQuotaSnapshot]
+    var piInstalled = false
     var isRefreshing = false
     var onRefresh: () -> Void = {}
 
@@ -36,8 +37,8 @@ struct AgentProviderUsagePager: View {
     /// The Summary card is always first; the provider cards follow in the
     /// user-configured order (`AgentUsageProviderCatalog`). Claude and Codex
     /// always show (they carry rate-limit rings even with no token data); the
-    /// remaining providers appear only when token or quota data exists, so
-    /// uninstalled agents don't add empty cards.
+    /// Pi also shows an empty card once its extension is installed. Other
+    /// providers appear only when token or quota data exists.
     private var cards: [AgentProviderUsageCardModel] {
         var result: [AgentProviderUsageCardModel] = [
             .summary(summary?.total)
@@ -50,6 +51,15 @@ struct AgentProviderUsagePager: View {
                 result.append(.claude(tokens: summary?.provider(.claude), quota: claudeUsage))
             case .codex:
                 result.append(.codex(tokens: summary?.provider(.codex), quota: codexUsage))
+            case .pi:
+                let contribution = summary?.provider(.pi)
+                guard piInstalled || contribution?.isEmpty == false else { continue }
+                result.append(.tokenOnly(
+                    id: .pi,
+                    iconAsset: nil,
+                    iconSystemName: "terminal.fill",
+                    tokens: contribution
+                ))
             default:
                 let contribution = summary?.provider(id)
                 let quota = AgentQuotaPresentation.snapshot(
@@ -278,7 +288,7 @@ struct AgentProviderUsageCardModel: Identifiable, Equatable {
     }
 
     /// A provider that exposes only token/cost totals (no local rate-limit
-    /// windows): OpenCode, Gemini, Antigravity, Copilot, Cursor. Rendered like
+    /// windows): OpenCode, Gemini, Antigravity, Copilot, Cursor, Pi. Rendered like
     /// the Summary card but scoped to one provider's transcripts.
     static func tokenOnly(
         id: AgentUsageProviderID,
@@ -306,13 +316,17 @@ struct AgentProviderUsageCardModel: Identifiable, Equatable {
     }
 
     static func claude(tokens: ProviderTokenUsageSummary?, quota: ClaudeUsageSnapshot?) -> Self {
-        var rows: [QuotaRow] = []
-        if let five = quota?.fiveHour {
-            rows.append(.init(id: "five-hour", label: "5h", usedPercentage: five.usedPercentage, resetsAt: five.resetsAt))
-        }
-        if let week = quota?.sevenDay {
-            rows.append(.init(id: "seven-day", label: "7d", usedPercentage: week.usedPercentage, resetsAt: week.resetsAt))
-        }
+        // A snapshot that reports neither window stays row-less; once either one
+        // lands, both rows render and the omitted one reads 0% rather than
+        // silently leaving the panel.
+        let rows: [QuotaRow] = (quota?.isEmpty == false ? quota : nil).map { snapshot in
+            let five = snapshot.displayFiveHour
+            let week = snapshot.displaySevenDay
+            return [
+                QuotaRow(id: "five-hour", label: "5h", usedPercentage: five.usedPercentage, resetsAt: five.resetsAt),
+                QuotaRow(id: "seven-day", label: "7d", usedPercentage: week.usedPercentage, resetsAt: week.resetsAt),
+            ]
+        } ?? []
         return Self(
             id: .claude,
             title: "Claude",

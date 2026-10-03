@@ -1813,7 +1813,7 @@ struct NotchHeaderSettings: View {
                         title: "Agents header usage",
                         footer: agentProvidersFooter
                     ) {
-                        let providers = AgentUsageProviderCatalog.defaultOrder
+                        let providers = AgentUsageProviderCatalog.headerProviders
                         ForEach(Array(providers.enumerated()), id: \.element) { index, id in
                             let isOn = selectedAgentProviders.contains(id)
                             let atLimit = selectedAgentProviders.count

@@ -9,8 +9,11 @@ import OpenIslandCore
 enum AgentUsageProviderCatalog {
     /// Reorderable providers, in default display order.
     static let defaultOrder: [AgentUsageProviderID] = [
-        .claude, .codex, .antigravity, .opencode, .cursor, .copilot, .gemini,
+        .claude, .codex, .antigravity, .opencode, .cursor, .copilot, .gemini, .pi,
     ]
+
+    /// Only providers with rate-limit windows belong in the percentage header.
+    static let headerProviders: [AgentUsageProviderID] = defaultOrder.filter { $0 != .pi }
 
     static var defaultOrderRawValues: [String] { defaultOrder.map(\.rawValue) }
 
@@ -34,7 +37,7 @@ enum AgentUsageProviderCatalog {
         var result: [AgentUsageProviderID] = []
         for rawValue in raw {
             guard let id = AgentUsageProviderID(rawValue: rawValue),
-                  defaultOrder.contains(id),
+                  headerProviders.contains(id),
                   !seen.contains(id) else { continue }
             seen.insert(id)
             result.append(id)
@@ -74,6 +77,7 @@ enum AgentUsageProviderCatalog {
         case .antigravity: return ("antigravity-icon", "triangle")
         case .copilot: return ("copilot-icon", "chevron.left.slash.chevron.right")
         case .cursor: return ("cursor-icon", "cursorarrow.rays")
+        case .pi: return (nil, "terminal.fill")
         case .summary: return (nil, "sparkles")
         }
     }
@@ -90,6 +94,7 @@ enum AgentUsageProviderCatalog {
         case .antigravity: return "antigravity-brand"
         case .copilot: return "copilot-brand"
         case .cursor: return "cursor-brand"
+        case .pi: return nil
         case .summary: return nil
         }
     }

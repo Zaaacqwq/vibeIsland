@@ -192,6 +192,7 @@ struct NotchAgentsView: View {
                     claudeUsage: agentMonitor.usage,
                     codexUsage: agentMonitor.codexUsage,
                     providerQuotas: agentMonitor.providerQuotas,
+                    piInstalled: agentMonitor.piExtensionStatus == .installed,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )
@@ -206,6 +207,7 @@ struct NotchAgentsView: View {
                     claudeUsage: nil,
                     codexUsage: nil,
                     providerQuotas: agentMonitor.providerQuotas,
+                    piInstalled: agentMonitor.piExtensionStatus == .installed,
                     isRefreshing: agentMonitor.isRefreshingTokenUsage,
                     onRefresh: { agentMonitor.refreshTokenUsage(force: true) }
                 )

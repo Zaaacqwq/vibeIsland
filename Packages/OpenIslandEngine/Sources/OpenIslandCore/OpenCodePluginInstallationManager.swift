@@ -8,10 +8,13 @@ public struct OpenCodePluginInstallationStatus: Equatable, Sendable {
     public var manifestURL: URL
     public var pluginFilePresent: Bool
     public var pluginRegistered: Bool
+    public var legacyPluginFilePresent: Bool
+    public var legacyPluginRegistered: Bool
     public var manifest: OpenCodePluginInstallerManifest?
 
     public var isInstalled: Bool {
-        pluginFilePresent && pluginRegistered
+        (pluginFilePresent && pluginRegistered)
+            || (legacyPluginFilePresent && legacyPluginRegistered)
     }
 
     public init(
@@ -22,6 +25,8 @@ public struct OpenCodePluginInstallationStatus: Equatable, Sendable {
         manifestURL: URL,
         pluginFilePresent: Bool,
         pluginRegistered: Bool,
+        legacyPluginFilePresent: Bool,
+        legacyPluginRegistered: Bool,
         manifest: OpenCodePluginInstallerManifest?
     ) {
         self.openCodeConfigDirectory = openCodeConfigDirectory
@@ -31,12 +36,14 @@ public struct OpenCodePluginInstallationStatus: Equatable, Sendable {
         self.manifestURL = manifestURL
         self.pluginFilePresent = pluginFilePresent
         self.pluginRegistered = pluginRegistered
+        self.legacyPluginFilePresent = legacyPluginFilePresent
+        self.legacyPluginRegistered = legacyPluginRegistered
         self.manifest = manifest
     }
 }
 
 public struct OpenCodePluginInstallerManifest: Equatable, Codable, Sendable {
-    public static let fileName = "open-island-opencode-plugin-install.json"
+    public static let fileName = "vibe-island-opencode-plugin-install.json"
 
     public var pluginPath: String
     public var installedAt: Date
@@ -48,7 +55,9 @@ public struct OpenCodePluginInstallerManifest: Equatable, Codable, Sendable {
 }
 
 public final class OpenCodePluginInstallationManager: @unchecked Sendable {
-    public static let pluginFileName = "open-island.js"
+    public static let pluginFileName = "vibe-island.js"
+    private static let legacyPluginFileName = "open-island.js"
+    private static let legacyManifestFileName = "open-island-opencode-plugin-install.json"
 
     public let openCodeConfigDirectory: URL
     private let fileManager: FileManager
@@ -70,6 +79,10 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         pluginsDirectory.appendingPathComponent(Self.pluginFileName)
     }
 
+    private var legacyPluginFileURL: URL {
+        pluginsDirectory.appendingPathComponent(Self.legacyPluginFileName)
+    }
+
     private var configURL: URL {
         openCodeConfigDirectory.appendingPathComponent("config.json")
     }
@@ -81,6 +94,8 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
     public func status() throws -> OpenCodePluginInstallationStatus {
         let pluginPresent = fileManager.fileExists(atPath: pluginFileURL.path)
         let registered = isPluginRegistered()
+        let legacyPresent = legacyPluginBelongsToVibeIsland()
+        let legacyRegistered = legacyPresent && isPluginRegistered(reference: "file://\(legacyPluginFileURL.path)")
         let manifest = try loadManifest()
 
         return OpenCodePluginInstallationStatus(
@@ -91,19 +106,22 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
             manifestURL: manifestURL,
             pluginFilePresent: pluginPresent,
             pluginRegistered: registered,
+            legacyPluginFilePresent: legacyPresent,
+            legacyPluginRegistered: legacyRegistered,
             manifest: manifest
         )
     }
 
     @discardableResult
     public func install(pluginSourceData: Data) throws -> OpenCodePluginInstallationStatus {
+        let ownsLegacyPlugin = legacyPluginBelongsToVibeIsland()
         try fileManager.createDirectory(at: pluginsDirectory, withIntermediateDirectories: true)
 
         // Write the JS plugin file
         try pluginSourceData.write(to: pluginFileURL, options: .atomic)
 
         // Register in config.json
-        try registerPluginInConfig()
+        try registerPluginInConfig(removeLegacyPlugin: ownsLegacyPlugin)
 
         // Write manifest
         let manifest = OpenCodePluginInstallerManifest(pluginPath: pluginFileURL.path)
@@ -112,22 +130,31 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
 
+        if ownsLegacyPlugin {
+            try removeLegacyPluginFiles()
+        }
+
         return try status()
     }
 
     @discardableResult
     public func uninstall() throws -> OpenCodePluginInstallationStatus {
+        let ownsLegacyPlugin = legacyPluginBelongsToVibeIsland()
         // Remove plugin file
         if fileManager.fileExists(atPath: pluginFileURL.path) {
             try fileManager.removeItem(at: pluginFileURL)
         }
 
         // Remove from config.json
-        try unregisterPluginFromConfig()
+        try unregisterPluginFromConfig(removeLegacyPlugin: ownsLegacyPlugin)
 
         // Remove manifest
         if fileManager.fileExists(atPath: manifestURL.path) {
             try fileManager.removeItem(at: manifestURL)
+        }
+
+        if ownsLegacyPlugin {
+            try removeLegacyPluginFiles()
         }
 
         return try status()
@@ -140,17 +167,19 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
     }
 
     private func isPluginRegistered() -> Bool {
+        isPluginRegistered(reference: pluginFileReference())
+    }
+
+    private func isPluginRegistered(reference: String) -> Bool {
         guard let data = try? Data(contentsOf: configURL),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let plugins = json["plugin"] as? [String] else {
             return false
         }
-
-        let ref = pluginFileReference()
-        return plugins.contains { $0 == ref || $0.hasSuffix("/\(Self.pluginFileName)") }
+        return plugins.contains(reference)
     }
 
-    private func registerPluginInConfig() throws {
+    private func registerPluginInConfig(removeLegacyPlugin: Bool) throws {
         let ref = pluginFileReference()
 
         var json: [String: Any]
@@ -163,8 +192,11 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
 
         var plugins = (json["plugin"] as? [String]) ?? []
 
-        // Remove any existing Open Island plugin references
-        plugins.removeAll { $0 == ref || $0.hasSuffix("/\(Self.pluginFileName)") }
+        // Replace our plugin registration and migrate an owned legacy one.
+        plugins.removeAll {
+            $0 == ref || $0.hasSuffix("/\(Self.pluginFileName)")
+                || (removeLegacyPlugin && $0 == "file://\(legacyPluginFileURL.path)")
+        }
         plugins.append(ref)
 
         json["plugin"] = plugins
@@ -180,7 +212,7 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         try outputData.write(to: configURL, options: .atomic)
     }
 
-    private func unregisterPluginFromConfig() throws {
+    private func unregisterPluginFromConfig(removeLegacyPlugin: Bool) throws {
         guard let data = try? Data(contentsOf: configURL),
               var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               var plugins = json["plugin"] as? [String] else {
@@ -189,7 +221,10 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
 
         let ref = pluginFileReference()
         let before = plugins.count
-        plugins.removeAll { $0 == ref || $0.hasSuffix("/\(Self.pluginFileName)") }
+        plugins.removeAll {
+            $0 == ref || $0.hasSuffix("/\(Self.pluginFileName)")
+                || (removeLegacyPlugin && $0 == "file://\(legacyPluginFileURL.path)")
+        }
 
         guard plugins.count != before else {
             return
@@ -213,6 +248,23 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
     }
 
     // MARK: - Helpers
+
+    private func legacyPluginBelongsToVibeIsland() -> Bool {
+        guard let source = try? String(contentsOf: legacyPluginFileURL, encoding: .utf8) else {
+            return false
+        }
+        return source.contains("Library/Application Support/VibeIsland/agent-bridge.sock")
+    }
+
+    private func removeLegacyPluginFiles() throws {
+        if fileManager.fileExists(atPath: legacyPluginFileURL.path) {
+            try fileManager.removeItem(at: legacyPluginFileURL)
+        }
+        let legacyManifestURL = openCodeConfigDirectory.appendingPathComponent(Self.legacyManifestFileName)
+        if fileManager.fileExists(atPath: legacyManifestURL.path) {
+            try fileManager.removeItem(at: legacyManifestURL)
+        }
+    }
 
     private func loadManifest() throws -> OpenCodePluginInstallerManifest? {
         guard fileManager.fileExists(atPath: manifestURL.path) else {

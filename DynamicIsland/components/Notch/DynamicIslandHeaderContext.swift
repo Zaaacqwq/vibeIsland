@@ -245,11 +245,13 @@ struct NotchHeaderContextWidget: View {
         let percent: Int
     }
 
+    /// Both windows always render once the snapshot exists; a window the status
+    /// line omitted shows 0% rather than dropping out of the header.
     private func claudeCells(_ usage: ClaudeUsageSnapshot) -> [UsageCell] {
-        var cells: [UsageCell] = []
-        if let five = usage.fiveHour { cells.append(UsageCell(label: "5h", percent: five.roundedUsedPercentage)) }
-        if let week = usage.sevenDay { cells.append(UsageCell(label: "7d", percent: week.roundedUsedPercentage)) }
-        return cells
+        [
+            UsageCell(label: "5h", percent: usage.displayFiveHour.roundedUsedPercentage),
+            UsageCell(label: "7d", percent: usage.displaySevenDay.roundedUsedPercentage),
+        ]
     }
 
     private func codexCells(_ usage: CodexUsageSnapshot) -> [UsageCell] {

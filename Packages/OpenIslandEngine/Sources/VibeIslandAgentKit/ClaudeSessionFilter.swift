@@ -2,13 +2,13 @@ import Foundation
 import OpenIslandCore
 
 /// Scope filter for which agents VibeIsland surfaces in the notch. Claude Code,
-/// Codex, Gemini CLI, Antigravity, OpenCode (plugin-based), and Cursor all have
+/// Codex, Gemini CLI, Antigravity, OpenCode, Cursor, and Pi all have
 /// hook payloads wired through the bridge.
 public enum ClaudeSessionFilter {
     /// Tools VibeIsland currently displays.
     public static func includes(_ tool: AgentTool) -> Bool {
         switch tool {
-        case .claudeCode, .codex, .geminiCLI, .antigravity, .openCode, .cursor:
+        case .claudeCode, .codex, .geminiCLI, .antigravity, .openCode, .cursor, .pi:
             true
         }
     }

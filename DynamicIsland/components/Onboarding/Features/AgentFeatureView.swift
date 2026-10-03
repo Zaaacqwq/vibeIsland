@@ -47,6 +47,7 @@ struct AgentFeatureView: View {
         Provider(id: "gemini", title: "Gemini", icon: .asset("gemini-icon"), install: { $0.installGeminiHooks() }),
         Provider(id: "cursor", title: "Cursor", icon: .asset("cursor-icon"), install: { $0.installCursorHooks() }, usageNeedsSignIn: true),
         Provider(id: "antigravity", title: "Antigravity", icon: .asset("antigravity-icon"), install: { $0.installAntigravityHooks() }, usageNeedsSignIn: true),
+        Provider(id: "pi", title: "Pi", icon: .symbol("terminal.fill"), install: { $0.installPiExtension() }),
     ]
 
     /// Titles of currently-selected providers whose usage needs a manual sign-in.

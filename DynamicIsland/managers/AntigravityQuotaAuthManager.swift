@@ -1,4 +1,5 @@
 import AppKit
+import Defaults
 import Foundation
 import Network
 import OpenIslandCore
@@ -11,6 +12,7 @@ actor AntigravityKeychainCredentialStore: AntigravityCredentialStoring {
     private let account = "google-antigravity"
 
     func loadCredentials() throws -> AntigravityOAuthCredentials? {
+        guard Defaults[.enableAgentMonitoring], Defaults[.agentAntigravityQuotaEnabled] else { return nil }
         var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -89,9 +91,7 @@ final class AntigravityQuotaAuthManager: ObservableObject {
     private let credentialStore = AntigravityKeychainCredentialStore.shared
     private var loginTask: Task<Void, Never>?
 
-    private init() {
-        Task { await reloadStatus() }
-    }
+    private init() {}
 
     func signIn() {
         guard !isAuthorizing else { return }
@@ -108,6 +108,7 @@ final class AntigravityQuotaAuthManager: ObservableObject {
                     codeVerifier: request.codeVerifier
                 )
                 try await credentialStore.saveCredentials(credentials)
+                Defaults[.agentAntigravityQuotaEnabled] = true
                 await reloadStatus()
                 AgentMonitorManager.shared.refreshProviderQuotas(force: true)
             } catch is CancellationError {
@@ -125,6 +126,7 @@ final class AntigravityQuotaAuthManager: ObservableObject {
         Task {
             do {
                 try await credentialStore.deleteCredentials()
+                Defaults[.agentAntigravityQuotaEnabled] = false
                 await reloadStatus()
                 AgentMonitorManager.shared.clearProviderQuota(.antigravity)
             } catch {

@@ -52,22 +52,22 @@ struct AgentUsageBadges: View {
                 .frame(width: 11, height: 11)
                 .foregroundStyle(NotchDesign.Colors.textPrimary)
                 .help("Claude usage")
-            if let five = usage.fiveHour {
-                badge(
-                    title: "5h",
-                    percent: five.roundedUsedPercentage,
-                    warn: five.usedPercentage >= 80,
-                    help: String(localized: "Claude 5-hour limit used")
-                )
-            }
-            if let week = usage.sevenDay {
-                badge(
-                    title: "7d",
-                    percent: week.roundedUsedPercentage,
-                    warn: week.usedPercentage >= 80,
-                    help: String(localized: "Claude 7-day limit used")
-                )
-            }
+            // Both windows always render once the snapshot exists; a window the
+            // status line omitted shows 0% instead of disappearing.
+            let five = usage.displayFiveHour
+            let week = usage.displaySevenDay
+            badge(
+                title: "5h",
+                percent: five.roundedUsedPercentage,
+                warn: five.usedPercentage >= 80,
+                help: String(localized: "Claude 5-hour limit used")
+            )
+            badge(
+                title: "7d",
+                percent: week.roundedUsedPercentage,
+                warn: week.usedPercentage >= 80,
+                help: String(localized: "Claude 7-day limit used")
+            )
         }
     }
 

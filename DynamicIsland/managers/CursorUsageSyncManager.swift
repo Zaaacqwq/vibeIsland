@@ -1,4 +1,5 @@
 import Foundation
+import Defaults
 import OpenIslandCore
 import Security
 import os
@@ -13,6 +14,7 @@ actor CursorTokenKeychainStore {
     private let account = "cursor-workos-session-token"
 
     func loadToken() throws -> String? {
+        guard Defaults[.enableAgentMonitoring], Defaults[.agentCursorUsageEnabled] else { return nil }
         var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -100,9 +102,7 @@ final class CursorUsageSyncManager: ObservableObject {
     /// every 30 minutes in the background.
     private static let backgroundRefreshInterval: TimeInterval = 30 * 60
 
-    private init() {
-        Task { await reloadStatus() }
-    }
+    private init() {}
 
     /// Connects a pasted `WorkosCursorSessionToken`: validates it, persists it to
     /// the Keychain, then performs the first sync.
@@ -133,6 +133,7 @@ final class CursorUsageSyncManager: ObservableObject {
         do {
             let info = try await client.validateSession(token: token)
             try await keychain.saveToken(token)
+            Defaults[.agentCursorUsageEnabled] = true
             membershipType = info.membershipType
             isConnected = true
             try await syncNow(token: token)
@@ -149,6 +150,7 @@ final class CursorUsageSyncManager: ObservableObject {
         backgroundLoopTask = nil
         Task {
             try? await keychain.deleteToken()
+            Defaults[.agentCursorUsageEnabled] = false
             try? FileManager.default.removeItem(at: cacheURL)
             isConnected = false
             membershipType = nil
@@ -185,6 +187,7 @@ final class CursorUsageSyncManager: ObservableObject {
     func startBackgroundRefresh() {
         guard backgroundLoopTask == nil else { return }
         backgroundLoopTask = Task { @MainActor [weak self] in
+            if let self { await self.reloadStatus() }
             while !Task.isCancelled {
                 guard let self else { return }
                 if self.isConnected { self.sync() }

@@ -688,8 +688,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { change in
                 if change.newValue {
                     AgentMonitorManager.shared.startIfNeeded()
+                    Task {
+                        await CursorUsageSyncManager.shared.reloadStatus()
+                        if CursorUsageSyncManager.shared.isConnected {
+                            CursorUsageSyncManager.shared.sync()
+                        }
+                    }
                 } else {
                     AgentMonitorManager.shared.stop()
+                    Task { await CursorUsageSyncManager.shared.reloadStatus() }
                 }
             }
             .store(in: &cancellables)

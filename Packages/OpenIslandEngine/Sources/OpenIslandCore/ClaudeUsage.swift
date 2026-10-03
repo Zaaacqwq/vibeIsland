@@ -12,6 +12,10 @@ public struct ClaudeUsageWindow: Equatable, Codable, Sendable {
     public var roundedUsedPercentage: Int {
         Int(usedPercentage.rounded())
     }
+
+    /// Stand-in for a window the status line did not report. No `resetsAt`,
+    /// because a window we never saw has no reset time to claim.
+    public static let unused = ClaudeUsageWindow(usedPercentage: 0, resetsAt: nil)
 }
 
 public struct ClaudeUsageSnapshot: Equatable, Codable, Sendable {
@@ -32,6 +36,18 @@ public struct ClaudeUsageSnapshot: Equatable, Codable, Sendable {
     public var isEmpty: Bool {
         fiveHour == nil && sevenDay == nil
     }
+
+    // Claude Code drops a window from `rate_limits` while it carries no usage —
+    // typically right after the 5h window rolls over. Rendering only the windows
+    // that happen to be present made the badge vanish, which reads identically to
+    // "the status line is broken". Once a snapshot exists at all the account
+    // demonstrably has both windows, so a missing one is 0%, not unknown.
+    // Callers must still skip an absent snapshot (see `isEmpty`) rather than
+    // inventing a 0%/0% pair for accounts that report no quota at all.
+
+    public var displayFiveHour: ClaudeUsageWindow { fiveHour ?? .unused }
+
+    public var displaySevenDay: ClaudeUsageWindow { sevenDay ?? .unused }
 }
 
 public enum ClaudeUsageLoader {

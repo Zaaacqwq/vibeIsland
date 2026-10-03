@@ -34,6 +34,8 @@ struct AgentsSettings: View {
     @Default(.enableAgentMonitoring) var enableAgentMonitoring
     @Default(.agentUsageProviderOrder) private var providerOrder
     @Default(.disabledAgentUsageProviders) private var disabledProviders
+    @Default(.agentAntigravityQuotaEnabled) private var antigravityQuotaEnabled
+    @Default(.agentCursorUsageEnabled) private var cursorUsageEnabled
     @Environment(\.colorScheme) private var colorScheme
     @Default(.agentInputSoundEnabled) private var inputSoundEnabled
     @Default(.agentCompletionSoundEnabled) private var completionSoundEnabled
@@ -59,7 +61,7 @@ struct AgentsSettings: View {
     }
 
     private var agentsRoot: some View {
-        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode, Gemini, Cursor) in the notch.") {
+        GeistSettingsPage(title: "Agents", subtitle: "Track AI coding-agent sessions (Claude Code, Codex, Antigravity, OpenCode, Gemini, Cursor, Pi) in the notch.") {
             GeistSection(
                 footer: "Adds an Agents tab and a closed-notch live activity showing running agent sessions, permission prompts, and one-click jump-back to the terminal."
             ) {
@@ -153,6 +155,14 @@ struct AgentsSettings: View {
                     uninstall: { agentMonitor.uninstallCursorHooks() }
                 )
 
+                hookSection(
+                    title: "Pi",
+                    info: "Installs a VibeIsland extension into ~/.pi/agent/extensions/ to show Pi sessions in the notch. Fails open if VibeIsland isn't running.",
+                    status: agentMonitor.piExtensionStatus,
+                    install: { agentMonitor.installPiExtension() },
+                    uninstall: { agentMonitor.uninstallPiExtension() }
+                )
+
                 GeistSection {
                     GeistNavRow(
                         title: "Usage",
@@ -187,6 +197,7 @@ struct AgentsSettings: View {
             agentMonitor.refreshOpenCodeHookStatus()
             agentMonitor.refreshGeminiHookStatus()
             agentMonitor.refreshCursorHookStatus()
+            agentMonitor.refreshPiExtensionStatus()
             agentMonitor.refreshStatusLineStatus()
             agentMonitor.refreshTokenUsage()
         }
@@ -210,8 +221,8 @@ struct AgentsSettings: View {
                     }
                 }
                 if let usage = agentMonitor.usage, !usage.isEmpty {
-                    if let five = usage.fiveHour { GeistRow { usageRow(label: "5-hour limit", window: five) } }
-                    if let week = usage.sevenDay { GeistRow { usageRow(label: "7-day limit", window: week) } }
+                    GeistRow { usageRow(label: "5-hour limit", window: usage.displayFiveHour) }
+                    GeistRow { usageRow(label: "7-day limit", window: usage.displaySevenDay) }
                     if let cachedAt = usage.cachedAt {
                         GeistRow {
                             Text("Updated \(relativeTime(cachedAt)) · refreshes on each Claude turn")
@@ -268,68 +279,76 @@ struct AgentsSettings: View {
                 note: "Uses Google OAuth and the Antigravity Code Assist quota endpoint. Tokens are stored in your macOS Keychain."
             ) {
                 GeistToggleRow(
-                    title: "Merge Antigravity quota groups",
-                    description: "Show one 5-hour row and one 7-day row instead of separate Gemini and Claude/GPT rows.",
-                    isOn: $compactAntigravityQuotaWindows
+                    title: "Enable Antigravity rate limits",
+                    description: "Read your saved Google connection and refresh quotas only when enabled.",
+                    isOn: $antigravityQuotaEnabled,
+                    divider: antigravityQuotaEnabled
                 )
-                GeistLabeledRow(title: "Google account") {
-                    if antigravityQuotaAuth.isAuthenticated {
-                        Label(
-                            antigravityQuotaAuth.accountEmail ?? "Connected",
-                            systemImage: "checkmark.circle.fill"
-                        )
-                        .font(Geist.Typography.body)
-                        .foregroundStyle(Geist.Colors.success)
-                        .labelStyle(.titleAndIcon)
-                    } else {
-                        Label("Not connected", systemImage: "xmark.circle")
-                            .font(Geist.Typography.body)
-                            .foregroundStyle(Geist.Colors.mute)
-                            .labelStyle(.titleAndIcon)
-                    }
-                }
-                if let quota = agentMonitor.providerQuotas[.antigravity] {
-                    let windows = AgentQuotaPresentation.windows(
-                        providerID: .antigravity,
-                        windows: quota.windows,
-                        compactAntigravity: compactAntigravityQuotaWindows,
-                        compactOpenCode: compactOpenCodeQuotaWindows
+                if antigravityQuotaEnabled {
+                    GeistToggleRow(
+                        title: "Merge Antigravity quota groups",
+                        description: "Show one 5-hour row and one 7-day row instead of separate Gemini and Claude/GPT rows.",
+                        isOn: $compactAntigravityQuotaWindows
                     )
-                    ForEach(windows) { window in
-                        GeistRow {
-                            providerQuotaRow(window: window)
+                    GeistLabeledRow(title: "Google account") {
+                        if antigravityQuotaAuth.isAuthenticated {
+                            Label(
+                                antigravityQuotaAuth.accountEmail ?? "Connected",
+                                systemImage: "checkmark.circle.fill"
+                            )
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.success)
+                            .labelStyle(.titleAndIcon)
+                        } else {
+                            Label("Not connected", systemImage: "xmark.circle")
                                 .font(Geist.Typography.body)
+                                .foregroundStyle(Geist.Colors.mute)
+                                .labelStyle(.titleAndIcon)
                         }
                     }
-                }
-                if let error = antigravityQuotaAuth.errorMessage {
-                    GeistRow {
-                        Text(error)
-                            .font(Geist.Typography.caption)
-                            .foregroundStyle(Geist.Colors.error)
+                    if let quota = agentMonitor.providerQuotas[.antigravity] {
+                        let windows = AgentQuotaPresentation.windows(
+                            providerID: .antigravity,
+                            windows: quota.windows,
+                            compactAntigravity: compactAntigravityQuotaWindows,
+                            compactOpenCode: compactOpenCodeQuotaWindows
+                        )
+                        ForEach(windows) { window in
+                            GeistRow {
+                                providerQuotaRow(window: window)
+                                    .font(Geist.Typography.body)
+                            }
+                        }
                     }
-                }
-                GeistRow(divider: false) {
-                    HStack(spacing: Geist.Spacing.xs) {
-                        if antigravityQuotaAuth.isAuthenticated {
-                            Button("Refresh") {
-                                agentMonitor.refreshProviderQuotas(force: true)
+                    if let error = antigravityQuotaAuth.errorMessage {
+                        GeistRow {
+                            Text(error)
+                                .font(Geist.Typography.caption)
+                                .foregroundStyle(Geist.Colors.error)
+                        }
+                    }
+                    GeistRow(divider: false) {
+                        HStack(spacing: Geist.Spacing.xs) {
+                            if antigravityQuotaAuth.isAuthenticated {
+                                Button("Refresh") {
+                                    agentMonitor.refreshProviderQuotas(force: true)
+                                }
+                                .buttonStyle(.geistProminent)
+                                Button("Disconnect") {
+                                    antigravityQuotaAuth.signOut()
+                                }
+                                .buttonStyle(.geist)
+                            } else {
+                                Button(
+                                    antigravityQuotaAuth.isAuthorizing
+                                        ? "Waiting for Google…"
+                                        : "Connect Google account"
+                                ) {
+                                    antigravityQuotaAuth.signIn()
+                                }
+                                .buttonStyle(.geistProminent)
+                                .disabled(antigravityQuotaAuth.isAuthorizing)
                             }
-                            .buttonStyle(.geistProminent)
-                            Button("Disconnect") {
-                                antigravityQuotaAuth.signOut()
-                            }
-                            .buttonStyle(.geist)
-                        } else {
-                            Button(
-                                antigravityQuotaAuth.isAuthorizing
-                                    ? "Waiting for Google…"
-                                    : "Connect Google account"
-                            ) {
-                                antigravityQuotaAuth.signIn()
-                            }
-                            .buttonStyle(.geistProminent)
-                            .disabled(antigravityQuotaAuth.isAuthorizing)
                         }
                     }
                 }
@@ -415,10 +434,32 @@ struct AgentsSettings: View {
             cursorUsageSection
         }
         .onAppear {
-            Task { await antigravityQuotaAuth.reloadStatus() }
-            Task { await cursorSync.reloadStatus() }
+            if antigravityQuotaEnabled {
+                Task { await antigravityQuotaAuth.reloadStatus() }
+            }
+            if cursorUsageEnabled {
+                Task { await cursorSync.reloadStatus() }
+            }
             agentMonitor.refreshStatusLineStatus()
             agentMonitor.refreshTokenUsage(force: true)
+        }
+        .onChange(of: antigravityQuotaEnabled) { _, enabled in
+            Task {
+                await antigravityQuotaAuth.reloadStatus()
+                if enabled && antigravityQuotaAuth.isAuthenticated {
+                    agentMonitor.refreshProviderQuota(.antigravity, force: true)
+                } else if !enabled {
+                    agentMonitor.clearProviderQuota(.antigravity)
+                }
+            }
+        }
+        .onChange(of: cursorUsageEnabled) { _, enabled in
+            Task {
+                await cursorSync.reloadStatus()
+                if enabled && cursorSync.isConnected {
+                    cursorSync.sync()
+                }
+            }
         }
     }
 
@@ -446,7 +487,7 @@ struct AgentsSettings: View {
                         .strokeBorder(Geist.Colors.hairline, lineWidth: Geist.hairlineWidth)
                 )
 
-                Text("Drag rows to reorder the provider cards in the Agents usage panel, and toggle each card on or off. The Summary card is always shown first. An enabled provider's card only appears once it has token or quota data.")
+                Text("Drag rows to reorder the provider cards in the Agents usage panel, and toggle each card on or off. The Summary card is always shown first. Pi also appears when its extension is installed; other provider cards need token or quota data.")
                     .font(Geist.Typography.caption)
                     .foregroundStyle(Geist.Colors.mute)
                     .padding(.leading, Geist.Spacing.xxs)
@@ -523,77 +564,85 @@ struct AgentsSettings: View {
             title: "Cursor usage",
             note: "VibeIsland downloads your usage export from cursor.com. Your Cursor session token is stored in the macOS Keychain."
         ) {
-            GeistLabeledRow(title: "Account") {
-                if cursorSync.isConnected {
-                    Label(
-                        cursorSync.membershipType.map { "Connected · \($0)" } ?? "Connected",
-                        systemImage: "checkmark.circle.fill"
-                    )
-                    .font(Geist.Typography.body)
-                    .foregroundStyle(Geist.Colors.success)
-                    .labelStyle(.titleAndIcon)
-                } else {
-                    Label("Not connected", systemImage: "xmark.circle")
+            GeistToggleRow(
+                title: "Enable Cursor usage sync",
+                description: "Read your saved Cursor session and sync usage only when enabled.",
+                isOn: $cursorUsageEnabled,
+                divider: cursorUsageEnabled
+            )
+            if cursorUsageEnabled {
+                GeistLabeledRow(title: "Account") {
+                    if cursorSync.isConnected {
+                        Label(
+                            cursorSync.membershipType.map { "Connected · \($0)" } ?? "Connected",
+                            systemImage: "checkmark.circle.fill"
+                        )
                         .font(Geist.Typography.body)
-                        .foregroundStyle(Geist.Colors.mute)
+                        .foregroundStyle(Geist.Colors.success)
                         .labelStyle(.titleAndIcon)
-                }
-            }
-            if cursorSync.isConnected, let syncedAt = cursorSync.lastSyncedAt {
-                GeistLabeledRow(title: "Last synced") {
-                    Text(syncedAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(Geist.Typography.body)
-                        .foregroundStyle(Geist.Colors.mute)
-                        .monospacedDigit()
-                }
-            }
-            if !cursorSync.isConnected {
-                GeistRow {
-                    VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
-                        Text("Advanced: paste the cookie value instead of signing in.")
-                            .font(Geist.Typography.caption)
-                            .foregroundStyle(Geist.Colors.mute)
-                        SecureField("WorkosCursorSessionToken", text: $cursorTokenInput)
-                            .textFieldStyle(.roundedBorder)
+                    } else {
+                        Label("Not connected", systemImage: "xmark.circle")
                             .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .labelStyle(.titleAndIcon)
                     }
                 }
-            }
-            if let error = cursorSync.errorMessage {
-                GeistRow {
-                    Text(error)
-                        .font(Geist.Typography.caption)
-                        .foregroundStyle(Geist.Colors.error)
+                if cursorSync.isConnected, let syncedAt = cursorSync.lastSyncedAt {
+                    GeistLabeledRow(title: "Last synced") {
+                        Text(syncedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(Geist.Typography.body)
+                            .foregroundStyle(Geist.Colors.mute)
+                            .monospacedDigit()
+                    }
                 }
-            }
-            GeistRow(divider: false) {
-                HStack(spacing: Geist.Spacing.xs) {
-                    if cursorSync.isConnected {
-                        Button(cursorSync.isSyncing ? "Syncing…" : "Sync") {
-                            cursorSync.sync()
+                if !cursorSync.isConnected {
+                    GeistRow {
+                        VStack(alignment: .leading, spacing: Geist.Spacing.xs) {
+                            Text("Advanced: paste the cookie value instead of signing in.")
+                                .font(Geist.Typography.caption)
+                                .foregroundStyle(Geist.Colors.mute)
+                            SecureField("WorkosCursorSessionToken", text: $cursorTokenInput)
+                                .textFieldStyle(.roundedBorder)
+                                .font(Geist.Typography.body)
                         }
-                        .buttonStyle(.geistProminent)
-                        .disabled(cursorSync.isSyncing)
-                        Button("Sign in again") {
-                            CursorLoginWindowController.shared.show()
+                    }
+                }
+                if let error = cursorSync.errorMessage {
+                    GeistRow {
+                        Text(error)
+                            .font(Geist.Typography.caption)
+                            .foregroundStyle(Geist.Colors.error)
+                    }
+                }
+                GeistRow(divider: false) {
+                    HStack(spacing: Geist.Spacing.xs) {
+                        if cursorSync.isConnected {
+                            Button(cursorSync.isSyncing ? "Syncing…" : "Sync") {
+                                cursorSync.sync()
+                            }
+                            .buttonStyle(.geistProminent)
+                            .disabled(cursorSync.isSyncing)
+                            Button("Sign in again") {
+                                CursorLoginWindowController.shared.show()
+                            }
+                            .buttonStyle(.geist)
+                            Button("Disconnect") {
+                                cursorSync.disconnect()
+                            }
+                            .buttonStyle(.geist)
+                        } else {
+                            Button(cursorSync.isSyncing ? "Signing in…" : "Sign in to Cursor") {
+                                CursorLoginWindowController.shared.show()
+                            }
+                            .buttonStyle(.geistProminent)
+                            .disabled(cursorSync.isSyncing)
+                            Button("Connect with token") {
+                                cursorSync.connect(token: cursorTokenInput)
+                                cursorTokenInput = ""
+                            }
+                            .buttonStyle(.geist)
+                            .disabled(cursorSync.isSyncing || cursorTokenInput.isEmpty)
                         }
-                        .buttonStyle(.geist)
-                        Button("Disconnect") {
-                            cursorSync.disconnect()
-                        }
-                        .buttonStyle(.geist)
-                    } else {
-                        Button(cursorSync.isSyncing ? "Signing in…" : "Sign in to Cursor") {
-                            CursorLoginWindowController.shared.show()
-                        }
-                        .buttonStyle(.geistProminent)
-                        .disabled(cursorSync.isSyncing)
-                        Button("Connect with token") {
-                            cursorSync.connect(token: cursorTokenInput)
-                            cursorTokenInput = ""
-                        }
-                        .buttonStyle(.geist)
-                        .disabled(cursorSync.isSyncing || cursorTokenInput.isEmpty)
                     }
                 }
             }

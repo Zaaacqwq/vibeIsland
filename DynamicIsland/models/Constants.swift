@@ -820,7 +820,7 @@ extension Defaults.Keys {
     /// not part of this list. See `AgentUsageProviderCatalog`.
     static let agentUsageProviderOrder = Key<[String]>(
         "agentUsageProviderOrder",
-        default: ["claude", "codex", "antigravity", "opencode", "cursor", "copilot", "gemini"]
+        default: ["claude", "codex", "antigravity", "opencode", "cursor", "copilot", "gemini", "pi"]
     )
     /// Provider cards the user has switched off in the usage panel, as
     /// `AgentUsageProviderID` raw values. Missing = enabled.
@@ -828,6 +828,10 @@ extension Defaults.Keys {
         "disabledAgentUsageProviders",
         default: []
     )
+    /// Reading these providers' saved credentials is opt-in. Agent session
+    /// monitoring works independently of their account-based usage features.
+    static let agentAntigravityQuotaEnabled = Key<Bool>("agentAntigravityQuotaEnabled", default: false)
+    static let agentCursorUsageEnabled = Key<Bool>("agentCursorUsageEnabled", default: false)
     /// When enabled, Antigravity's Gemini and Claude/GPT quota groups are
     /// folded into one 5h row and one 7d row in the compact usage panel.
     static let agentAntigravityCompactQuotaWindows = Key<Bool>(

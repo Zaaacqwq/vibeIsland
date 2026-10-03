@@ -35,7 +35,7 @@ without taking over your desktop.
 ## AI agents, without the context switching
 
 VibeIsland provides one-click hook/plugin setup for **Claude Code**, **Codex**,
-**Gemini CLI**, **Antigravity**, **OpenCode**, and **Cursor**. Sessions can
+**Gemini CLI**, **Antigravity**, **OpenCode**, **Cursor**, and **Pi**. Sessions can
 remain compact while they run, then surface automatically — with a red halo and
 a sound — when an agent asks a question or requests permission.
 
@@ -62,6 +62,7 @@ usage, so tools that do not expose live hooks can still appear as usage cards.
 | Antigravity | Yes | executing · complete | Session status, jump-back | Tokens, cache, active time, cost, and shared quota windows (sign-in) |
 | Gemini CLI | Yes | thinking · complete | Session status, jump-back | Tokens, cache, reasoning, active time, and cost |
 | Cursor | Yes | thinking · executing · input-needed · complete | Input-needed halo + sound when it waits on you; jump-back to approve in Cursor (its own allowlist governs the actual decision) | Token and cost export from cursor.com |
+| Pi | Yes | executing · complete | Session status, tool activity, jump-back | Local session tokens, cache, active time, and cost; no 5h / 7d quota |
 | GitHub Copilot | Usage only | — | — | Token, cache, active time, and cost where local usage data is available |
 
 Questions and permission requests you can answer in the notch use each tool's
@@ -129,12 +130,16 @@ Download the latest `VibeIsland-x.y.z.dmg` from
 [Releases](https://github.com/Zaaacqwq/vibeIsland/releases), open it, and drag
 **VibeIsland** into **Applications**.
 
-Starting with the first notarized release, builds are Developer ID signed and
-should open normally. macOS may still ask you to confirm the first launch. After the
-first update from an older release to the new signing identity, you may need
-to grant privacy permissions such as Accessibility and Calendar again.
+Starting with **v1.4.3**, release DMGs are signed with Apple Developer ID and
+notarized. You can install and open the app normally; there is no need to use
+**Open Anyway**, bypass Gatekeeper, or change macOS security settings. macOS
+may still ask you to confirm the first launch.
 
-Older release archives were not notarized. Check the release notes when
+App features may request their own macOS permissions, such as Accessibility
+or Calendar. If you are upgrading from a release with the old signing identity,
+you may need to grant those permissions again.
+
+Releases before v1.4.3 were not notarized. Check the release notes when
 downloading an older installer.
 
 ## Build from source

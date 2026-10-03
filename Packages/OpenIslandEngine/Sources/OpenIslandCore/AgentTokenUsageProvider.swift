@@ -55,6 +55,7 @@ public final class AgentTokenUsageProvider: @unchecked Sendable {
             AntigravityTokenAggregator(),
             CopilotTokenAggregator(),
             CursorTokenAggregator(),
+            PiTokenAggregator(),
         ]
     ) {
         self.windowDays = windowDays

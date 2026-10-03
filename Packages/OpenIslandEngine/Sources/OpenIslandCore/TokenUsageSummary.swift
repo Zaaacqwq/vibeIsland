@@ -14,6 +14,7 @@ public enum AgentUsageProviderID: String, CaseIterable, Codable, Sendable, Ident
     case antigravity
     case copilot
     case cursor
+    case pi
 
     public var id: String { rawValue }
 
@@ -27,6 +28,7 @@ public enum AgentUsageProviderID: String, CaseIterable, Codable, Sendable, Ident
         case .antigravity: return "Antigravity"
         case .copilot: return "Copilot"
         case .cursor: return "Cursor"
+        case .pi: return "Pi"
         }
     }
 }

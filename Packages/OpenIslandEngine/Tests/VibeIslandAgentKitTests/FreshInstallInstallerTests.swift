@@ -440,7 +440,7 @@ func openCodeFreshInstall() throws {
     let config = try decode(Data(contentsOf: status.configURL))
     let plugins = try #require(config["plugin"] as? [String])
     #expect(plugins.count == 1)
-    #expect(plugins[0].hasSuffix("/open-island.js"))
+    #expect(plugins[0].hasSuffix("/vibe-island.js"))
 }
 
 @Test("OpenCode re-install does not duplicate the plugin registration")
@@ -456,7 +456,7 @@ func openCodeReinstallIdempotent() throws {
     #expect(status.isInstalled)
     let config = try decode(Data(contentsOf: status.configURL))
     let plugins = try #require(config["plugin"] as? [String])
-    #expect(plugins.filter { $0.hasSuffix("/open-island.js") }.count == 1)
+    #expect(plugins.filter { $0.hasSuffix("/vibe-island.js") }.count == 1)
 }
 
 @Test("OpenCode install preserves the user's other plugins")
@@ -474,7 +474,7 @@ func openCodePreservesOtherPlugins() throws {
     let config = try decode(Data(contentsOf: status.configURL))
     let plugins = try #require(config["plugin"] as? [String])
     #expect(plugins.contains("file:///opt/other-plugin.js"))
-    #expect(plugins.contains { $0.hasSuffix("/open-island.js") })
+    #expect(plugins.contains { $0.hasSuffix("/vibe-island.js") })
 }
 
 @Test("OpenCode uninstall removes the plugin and registration")

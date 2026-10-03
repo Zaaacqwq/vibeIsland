@@ -7,6 +7,7 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
     case openCode
     case cursor
     case antigravity
+    case pi
 
     public var displayName: String {
         switch self {
@@ -22,6 +23,8 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "Cursor"
         case .antigravity:
             "Antigravity"
+        case .pi:
+            "Pi"
         }
     }
 
@@ -39,6 +42,8 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
             "CURSOR"
         case .antigravity:
             "AGY"
+        case .pi:
+            "PI"
         }
     }
 
@@ -54,6 +59,7 @@ public enum AgentTool: String, CaseIterable, Codable, Sendable {
         case .geminiCLI:  "#42e86b"
         case .openCode:   "#ffb547"
         case .antigravity: "#4f9bff"
+        case .pi:          "#a3e635"
         }
     }
 }
@@ -475,7 +481,7 @@ public extension AgentSession {
     }
 
     var isTrackedLiveSession: Bool {
-        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .cursor || tool == .antigravity)
+        !isDemoSession && (tool == .codex || tool == .claudeCode || tool == .geminiCLI || tool == .openCode || tool == .cursor || tool == .antigravity || tool == .pi)
     }
 
     var isTrackedLiveCodexSession: Bool {
