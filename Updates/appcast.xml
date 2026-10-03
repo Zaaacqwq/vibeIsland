@@ -3,6 +3,15 @@
     <channel>
         <title>VibeIsland</title>
         <item>
+            <title>1.4.4</title>
+            <pubDate>Sat, 03 Oct 2026 00:48:33 +0000</pubDate>
+            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.4</link>
+            <sparkle:version>20</sparkle:version>
+            <sparkle:shortVersionString>1.4.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.4/VibeIsland-1.4.4.dmg" length="21969870" type="application/octet-stream" sparkle:edSignature="A84JU2IdMVcaJX7pGp0O3b7I2tu0OQgIlR5y5eS1fb/GXnOs9aiz6F1Vg8SBFS1AzY9JzJfj9O4jdLzfyBbqDA=="/>
+        </item>
+        <item>
             <title>1.4.3</title>
             <pubDate>Fri, 02 Oct 2026 20:51:51 +0000</pubDate>
             <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.3</link>
@@ -19,15 +28,6 @@
             <sparkle:shortVersionString>1.4.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.2/VibeIsland-1.4.2.dmg" length="21768528" type="application/octet-stream" sparkle:edSignature="qN0Bb+ltCEsFSeiOS35o80skt0u15lke+SdrT/rhrJehImTyiB4Vxd166dme3qpD15UJZkqogkamuoDtEjhEDA=="/>
-        </item>
-        <item>
-            <title>1.4.1</title>
-            <pubDate>Thu, 06 Aug 2026 01:57:03 +0000</pubDate>
-            <link>https://github.com/Zaaacqwq/vibeIsland/releases/tag/v1.4.1</link>
-            <sparkle:version>14</sparkle:version>
-            <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/Zaaacqwq/vibeIsland/releases/download/v1.4.1/VibeIsland-1.4.1.dmg" length="21778917" type="application/octet-stream" sparkle:edSignature="umZTq60pOj3+GGLC49M/cfqXx6rE4ESikO84OgDvcnE4hieorispHNRxgOa7xNlCPQzu2fBXnhGkfHZovN+CBA=="/>
         </item>
     </channel>
 </rss>
